@@ -20,7 +20,7 @@ export default function Home() {
           id="diary-heading"
           className="mt-5 max-w-xl font-serif text-4xl leading-tight sm:text-5xl"
         >
-          No site reports yet.
+          Daily site records.
         </h2>
         <p className="mt-5 max-w-lg text-base leading-7">
           Your diary will hold the day’s work, confirmed quantities, and costs

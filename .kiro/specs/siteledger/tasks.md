@@ -3,7 +3,7 @@
 Source of truth: `PROJECT_BRIEF.md`, section 16. Complete one task and its acceptance criteria before starting the next. Commit using the specified message.
 
 - [x] 1. Scaffold — local app runs; `.kiro` is committed and visible in the public repository. Commit: `Scaffold: app, brief, kiro skeleton`.
-- [ ] 2. Schema and seed — dashboard query returns the demo project and cumulative figures. Commit: `Data: schema and demo seed`.
+- [x] 2. Schema and seed — local Supabase and the summary API return the seeded demo with verified cumulative figures; hosted setup awaits the builder's new account. Commit: `Data: schema and demo seed`.
 - [ ] 3. Telegram intake — a real phone voice note appears within 10 seconds. Commit: `Telegram: voice and photo intake`.
 - [ ] 4. Transcription and extraction — demo voice note returns valid JSON matching spoken quantities. Commit: `AI: transcription and extraction`.
 - [ ] 5. Confirm screen — extracted fields are editable; nothing costs before confirmation. Commit: `UI: human confirm screen`.

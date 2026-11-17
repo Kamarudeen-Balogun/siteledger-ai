@@ -1,7 +1,7 @@
 # SiteLedger design
 
 Source of truth: `PROJECT_BRIEF.md`, sections 7–10 and 12.
-This is the foundation design, prepared for review in Kiro. Integrations are not implemented yet.
+This design was prepared with Codex for review in Kiro. The Supabase schema, seed, and server-side summary query are implemented; Telegram, AI, PDF, and the product screens follow the ordered tasks.
 
 ## Stack and boundaries
 
@@ -21,7 +21,9 @@ Nothing is costed before human confirmation. Locked records retain the original 
 
 ## Data model
 
-Task 2 will create the section 8 tables: `projects`, `boq_items`, `submissions`, `submission_photos`, `report_items`, `reports`, `amendments`, and `telegram_users`.
+Task 2 creates the section 8 tables: `projects`, `boq_items`, `submissions`, `submission_photos`, `report_items`, `reports`, `amendments`, and `telegram_users`. BoQ rate, description, unit, and section snapshots preserve the original approved record. Triggers block locked evidence changes and serialize evidence writes with approval; browser database roles have no direct access.
+
+The `project_summary` and `boq_progress` views aggregate existing locked records. The read-only `/api/projects/[projectCode]/summary` endpoint exposes only the fictional demo and uses a server-only service-role key. The real project will use the builder's new Supabase account; an existing MCP account is excluded.
 
 The sole demo project is **4-Bedroom Duplex, Lekki Phase 1, Lagos**. Seeded names and history are fictional demo data. Rates come from section 10 and are illustrative rather than live market prices.
 
