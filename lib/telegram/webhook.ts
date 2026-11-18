@@ -3,14 +3,16 @@ import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { downloadTelegramFile, telegramCall } from "./api";
 import { intakeRpc, uploadEvidence, type IntakeReceipt } from "./storage";
 import { MAX_PHOTO_BYTES, MAX_VOICE_BYTES, parseTelegramUpdate, type IntakePayload } from "./update";
+import { reviewUrl } from "../confirm/access";
 
 export type IntakeDependencies = {
   prepare: (id: number, payload: IntakePayload, owner: string) => Promise<IntakeReceipt | { busy: true }>;
   download: (fileId: string, limit: number) => Promise<Uint8Array>;
   upload: (path: string, bytes: Uint8Array, contentType: string) => Promise<void>;
   finishMedia: (id: number, owner: string) => Promise<void>;
-  sendReply: (chatId: number, text: string) => Promise<void>;
+  sendReply: (chatId: number, text: string, reviewLink?: string) => Promise<void>;
   finishReply: (id: number, owner: string, sent: boolean) => Promise<void>;
+  reviewSubmission?: (payload: IntakePayload) => Promise<string | null>;
 };
 
 export const intakeDependencies: IntakeDependencies = {
@@ -18,8 +20,10 @@ export const intakeDependencies: IntakeDependencies = {
   download: downloadTelegramFile,
   upload: uploadEvidence,
   finishMedia: (id, owner) => intakeRpc("finish_telegram_media", { p_update_id: id, p_owner: owner }),
-  sendReply: async (chatId, text) => { await telegramCall("sendMessage", { chat_id: chatId, text }); },
+  sendReply: async (chatId, text, reviewLink) => { await telegramCall("sendMessage", { chat_id: chatId, text,
+    ...(reviewLink ? { reply_markup: { inline_keyboard: [[{ text: "Review site note", web_app: { url: reviewLink } }]] } } : {}) }); },
   finishReply: (id, owner, sent) => intakeRpc("finish_telegram_reply", { p_update_id: id, p_owner: owner, p_sent: sent }),
+  reviewSubmission: payload => intakeRpc("latest_confirmation_submission", { p_telegram_id: payload.user_id }),
 };
 
 export function validWebhookSecret(supplied: string | null, expected: string): boolean {
@@ -72,7 +76,11 @@ export async function handleTelegramWebhook(request: Request, dependencies: Inta
       await dependencies.upload(receipt.storage_path, bytes, receipt.payload.content_type);
       await dependencies.finishMedia(parsed.updateId, owner);
     }
-    await dependencies.sendReply(receipt.payload.chat_id, receipt.reply_text);
+    const reviewId = receipt.submission_id ?? (receipt.payload.kind === "today" ? await dependencies.reviewSubmission?.(receipt.payload) : null);
+    const link = reviewId ? reviewUrl(reviewId, receipt.payload.user_id, secret) : null;
+    await dependencies.sendReply(receipt.payload.chat_id,
+      receipt.payload.kind === "today" && link ? "Open your latest site note to check the quantities and photos." : receipt.reply_text,
+      link ?? undefined);
     await dependencies.finishReply(parsed.updateId, owner, true);
     if (receipt.submission_id) onSubmissionSaved?.(receipt.submission_id);
     return Response.json({ ok: true });

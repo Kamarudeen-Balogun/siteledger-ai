@@ -8,6 +8,8 @@ The foundation is a Next.js App Router application with TypeScript, Tailwind CSS
 
 Task 4 implements server-side transcription and extraction and passes its real-voice acceptance check. The costing engine, report/PDF screens, and the approval/amendment UI are later tasks. The costing engine will only ever run on confirmed values. The builder's 18 November amendments add multilingual voice input, automatic language detection, and bounded free-provider fallback; [language coverage](docs/voice-languages.md) distinguishes model vocabulary from tested recordings.
 
+Task 5 adds the private mobile confirmation screen. Work items, materials, delays, issues, language notes and photo observations are editable. Missing quantities and low-confidence fields require human input. Corrections are stored separately from the unchanged transcript and original extraction; no cost or report is created by this task. On 18 November 2026, the builder corrected the real note's blockwork quantity from 1 to 18 m² and confirmed it through the web screen.
+
 The planned project **4-Bedroom Duplex, Lekki Phase 1, Lagos** and its client and report history are fictional demo data. Rates in the brief are illustrative demo rates, not live market prices.
 
 ## Run locally
@@ -41,7 +43,7 @@ SiteLedger uses its own Supabase project. An MCP connection to another account i
 The local project ID is `siteledger-ai`. API and Postgres use ports **55421** and **55422** so the stack can coexist with other projects. Install Docker and Supabase CLI, then:
 
 ```sh
-supabase start --exclude edge-runtime,imgproxy,mailpit,postgres-meta,realtime,studio,supavisor,logflare,vector
+supabase start --exclude "analytics,edge-runtime,functions,imgproxy,inbucket,meta,realtime,studio,vector"
 node scripts/configure-local-env.mjs
 npm run db:check
 ```
@@ -122,6 +124,27 @@ Task 4 acceptance on 18 November 2026: the final default Groq Whisper Turbo pipe
 
 The earlier saved transcript from that submission was produced by the original Whisper model and misheard eighteen; its original extraction contains 1 m². The acceptance recheck does not overwrite that evidence. Task 5 must let the human correct that existing record. Future notes use Turbo. This is a tested demo recording, not a guarantee of accuracy across all speech or languages.
 
+## Human confirmation (task 5)
+
+Apply `supabase/migrations/20261118000300_human_confirmation.sql` after the earlier migrations. Set `SITELEDGER_APP_URL` in `.env.local` to the exact HTTPS application origin, without a trailing slash or path. During local phone testing, point ngrok at the Next.js port and use its HTTPS origin for both this setting and the Telegram webhook. Restart Next.js when changing environment variables. Use the production origin when deploying in task 13.
+
+Run `npm run telegram:configure-menu` after starting the HTTPS app. It verifies @SiteLedgerNGbot, sets `/start`, `/today` and `/help`, and installs a **SiteLedger** Mini App menu button. Open that menu or send `/today` and tap a new **Review site note** button. Earlier bot messages retain their old external URL buttons.
+
+The menu uses Telegram’s Web App SDK and sends signed `initData` to the server. The server verifies its HMAC and age before resolving the linked reviewer’s latest note; browser-supplied user IDs are not trusted. Ngrok HTTPS supports local Mini App testing; Vercel remains the later production deployment task. If ngrok displays its free browser notice, tap Visit Site.
+
+The note’s seven-day signed review link grants access to its holder. Keep full review URLs out of logs, screenshots and Git, and request a fresh button when a link expires. Foremen review their own notes; linked PMs may review notes on their project. The server resolves who confirmed from the linked Telegram account, and private audio/photos require the same valid review link.
+
+Listen to the original audio, choose each work item's BoQ entry, enter the quantities and matching units, review the attached photos, then tap **Confirm site note**. Selecting a BoQ item fills its unit, displayed beside the quantity and explained as area, volume, weight, points or days. Units `m²`/`m³` are normalized to BoQ units `m2`/`m3`. Unknown quantities stay blank instead of being estimated. Successful saves bring the **Site note confirmed** message into view, with author and time; it remains visible when reopening. Later edits are marked **Changes not yet confirmed**. Network errors keep current edits on the page; queued AI and pending photo uploads block confirmation. Confirmed values remain correctable until a later task locks the report. Keep the page open if disconnected; persistent offline submission storage is task 10.
+
+```sh
+npm run test:confirm
+npm run db:check-confirm
+```
+
+Confirmation checks cover token expiry/tampering, authorization, required quantities, BoQ units, immutable raw evidence, pending jobs/media, server-resolved authors, and absence of new costs/reports. A mobile browser check at 390px saved an isolated test fixture through the API and corrected it again before locking. A waiting page refreshes into extracted fields automatically. Four real private photos and audio load; unsigned media requests are denied and mobile/desktop layouts fit. Temporary QA records were removed. These checks do not silently confirm the builder's real records.
+
+After the builder reported unclear save feedback and units, browser checks verified the revised visible success state and simulated signed menu access through the real Telegram SDK. The builder then confirmed that the Mini App opens inside Telegram and looks clear. Five confirmation/security tests, the Telegram tests, local database checks, lint, TypeScript and production build pass. The task 5 Kiro review is still in progress and is not claimed as completed evidence.
+
 ## Project structure
 
 ```text
@@ -134,13 +157,14 @@ app/                   Next.js routes and base styles
 components/            shared interface components
 lib/
   ai/                  server AI functions
+  confirm/             private review access, validation and evidence reads
   costing/             pure costing function and types
   telegram/            intake handlers
   pdf/                 report template
 supabase/
   migrations/          database schema
   seed/                demo records and BoQ
-tests/                 costing tests from task 6
+tests/                 intake, AI, confirmation and database checks; costing from task 6
 public/                demo assets
 ```
 

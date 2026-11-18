@@ -228,6 +228,7 @@ GEMINI_API_KEY=               # optional transcription fallback, Free tier
 GONKAROUTER_API_KEY=          # optional extraction fallback, starter tokens
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_WEBHOOK_SECRET=
+SITELEDGER_APP_URL=           # HTTPS application origin for private Telegram review links
 ```
 
 Add a `.env.example` with these names and empty values. Add `.env.local` to `.gitignore` — and confirm, twice, that `/.kiro` is **not** in `.gitignore`.

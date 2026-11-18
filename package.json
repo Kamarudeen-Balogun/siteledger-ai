@@ -15,7 +15,10 @@
     "telegram:set-webhook": "node scripts/set-telegram-webhook.mjs",
     "test:ai": "node --conditions=react-server --import tsx --test tests/ai.test.ts",
     "ai:process": "node --conditions=react-server --import tsx scripts/process-ai-submissions.mjs",
-    "db:check-ai": "node scripts/check-database.mjs tests/ai.sql"
+    "db:check-ai": "node scripts/check-database.mjs tests/ai.sql",
+    "test:confirm": "node --conditions=react-server --import tsx --test tests/confirm.test.ts",
+    "db:check-confirm": "node scripts/check-database.mjs tests/confirm.sql",
+    "telegram:configure-menu": "node scripts/configure-telegram-menu.mjs"
   },
   "dependencies": {
     "next": "16.4.6",
@@ -24,6 +27,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^20",
     "@types/react": "^19",

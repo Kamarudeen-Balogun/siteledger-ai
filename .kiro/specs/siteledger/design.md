@@ -1,7 +1,7 @@
 # SiteLedger design
 
 Source of truth: `PROJECT_BRIEF.md`, sections 7–10 and 12.
-This design was prepared with Codex for review in Kiro. The Supabase schema, seed, server-side summary query, and Telegram intake are implemented; AI, PDF, and the product screens follow the ordered tasks.
+This design was prepared with Codex for review in Kiro. The Supabase schema, seed, server-side summary query, Telegram intake, AI extraction and task 5 confirmation screen are implemented; costing, PDF and later product screens follow the ordered tasks.
 
 ## Stack and boundaries
 
@@ -36,6 +36,12 @@ Server-only RPCs reserve an immutable update payload, lease, submission, and med
 The `site-evidence` bucket is private. References use bucket/path; the server uploads without overwrite. Intake groups by user/project/day in Africa/Lagos, supports photos before voice, limits photos to five and compressed renditions below 1 MB, and preserves extra voice notes in separate submissions. Text and captions stay in submission notes. Pending media blocks confirmation; task 4 allows voice processing while photos arrive, and incoming photos/text can join received or extracted submissions until confirmation.
 
 Supabase schema, seed, and intake migration were applied through the scoped `supabase_siteledger` MCP on 18 November 2026. These changes were built and checked with Codex; actual Kiro execution is recorded separately when it happens.
+
+## Human confirmation (task 5)
+
+The builder approved private links and then requested a Telegram Mini App menu. New “Review site note” buttons use `web_app`; the menu opens `/confirm` and validates Telegram’s signed `initData` before issuing a private review link. The server rejects altered/duplicate fields, stale sessions and caller-supplied identities. HMAC review links expire after seven days and bind the submission and linked Telegram actor. The server-authorized RPC restricts foremen to their own notes and PMs to their project; media routes enforce the same boundary. A link is a bearer credential, so full links must not appear in logs or committed evidence. `SITELEDGER_APP_URL` sets the HTTPS application origin and POST origin boundary. Old bot messages retain URL buttons.
+
+The original transcript and AI extraction remain unchanged. Separate confirmed JSON, BoQ choices, author and timestamp capture human corrections. Every extracted field is editable, low-confidence values require input, photos have editable observations, and explicit quantities must use the selected BoQ unit. Listening pages refresh into the completed extraction; pending photo refreshes keep current edits. The database locks the job and submission when saving, blocks pending evidence and locked records, and creates no report, cost or report item in this task.
 
 ## Interface
 
