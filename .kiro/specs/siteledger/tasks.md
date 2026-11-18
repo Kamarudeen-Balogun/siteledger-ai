@@ -20,3 +20,5 @@ Source of truth: `PROJECT_BRIEF.md`, section 16. Complete one task and its accep
 ## Kiro evidence
 
 This skeleton was prepared with Codex. Record actual Kiro reviews, hook runs, and Crew work as they happen; the presence of these files alone does not establish Kiro use.
+
+18 November 2026: the builder confirmed successful Kiro sign-in and submission of the credit request. Credit approval and executed Kiro reviews/hooks are not yet recorded.

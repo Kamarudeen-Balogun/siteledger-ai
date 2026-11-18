@@ -103,7 +103,7 @@ Human confirmation precedes costing and locking. Locked records cannot be edited
 
 ## Kiro build evidence
 
-The requirements, design, steering, task list, hook notes, and four agent role specifications were prepared with Codex. They are preparation for Kiro use, not evidence of executed Kiro hooks or Crew work. Kiro is installed, but GitHub, Google, and AWS Builder ID sign-in have failed; account access and the credit request remain unresolved. Development is continuing with the builder's authorization, and genuine Kiro work is still required before submission.
+The requirements, design, steering, task list, hook notes, and four agent role specifications were prepared with Codex. They are preparation for Kiro use, not evidence of executed Kiro hooks or Crew work. On 18 November 2026, the builder confirmed successful Kiro sign-in and submission of the credit request. Credit approval has not been confirmed, and genuine Kiro reviews, hook runs, and build work still need to be recorded before submission.
 
 Open this folder in Kiro, review the specifications there, and configure hooks using the installed version. Record real examples and commits as Voice, Vision, Costing, and Safety work happens. MCP integration and the full Kiro write-up are later work. `.kiro` must remain tracked.
 
