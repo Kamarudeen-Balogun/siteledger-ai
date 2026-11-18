@@ -223,7 +223,9 @@ siteledger-ai/
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-OPENAI_API_KEY=               # or the chosen transcription / LLM provider key
+GROQ_API_KEY=                 # primary transcription and extraction, Free plan
+GEMINI_API_KEY=               # optional transcription fallback, Free tier
+GONKAROUTER_API_KEY=          # optional extraction fallback, starter tokens
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_WEBHOOK_SECRET=
 ```
@@ -254,6 +256,8 @@ Enforce append-only behaviour in code and, where Supabase allows, with row-level
 Send the audio to the transcription provider. Keep the raw transcript unchanged and stored. Do not let any later step rewrite history — corrections happen at the confirm screen and are stored as the confirmed values.
 
 **Builder amendment — 18 November 2026:** Task 4 must support multilingual voice transcription with automatic language detection, covering widely used languages supported by the selected provider so people outside Nigeria can submit voice notes. Publish the provider-supported language list and identify which languages have been tested with site recordings. Nigerian English and Pidgin remain required demo tests. Do not claim universal language coverage or verified accuracy for untested languages.
+
+**Builder amendment — 18 November 2026 (free providers and fallback):** For task 4, use Groq Free-plan Whisper for transcription and Groq Free-plan text extraction. Where configured, try Gemini Free-tier transcription or GonkaRouter starter-token extraction as an alternate. GonkaRouter offers a limited 1 million starter tokens, not an unlimited free plan. Use at most two transcription requests and two extraction generations per processing attempt, preserve the unchanged transcript and media, and return a durable manual-entry result when those attempts fail. Never configure billing upgrades, paid-provider fallback, or automatic top-ups. All requests remain behind `transcribeAndExtract()`; this amendment adds no other task or screen.
 
 ### Step 2 — Extract into this exact JSON shape
 

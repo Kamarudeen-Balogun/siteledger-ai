@@ -12,7 +12,10 @@
     "test:telegram": "node --conditions=react-server --import tsx --test tests/telegram.test.ts",
     "db:check-telegram": "node scripts/check-database.mjs tests/telegram.sql",
     "setup:verify": "node scripts/verify-setup.mjs",
-    "telegram:set-webhook": "node scripts/set-telegram-webhook.mjs"
+    "telegram:set-webhook": "node scripts/set-telegram-webhook.mjs",
+    "test:ai": "node --conditions=react-server --import tsx --test tests/ai.test.ts",
+    "ai:process": "node --conditions=react-server --import tsx scripts/process-ai-submissions.mjs",
+    "db:check-ai": "node scripts/check-database.mjs tests/ai.sql"
   },
   "dependencies": {
     "next": "16.4.6",

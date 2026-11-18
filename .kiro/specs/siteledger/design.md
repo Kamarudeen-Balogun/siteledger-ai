@@ -33,7 +33,7 @@ The sole demo project is **4-Bedroom Duplex, Lekki Phase 1, Lagos**. Seeded name
 
 Server-only RPCs reserve an immutable update payload, lease, submission, and media path, then finalize saved media and acknowledgements. Network calls run outside database locks. Telegram retries failures; media writes and captions do not duplicate. A short lease permits recovery after an interrupted process. Telegram may repeat an acknowledgement if sending succeeded immediately before a process stopped.
 
-The `site-evidence` bucket is private. References use bucket/path; the server uploads without overwrite. Intake groups by user/project/day in Africa/Lagos, supports photos before voice, limits photos to five and compressed renditions below 1 MB, and preserves extra voice notes in separate submissions. Text and captions stay in submission notes. Pending media blocks processing/confirmation, and incoming media only joins received submissions.
+The `site-evidence` bucket is private. References use bucket/path; the server uploads without overwrite. Intake groups by user/project/day in Africa/Lagos, supports photos before voice, limits photos to five and compressed renditions below 1 MB, and preserves extra voice notes in separate submissions. Text and captions stay in submission notes. Pending media blocks confirmation; task 4 allows voice processing while photos arrive, and incoming photos/text can join received or extracted submissions until confirmation.
 
 Supabase schema, seed, and intake migration were applied through the scoped `supabase_siteledger` MCP on 18 November 2026. These changes were built and checked with Codex; actual Kiro execution is recorded separately when it happens.
 
@@ -42,3 +42,11 @@ Supabase schema, seed, and intake migration were applied through the scoped `sup
 Use the section 12 digital site diary: warm paper, dark ink, construction orange, serif headings, ruled tables, tabular naira figures, and monospace identifiers. Foreman screens start at 390px with 16px body text and 48px action targets.
 
 Only the seven screens listed in section 12 are in scope. Each implemented screen must handle its applicable empty, loading, error, offline, and low-confidence states honestly.
+
+## Transcription and extraction (task 4)
+
+The server-only pipeline uses Groq Free-plan Whisper and strict-schema GPT-OSS extraction. The builder requested free alternatives and bounded fallback: Gemini Free-tier audio and GonkaRouter starter-token GLM extraction. Missing keys are skipped; at most two configured providers are attempted in a stage, and extraction has at most two generations including its invalid-JSON retry. GonkaRouter router substitutions are disabled so request limits remain explicit. Billing changes and automatic top-ups are absent.
+
+The audio-save trigger queues a private durable job; the Telegram webhook schedules it through `after()`. A lease prevents duplicate work. The unchanged transcript is checkpointed before extraction, and later recovery uses the saved transcript. Invalid responses fall back to private manual-entry metadata with original media retained. No costing, confirmation, or locking runs here. The original-language transcript is never rewritten to improve a demo result.
+
+Whisper receives a short site-vocabulary context rather than chat instructions. A live Pidgin recording exposed `don` being transcribed as `don't`; the revised vocabulary prompt preserved `don` and recovered the spoken work quantities in a read-only recheck. [Language coverage](../../../docs/voice-languages.md) records the difference between supported language vocabulary and actual recording tests. The provider language label itself can be wrong.

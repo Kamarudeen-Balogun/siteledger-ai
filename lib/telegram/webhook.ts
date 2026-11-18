@@ -28,7 +28,8 @@ export function validWebhookSecret(supplied: string | null, expected: string): b
   return timingSafeEqual(createHash("sha256").update(supplied).digest(), createHash("sha256").update(expected).digest());
 }
 
-export async function handleTelegramWebhook(request: Request, dependencies: IntakeDependencies, secret: string | undefined) {
+export async function handleTelegramWebhook(request: Request, dependencies: IntakeDependencies, secret: string | undefined,
+  onSubmissionSaved?: (id: string) => void) {
   if (!secret) return Response.json({ error: "Intake is not configured." }, { status: 503 });
   if (!validWebhookSecret(request.headers.get("X-Telegram-Bot-Api-Secret-Token"), secret))
     return Response.json({ error: "Unauthorized." }, { status: 401 });
@@ -60,7 +61,10 @@ export async function handleTelegramWebhook(request: Request, dependencies: Inta
   try {
     const receipt = await dependencies.prepare(parsed.updateId, parsed.payload, owner);
     if ("busy" in receipt) return Response.json({ error: "Intake is busy. Please retry." }, { status: 503 });
-    if (receipt.reply_sent_at) return Response.json({ ok: true });
+    if (receipt.reply_sent_at) {
+      if (receipt.submission_id) onSubmissionSaved?.(receipt.submission_id);
+      return Response.json({ ok: true });
+    }
     if (receipt.status === "pending") {
       if (!receipt.storage_path || !receipt.payload.file_id || !receipt.payload.content_type) throw new Error("Media missing.");
       const bytes = await dependencies.download(receipt.payload.file_id,
@@ -70,6 +74,7 @@ export async function handleTelegramWebhook(request: Request, dependencies: Inta
     }
     await dependencies.sendReply(receipt.payload.chat_id, receipt.reply_text);
     await dependencies.finishReply(parsed.updateId, owner, true);
+    if (receipt.submission_id) onSubmissionSaved?.(receipt.submission_id);
     return Response.json({ ok: true });
   } catch {
     await dependencies.finishReply(parsed.updateId, owner, false).catch(() => undefined);

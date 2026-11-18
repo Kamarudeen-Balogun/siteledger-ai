@@ -1,0 +1,12 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Lint on save",
+      "description": "Run eslint . (no auto-fix) after saving a TypeScript or Markdown file. This is the hook configured in task 4 review. It reports lint problems back to the agent; it does not modify files.",
+      "trigger": "PostFileSave",
+      "matcher": "\\.(ts|tsx|md)$",
+      "action": { "type": "command", "command": "npm run lint" }
+    }
+  ]
+}

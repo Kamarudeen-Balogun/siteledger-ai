@@ -5,7 +5,7 @@ Source of truth: `PROJECT_BRIEF.md`, section 16. Complete one task and its accep
 - [x] 1. Scaffold — local app runs; `.kiro` is committed and visible in the public repository. Commit: `Scaffold: app, brief, kiro skeleton`.
 - [x] 2. Schema and seed — local Supabase and the summary API return the seeded demo with verified cumulative figures; the new hosted project was provisioned and checked through `supabase_siteledger` on 18 November 2026. Commit: `Data: schema and demo seed`.
 - [x] 3. Telegram intake — on 18 November 2026, a real phone voice note was saved in hosted Supabase in 7.85 seconds, acknowledged by @SiteLedgerNGbot, and joined by four photos. Automated retry, grouping, private-access, and database-protection checks pass. Commit: `Telegram: voice and photo intake`.
-- [ ] 4. Transcription and extraction — demo voice note returns valid JSON matching spoken quantities. Commit: `AI: transcription and extraction`.
+- [x] 4. Transcription and extraction — on 18 November 2026, the final default Groq Whisper Turbo pipeline processed the builder’s real Telegram audio in a read-only check, preserving Pidgin and returning quantities 18/2, crews 6/4, 40 cement bags and a two-hour delay. Eighteen AI tests, existing Telegram/database checks, and build checks pass; live GonkaRouter extraction fallback was verified with a simulated Groq outage. Commit: `AI: transcription and extraction`.
 - [ ] 5. Confirm screen — extracted fields are editable; nothing costs before confirmation. Commit: `UI: human confirm screen`.
 - [ ] 6. Costing engine — section 10 tests pass, including the red overrun flag. Commit: `Costing: engine with tests`.
 - [ ] 7. Report and PDF — the seeded day's PDF prints as a client document. Commit: `Report: web view and PDF`.
@@ -21,4 +21,4 @@ Source of truth: `PROJECT_BRIEF.md`, section 16. Complete one task and its accep
 
 This skeleton was prepared with Codex. Record actual Kiro reviews, hook runs, and Crew work as they happen; the presence of these files alone does not establish Kiro use.
 
-18 November 2026: the builder confirmed successful Kiro sign-in and submission of the credit request. Credit approval and executed Kiro reviews/hooks are not yet recorded.
+18 November 2026: the builder confirmed successful Kiro sign-in and submission of the credit request. Two builder-run Kiro reviews are saved in `task-4-review.md`; manual lint/type checks were recorded. The save hook exists, but execution was not observed. Credit approval and Crew execution are not yet confirmed.
