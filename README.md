@@ -4,11 +4,15 @@ SiteLedger turns a foreman's voice note and site photos into a human-confirmed d
 
 ## Current state
 
+The builder approved an additional pre-submission milestone on 18 November 2026: finish the core report flow, then add email/password browser access, recovery, linked Telegram identity and private project creation/selection/archive in task 10A. Projects will select a currency and use BoQ rates supplied in that currency; the demo stays NGN, without exchange-rate conversion. Existing reports retain their original currency. Per-project dashboards and analysis follow in task 11, with totals kept separate for different currencies. These capabilities are planned and not yet implemented.
+
 The foundation is a Next.js App Router application with TypeScript, Tailwind CSS, a site-diary placeholder, and tracked `.kiro` preparation files. Task 2 adds the eight database tables, protected record snapshots, the fictional demo history, and a read-only demo summary query. Task 3 implements Telegram account linking and private voice/photo storage, with retry protection and WAT daily grouping.
 
-Task 4 implements server-side transcription and extraction and passes its real-voice acceptance check. The costing engine, report/PDF screens, and the approval/amendment UI are later tasks. The costing engine will only ever run on confirmed values. The builder's 18 November amendments add multilingual voice input, automatic language detection, and bounded free-provider fallback; [language coverage](docs/voice-languages.md) distinguishes model vocabulary from tested recordings.
+Task 4 implements server-side transcription and extraction and passes its real-voice acceptance check. Report/PDF screens and the approval/amendment UI are later tasks. The costing engine only ever runs on confirmed values. The builder's 18 November amendments add multilingual voice input, automatic language detection, and bounded free-provider fallback; [language coverage](docs/voice-languages.md) distinguishes model vocabulary from tested recordings.
 
 Task 5 adds the private mobile confirmation screen. Work items, materials, delays, issues, language notes and photo observations are editable. Missing quantities and low-confidence fields require human input. Corrections are stored separately from the unchanged transcript and original extraction; no cost or report is created by this task. On 18 November 2026, the builder corrected the real note's blockwork quantity from 1 to 18 m² and confirmed it through the web screen.
+
+Task 6 adds the pure `costReport(items, priceList)` engine with 21 tests. It calculates exact costs, cumulative quantities, completion, earned value, planned variance, overruns and crew productivity. Money uses decimal arithmetic and returns decimal strings; only the NGN display formatter rounds to the nearest ₦10. A read-only check of the builder's saved confirmation matches PostgreSQL: 18 m² blockwork costs ₦261,000 and 2 m³ concrete costs ₦290,000, totalling ₦551,000. Report creation and wiring the confirm action to costing belong to task 7.
 
 The planned project **4-Bedroom Duplex, Lekki Phase 1, Lagos** and its client and report history are fictional demo data. Rates in the brief are illustrative demo rates, not live market prices.
 
@@ -34,7 +38,11 @@ npm run build
 npm start
 ```
 
-Costing tests will be introduced before the engine at task 6.
+```sh
+npm run test:costing
+```
+
+The costing tests were written and run before the engine existed, then passed after implementation. See [the task 6 handoff](.kiro/specs/siteledger/task-6-handoff.md) for the input contract and validation evidence.
 
 ## Database setup
 
@@ -178,7 +186,7 @@ Human confirmation precedes costing and locking. Locked records cannot be edited
 
 ## Kiro build evidence
 
-The requirements, design, steering, task list, hook notes, and four agent role specifications were prepared with Codex. They are preparation for Kiro use, not evidence of executed Kiro hooks or Crew work. On 18 November 2026, the builder confirmed successful Kiro sign-in and submission of the credit request. Credit approval has not been confirmed. The builder has since completed two real Kiro task 4 reviews; [the saved review](.kiro/specs/siteledger/task-4-review.md) records Gemini-era findings and manual lint/type checks. Its hook was created, but actual hook execution was not observed. The final Groq/GonkaRouter changes were written by Codex; the earlier Kiro review does not cover them. Crew execution and hook-run evidence remain later work.
+The requirements, design, steering, task list, hook notes, and four agent role specifications were prepared with Codex. They are preparation for Kiro use, not evidence of executed Kiro hooks or Crew work. On 18 November 2026, the builder confirmed successful Kiro sign-in and submission of the credit request. Credit approval has not been confirmed. The builder has since completed two real Kiro task 4 reviews; [the saved review](.kiro/specs/siteledger/task-4-review.md) records Gemini-era findings and manual lint/type checks. The completed [task 5 review](.kiro/specs/siteledger/task-5-review.md) covers the committed confirmation screen and reports all five requirement checks met. Codex read it and recorded [the follow-up](.kiro/specs/siteledger/task-5-resolutions.md). Its lint hook exists, but execution during agent saves was not observed. The final Groq/GonkaRouter changes and task 6 costing engine were written by Codex; those changes are not covered by the historical reviews. Crew execution and hook-run evidence remain later work.
 
 Open this folder in Kiro, review the specifications there, and configure hooks using the installed version. Record real examples and commits as Voice, Vision, Costing, and Safety work happens. MCP integration and the full Kiro write-up are later work. `.kiro` must remain tracked.
 

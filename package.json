@@ -18,9 +18,11 @@
     "db:check-ai": "node scripts/check-database.mjs tests/ai.sql",
     "test:confirm": "node --conditions=react-server --import tsx --test tests/confirm.test.ts",
     "db:check-confirm": "node scripts/check-database.mjs tests/confirm.sql",
-    "telegram:configure-menu": "node scripts/configure-telegram-menu.mjs"
+    "telegram:configure-menu": "node scripts/configure-telegram-menu.mjs",
+    "test:costing": "node --import tsx --test tests/costing.test.ts"
   },
   "dependencies": {
+    "big.js": "^7.0.1",
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -29,6 +31,7 @@
   "devDependencies": {
     "@playwright/test": "^1.65.1",
     "@tailwindcss/turbopack": "4.3.3",
+    "@types/big.js": "^7.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
