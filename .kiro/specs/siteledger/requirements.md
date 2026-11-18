@@ -5,6 +5,7 @@ Prepared during scaffolding; review and refine these requirements in Kiro.
 
 1. When a foreman sends a voice note and up to five photos through Telegram or the web app, the system shall preserve the submission and its source.
 2. When audio is transcribed, the system shall store the raw transcript unchanged and preserve Nigerian English and Pidgin site terms.
+   Builder amendment, 18 November 2026: voice transcription shall automatically detect and support widely used languages offered by the chosen provider. Publish supported and site-tested coverage separately; Nigerian English and Pidgin remain mandatory demo tests.
 3. When extraction succeeds, the system shall return the exact section 9 schema with confidence scores and no invented quantities or prices.
 4. If extraction fails validation after one retry, the system shall preserve the audio and photos and offer manual entry.
 5. Before costing or locking, the system shall require a human to confirm every work item and quantity.

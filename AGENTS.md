@@ -255,6 +255,8 @@ Enforce append-only behaviour in code and, where Supabase allows, with row-level
 
 Send the audio to the transcription provider. Keep the raw transcript unchanged and stored. Do not let any later step rewrite history — corrections happen at the confirm screen and are stored as the confirmed values.
 
+**Builder amendment — 18 November 2026:** Task 4 must support multilingual voice transcription with automatic language detection, covering widely used languages supported by the selected provider so people outside Nigeria can submit voice notes. Publish the provider-supported language list and identify which languages have been tested with site recordings. Nigerian English and Pidgin remain required demo tests. Do not claim universal language coverage or verified accuracy for untested languages.
+
 ### Step 2 — Extract into this exact JSON shape
 
 ```json

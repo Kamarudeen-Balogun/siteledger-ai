@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 
-const sql = await readFile(new URL("../tests/database.sql", import.meta.url), "utf8");
+const source = process.argv[2] === "tests/telegram.sql" ? "telegram.sql" : "database.sql";
+const sql = await readFile(new URL(`../tests/${source}`, import.meta.url), "utf8");
 // An explicit container prevents checks from reaching another project or a hosted database.
 const result = spawnSync(
   "docker",

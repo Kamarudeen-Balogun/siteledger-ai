@@ -3,8 +3,8 @@
 Source of truth: `PROJECT_BRIEF.md`, section 16. Complete one task and its acceptance criteria before starting the next. Commit using the specified message.
 
 - [x] 1. Scaffold — local app runs; `.kiro` is committed and visible in the public repository. Commit: `Scaffold: app, brief, kiro skeleton`.
-- [x] 2. Schema and seed — local Supabase and the summary API return the seeded demo with verified cumulative figures; hosted setup awaits the builder's new account. Commit: `Data: schema and demo seed`.
-- [ ] 3. Telegram intake — a real phone voice note appears within 10 seconds. Commit: `Telegram: voice and photo intake`.
+- [x] 2. Schema and seed — local Supabase and the summary API return the seeded demo with verified cumulative figures; the new hosted project was provisioned and checked through `supabase_siteledger` on 18 November 2026. Commit: `Data: schema and demo seed`.
+- [x] 3. Telegram intake — on 18 November 2026, a real phone voice note was saved in hosted Supabase in 7.85 seconds, acknowledged by @SiteLedgerNGbot, and joined by four photos. Automated retry, grouping, private-access, and database-protection checks pass. Commit: `Telegram: voice and photo intake`.
 - [ ] 4. Transcription and extraction — demo voice note returns valid JSON matching spoken quantities. Commit: `AI: transcription and extraction`.
 - [ ] 5. Confirm screen — extracted fields are editable; nothing costs before confirmation. Commit: `UI: human confirm screen`.
 - [ ] 6. Costing engine — section 10 tests pass, including the red overrun flag. Commit: `Costing: engine with tests`.

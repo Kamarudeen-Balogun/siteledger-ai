@@ -1,0 +1,11 @@
+# SiteLedger's development database only. Credentials are stored by Codex OAuth.
+# Disable the unrelated user-level Supabase connections in this workspace.
+[mcp_servers.supabase]
+enabled = false
+
+[mcp_servers.supabase_portfolio]
+enabled = false
+
+[mcp_servers.supabase_siteledger]
+enabled = true
+url = "https://mcp.supabase.com/mcp?project_ref=tfpxfxzawcjqjwrchlky&features=database,storage,docs"

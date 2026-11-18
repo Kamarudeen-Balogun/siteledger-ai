@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "db:check": "node scripts/check-database.mjs"
+    "db:check": "node scripts/check-database.mjs",
+    "test:telegram": "node --conditions=react-server --import tsx --test tests/telegram.test.ts",
+    "db:check-telegram": "node scripts/check-database.mjs tests/telegram.sql",
+    "setup:verify": "node scripts/verify-setup.mjs",
+    "telegram:set-webhook": "node scripts/set-telegram-webhook.mjs"
   },
   "dependencies": {
     "next": "16.4.6",
@@ -24,6 +28,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
     "tailwindcss": "4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }
