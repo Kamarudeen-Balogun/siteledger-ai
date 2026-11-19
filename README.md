@@ -8,11 +8,13 @@ The builder approved an additional pre-submission milestone on 18 November 2026:
 
 The foundation is a Next.js App Router application with TypeScript, Tailwind CSS, a site-diary placeholder, and tracked `.kiro` preparation files. Task 2 adds the eight database tables, protected record snapshots, the fictional demo history, and a read-only demo summary query. Task 3 implements Telegram account linking and private voice/photo storage, with retry protection and WAT daily grouping.
 
-Task 4 implements server-side transcription and extraction and passes its real-voice acceptance check. Report/PDF screens and the approval/amendment UI are later tasks. The costing engine only ever runs on confirmed values. The builder's 18 November amendments add multilingual voice input, automatic language detection, and bounded free-provider fallback; [language coverage](docs/voice-languages.md) distinguishes model vocabulary from tested recordings.
+Task 4 implements server-side transcription and extraction and passes its real-voice acceptance check. The costing engine only ever runs on confirmed values. The builder's 18 November amendments add multilingual voice input, automatic language detection, and bounded free-provider fallback; [language coverage](docs/voice-languages.md) distinguishes model vocabulary from tested recordings.
 
 Task 5 adds the private mobile confirmation screen. Work items, materials, delays, issues, language notes and photo observations are editable. Missing quantities and low-confidence fields require human input. Corrections are stored separately from the unchanged transcript and original extraction; no cost or report is created by this task. On 18 November 2026, the builder corrected the real note's blockwork quantity from 1 to 18 m² and confirmed it through the web screen.
 
-Task 6 adds the pure `costReport(items, priceList)` engine with 21 tests. It calculates exact costs, cumulative quantities, completion, earned value, planned variance, overruns and crew productivity. Money uses decimal arithmetic and returns decimal strings; only the NGN display formatter rounds to the nearest ₦10. A read-only check of the builder's saved confirmation matches PostgreSQL: 18 m² blockwork costs ₦261,000 and 2 m³ concrete costs ₦290,000, totalling ₦551,000. Report creation and wiring the confirm action to costing belong to task 7.
+Task 6 adds the pure `costReport(items, priceList)` engine with 21 tests. It calculates exact costs, cumulative quantities, completion, earned value, planned variance, overruns and crew productivity. Money uses decimal arithmetic and returns decimal strings; only the NGN display formatter rounds to the nearest ₦10. A read-only check of the builder's saved confirmation matches PostgreSQL: 18 m² blockwork costs ₦261,000 and 2 m³ concrete costs ₦290,000, totalling ₦551,000.
+
+Task 7 adds private daily reports and server-generated A4 PDFs headed **Perkins Limited**, the builder's chosen firm name. **Confirm and cost it** saves the human confirmation, costs it against the BoQ and opens a draft report. The document includes weather, work, progress, red variance, materials, delays, issues, attached photos and signature blocks. The builder's confirmed note now has a verified ₦551,000 draft and PDF; original evidence and locked history were preserved. Approval, locking and the amendment interface are task 8.
 
 The planned project **4-Bedroom Duplex, Lekki Phase 1, Lagos** and its client and report history are fictional demo data. Rates in the brief are illustrative demo rates, not live market prices.
 
@@ -142,7 +144,7 @@ The menu uses Telegram’s Web App SDK and sends signed `initData` to the server
 
 The note’s seven-day signed review link grants access to its holder. Keep full review URLs out of logs, screenshots and Git, and request a fresh button when a link expires. Foremen review their own notes; linked PMs may review notes on their project. The server resolves who confirmed from the linked Telegram account, and private audio/photos require the same valid review link.
 
-Listen to the original audio, choose each work item's BoQ entry, enter the quantities and matching units, review the attached photos, then tap **Confirm site note**. Selecting a BoQ item fills its unit, displayed beside the quantity and explained as area, volume, weight, points or days. Units `m²`/`m³` are normalized to BoQ units `m2`/`m3`. Unknown quantities stay blank instead of being estimated. Successful saves bring the **Site note confirmed** message into view, with author and time; it remains visible when reopening. Later edits are marked **Changes not yet confirmed**. Network errors keep current edits on the page; queued AI and pending photo uploads block confirmation. Confirmed values remain correctable until a later task locks the report. Keep the page open if disconnected; persistent offline submission storage is task 10.
+Listen to the original audio, choose each work item's BoQ entry, enter the quantities and matching units, review the attached photos, then tap **Confirm and cost it**. Selecting a BoQ item fills its unit, displayed beside the quantity and explained as area, volume, weight, points or days. Units `m²`/`m³` are normalized to BoQ units `m2`/`m3`. Unknown quantities stay blank instead of being estimated. Confirmation remains visible when reopening; task 7 now opens the generated draft report after saving. Later edits are marked **Changes not yet confirmed**. Network errors keep current edits on the page; queued AI and pending photo uploads block confirmation. Confirmed values remain correctable until a later task locks the report. Keep the page open if disconnected; persistent offline submission storage is task 10.
 
 ```sh
 npm run test:confirm
@@ -151,7 +153,24 @@ npm run db:check-confirm
 
 Confirmation checks cover token expiry/tampering, authorization, required quantities, BoQ units, immutable raw evidence, pending jobs/media, server-resolved authors, and absence of new costs/reports. A mobile browser check at 390px saved an isolated test fixture through the API and corrected it again before locking. A waiting page refreshes into extracted fields automatically. Four real private photos and audio load; unsigned media requests are denied and mobile/desktop layouts fit. Temporary QA records were removed. These checks do not silently confirm the builder's real records.
 
-After the builder reported unclear save feedback and units, browser checks verified the revised visible success state and simulated signed menu access through the real Telegram SDK. The builder then confirmed that the Mini App opens inside Telegram and looks clear. Five confirmation/security tests, the Telegram tests, local database checks, lint, TypeScript and production build pass. The task 5 Kiro review is still in progress and is not claimed as completed evidence.
+After the builder reported unclear save feedback and units, browser checks verified the revised visible success state and simulated signed menu access through the real Telegram SDK. The builder then confirmed that the Mini App opens inside Telegram and looks clear. Five confirmation/security tests, the Telegram tests, local database checks, lint, TypeScript and production build pass. The completed task 5 Kiro review and its follow-up are linked below.
+
+## Daily reports and PDF (task 7)
+
+Apply `supabase/migrations/20261118000400_daily_reports.sql` after the earlier migrations. It adds captured report documents and server-only read/save functions; the migration has been applied to SiteLedger's local and hosted databases. Requests use the same private review access as confirmation. The route `/reports/<submission-id>` opens that note's report, whose persisted report UUID appears inside the document. Keep private URLs out of logs and Git.
+
+After confirmation, open **Download PDF**. **Correct site note** lets you change confirmed work before approval and rebuild the same draft, preserving its weather. Weather can also be recorded or cleared through **Change weather or rebuild this draft**. A changed confirmation or BoQ makes the draft stale and blocks PDF export until it is rebuilt. Retry-safe saves do not create duplicate reports. Exact costs are stored, and caller-supplied rates, totals and identities are rejected. Draft generation does not approve or lock a report.
+
+The public `/reports/demo` preview and `/api/reports/demo/pdf` export expose only the original fictional seeded report dated 6 November 2026. They never include real Telegram notes or their private media, even when those notes belong to the demo project. Legacy locked reports use captured rates; exporting does not update them. The bundled Public Sans and Source Serif fonts, with their licenses in `public/fonts/`, support the naira glyph without remote font downloads.
+
+```sh
+npm run test:reports
+npm run db:check-reports
+```
+
+For the isolated production browser check, run `npm run build`, then `node scripts/configure-local-env.mjs --serve --report-preview` in one terminal and `npm run test:report-browser` in another. This uses the local SiteLedger database on port 55421 and a local-only review secret without changing `.env.local`. Avoid rebuilding while this preview is serving; restart it after a build. The browser check creates and removes its own temporary draft fixture.
+
+Verification covers 61 automated tests across intake, AI, confirmation, costing, reports and the mobile browser flow, plus five local SQL suites, lint, TypeScript and the production build. The final demo PDF was visually checked on both A4 pages, with footer/page numbers, signature blocks, naira figures and red overrun. The builder's confirmed draft exports the exact ₦551,000 total. Its note has no attached photos: the four photos remain on the earlier unconfirmed note. The actual renderer included all four in a clearly labelled local PDF fixture without moving them, confirming that note or inventing findings. See [task 7 evidence and Kiro review prompt](.kiro/specs/siteledger/task-7-handoff.md).
 
 ## Project structure
 
@@ -167,12 +186,13 @@ lib/
   ai/                  server AI functions
   confirm/             private review access, validation and evidence reads
   costing/             pure costing function and types
+  reports/             verified report sources, snapshots and private draft creation
   telegram/            intake handlers
   pdf/                 report template
 supabase/
   migrations/          database schema
   seed/                demo records and BoQ
-tests/                 intake, AI, confirmation and database checks; costing from task 6
+tests/                 intake, AI, confirmation, costing, reports and database checks
 public/                demo assets
 ```
 

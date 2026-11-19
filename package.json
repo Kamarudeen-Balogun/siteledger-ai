@@ -19,9 +19,13 @@
     "test:confirm": "node --conditions=react-server --import tsx --test tests/confirm.test.ts",
     "db:check-confirm": "node scripts/check-database.mjs tests/confirm.sql",
     "telegram:configure-menu": "node scripts/configure-telegram-menu.mjs",
-    "test:costing": "node --import tsx --test tests/costing.test.ts"
+    "test:costing": "node --import tsx --test tests/costing.test.ts",
+    "test:reports": "node --conditions=react-server --import tsx --test tests/reports.test.ts",
+    "db:check-reports": "node scripts/check-database.mjs tests/reports.sql",
+    "test:report-browser": "node --conditions=react-server --import tsx --test tests/report-browser.test.ts"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.9.0",
     "big.js": "^7.0.1",
     "next": "16.4.6",
     "react": "19.3.0",

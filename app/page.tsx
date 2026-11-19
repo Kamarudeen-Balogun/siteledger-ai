@@ -1,3 +1,4 @@
+import Link from "next/link";
 export default function Home() {
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-5xl flex-col px-6 sm:px-10">
@@ -26,6 +27,7 @@ export default function Home() {
           Your diary will hold the day’s work, confirmed quantities, and costs
           against the Bill of Quantities.
         </p>
+        <Link href="/reports/demo" className="mt-6 inline-flex min-h-12 items-center bg-accent px-5 py-3 font-semibold text-white">Open demo daily report</Link>
       </section>
 
       <footer className="border-t border-rule py-5 font-mono text-xs leading-6">

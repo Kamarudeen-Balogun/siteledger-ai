@@ -478,6 +478,7 @@ Use one accent colour. If everything is orange, nothing is. Currency is always f
 Seed one project and use it in every screenshot and the demo video:
 
 - **Project:** "4-Bedroom Duplex, Lekki Phase 1, Lagos" — client name fictional, stated as a demo project in the README.
+- **Report firm:** Perkins Limited — builder-selected on 18 November 2026 for task 7's report and PDF heading.
 - **History:** 10–14 prior locked daily reports across two weeks, with cumulative progress already at roughly 35–45% on blockwork, one rain delay, one defect that was later amended, and one BoQ item slightly overrunning.
 - **Today's demo submission:** the voice note from the demo script — blockwork progress, a concrete pour, a cement delivery, and one visible defect in a photo.
 

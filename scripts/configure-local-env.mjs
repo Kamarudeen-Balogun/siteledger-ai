@@ -46,6 +46,10 @@ try {
 }
 
 if (process.argv.includes("--serve")) {
+  if (process.argv.includes("--report-preview")) {
+    localEnv.TELEGRAM_WEBHOOK_SECRET = "local-report-preview";
+    localEnv.SITELEDGER_APP_URL = "http://127.0.0.1:3010";
+  }
   // This temporary preview always uses local values, even if .env.local contains hosted credentials.
   const preview = spawn(
     process.execPath,

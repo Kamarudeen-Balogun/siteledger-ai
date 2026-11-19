@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  outputFileTracingIncludes: { "/api/reports/**": ["./public/fonts/*.ttf"] },
   turbopack: {
     rules: {
       "*.css": {

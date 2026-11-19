@@ -46,6 +46,7 @@ export function ConfirmForm({ record, access }: { record: ReviewRecord; access: 
   const [materials, setMaterials] = useState(() => source.materials.map((value, i) => ({ key: "material-" + i, value })));
   const [delays, setDelays] = useState(() => source.delays.map((value, i) => ({ key: "delay-" + i, value })));
   const [saving, setSaving] = useState(false), [error, setError] = useState("");
+  const [costing, setCosting] = useState(false);
   const [saved, setSaved] = useState<{ by: string; at: string } | null>(() => record.confirmed_at ? { by: record.confirmed_by!, at: record.confirmed_at } : null);
   const [dirty, setDirty] = useState(false);
   const feedback = useRef<HTMLDivElement>(null), focusFeedback = useRef(false);
@@ -92,8 +93,13 @@ export function ConfirmForm({ record, access }: { record: ReviewRecord; access: 
       const result = await response.json();
       if (!response.ok) { setError(result.error ?? "Your edits are still here. Try confirming again."); return; }
       setSaved({ by: result.confirmed_by, at: result.confirmed_at }); setDirty(false);
+      setCosting(true);
+      const costResponse = await fetch(`/api/reports/${record.id}`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${access}` },
+        body: JSON.stringify({}), cache: "no-store", signal: AbortSignal.timeout(20000) });
+      if (!costResponse.ok) { setError("Your confirmation is saved. Open the costed report below to try creating it again."); return; }
+      router.push(`/reports/${record.id}?access=${encodeURIComponent(access)}`);
     } catch { setError("Could not reach SiteLedger. Your edits are still here; try again."); }
-    finally { setSaving(false); }
+    finally { setSaving(false); setCosting(false); }
   }
   const date = new Intl.DateTimeFormat("en-NG", { dateStyle: "long", timeStyle: "short", timeZone: "Africa/Lagos" }).format(new Date(record.created_at));
   return <main className="mx-auto max-w-5xl px-4 pb-12 sm:px-8">
@@ -110,10 +116,11 @@ export function ConfirmForm({ record, access }: { record: ReviewRecord; access: 
           <p className="mt-2">Your original voice note is kept. You can correct this note until its report is locked.</p>
         </div>}
     </div>
+    {saved && !dirty && <a className="mt-4 block min-h-12 py-3 font-semibold underline" href={`/reports/${record.id}?access=${encodeURIComponent(access)}`}>Open costed report</a>}
     <div className="py-6 text-base leading-7"><p className="font-semibold">Three steps to check your site note</p>
       <ol className="mt-2 list-decimal space-y-1 pl-5"><li>Listen to your voice note or read the original transcript.</li>
         <li>Choose each BoQ item. Check its quantity, measurement unit and crew, then review materials, delays and photos.</li>
-        <li>Tap Confirm site note. Look for “Site note confirmed” at the top.</li></ol>
+        <li>Tap Confirm and cost it. Your confirmed quantities become a costed report.</li></ol>
       <p className="mt-3">An asterisk (*) marks a required field. Unclear values are blank and marked “Check this one”. Nothing is costed or locked before you confirm.</p></div>
     {locked && <p className="my-4 border-2 border-accent p-4 font-mono text-accent">LOCKED — this record cannot be changed.</p>}
     {record.audio_url && <Section title="Your voice note"><audio aria-label="Original site voice note" className="w-full" controls preload="none" src={mediaUrl("audio")} />
@@ -190,7 +197,7 @@ export function ConfirmForm({ record, access }: { record: ReviewRecord; access: 
       {saved && !dirty && !error && <p className="mb-4 border-l-4 border-[#657055] bg-[#EEF0E7] p-4 font-semibold">Site note confirmed. Your changes are saved.</p>}
       <p className="mb-4">By confirming, you confirm that these are the quantities and observations from your site.</p>
       <button type="submit" disabled={saving || locked || record.pending_media || (!!saved && !dirty)} className="min-h-14 w-full bg-accent px-6 py-4 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
-        {saving ? "Saving your confirmation…" : saved ? dirty ? "Confirm changes" : "Confirmed — saved" : "Confirm site note"}</button>
+        {saving ? costing ? "Costing against the BoQ…" : "Saving your confirmation…" : saved ? dirty ? "Confirm changes and rebuild report" : "Confirmed — saved" : "Confirm and cost it"}</button>
       </form>}
   </main>;
 }

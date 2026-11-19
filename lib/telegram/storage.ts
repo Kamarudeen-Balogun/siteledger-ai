@@ -14,7 +14,9 @@ export class IntakeUnavailableError extends Error {
   constructor() { super("Site note storage is temporarily unavailable."); }
 }
 function configuration() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  // Server configuration must stay runtime-resolved: a local preview must not
+  // combine a build-time hosted URL with its isolated local service credentials.
+  const url = Reflect.get(process.env, "NEXT_PUBLIC_SUPABASE_URL") as string | undefined;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new IntakeUnavailableError();
   return { url, headers: { apikey: key, ...(key.startsWith("eyJ") ? { Authorization: `Bearer ${key}` } : {}) } };
