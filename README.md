@@ -210,6 +210,8 @@ The requirements, design, steering, task list, hook notes, and four agent role s
 
 Open this folder in Kiro, review the specifications there, and configure hooks using the installed version. Record real examples and commits as Voice, Vision, Costing, and Safety work happens. MCP integration and the full Kiro write-up are later work. `.kiro` must remain tracked.
 
+On 19 November 2026, the builder completed Kiro reviews of [task 6](.kiro/specs/siteledger/task-6-review.md) and [task 7](.kiro/specs/siteledger/task-7-review.md). Every requirement check was met and no blocking defect was reported. Kiro's manual costing/report/SQL/lint/type checks passed. [Codex's follow-up](.kiro/specs/siteledger/task-6-7-resolutions.md) clarifies review wording and records the future dashboard/currency observations. Neither review's agent save surfaced hook execution; an actual editor save and hook output remain unverified. These reviews are evidence of Kiro use, while Crew execution remains unobserved.
+
 ## Schedule
 
 The brief's submission target is **3 December 2026 (Thursday)**; its deadline is **4 December 2026 (Friday), 23:00 WAT**. Some weekday labels in the brief differ from the 2026 calendar; the original brief has been preserved. Check official competition resources before relying on the stated credit-request terms.
