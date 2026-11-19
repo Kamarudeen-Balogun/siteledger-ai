@@ -137,11 +137,13 @@ Record exactly this flow. Rehearse it. The video must be under 3 minutes.
 
 ### Cut list — do not build these, even if an agent suggests them
 
-**Builder amendment — 18 November 2026 (browser accounts and project management):** Finish the core report flow first, then add email/password browser access and project creation/management before submission. Implement this as task 10A after the core intake, confirmation, costing, PDF, dispute log and web upload flow passes, before dashboard integration and production deployment. Include password recovery, linking the same account to Telegram, creating/selecting/archiving projects, access to old project records, and private account/project dashboards using the existing BoQ progress and variance formulas. Preserve every locked report and amendment when archiving a project. Independent users must not access each other's private projects. This amendment allows the account/project ownership needed for that flow; company administration, invitations, billing and complex roles remain excluded. Keep the two existing roles, foreman and PM. This milestone is required before submission, not a phase 2 promise; do not implement it during tasks 6–10.
+**Builder amendment — 18 November 2026 (browser accounts and project management):** Finish the core report flow first, then add email/password browser access and project creation/management before submission. Implement this as task 10A after the core intake, confirmation, costing, PDF, dispute log and web upload flow passes, before dashboard integration and production deployment. Include password recovery, linking the same account to Telegram, creating/selecting/archiving projects, access to old project records, and private account/project dashboards using the existing BoQ progress and variance formulas. Preserve every locked report and amendment when archiving a project. Independent users must not access each other's private projects. This amendment allows the account/project ownership needed for that flow; company administration, billing and complex roles remain excluded. Project invitations and team management are allowed only by the 19 November amendment below. Keep the two existing roles, foreman and PM. This milestone is required before submission, not a phase 2 promise; do not implement it during tasks 6–10.
 
 - WhatsApp bot as the primary channel (see section 11 — phase 2 only)
 - Payments, subscriptions, or billing of any kind
-- Multi-company accounts, invitations, or complex roles — one demo company, two roles (foreman, PM) maximum
+**Builder amendment — 19 November 2026 (authorized project teams and professional identity):** Task 10A must include owner-controlled project invitations, membership management, explicit professional names and roles per project. One account may belong to several projects with different roles. A one-person project may use a PM account for intake, confirmation and approval, with separate explicit actions and honest attribution. This deliberately lifts the exclusion of project invitations and team management, while keeping only foreman and PM work roles. The project creator is its owner and initially a PM; ownership grants project administration, rather than introducing another work role. Follow the access requirements in section 8. Implement these features in task 10A after tasks 9–10; close confirmed access leaks in the current flow immediately without building the membership UI early.
+
+- Multi-company administration or complex roles — one demo company, two work roles (foreman, PM); project invitations and membership management are allowed under the amendment above
 - Native mobile apps — the web app must be mobile-first and installable-feeling, nothing more
 - Real-time chat, comments, or notifications beyond the Telegram summary
 - A marketplace, a materials-ordering feature, or supplier integrations
@@ -246,9 +248,28 @@ Add a `.env.example` with these names and empty values. Add `.env.local` to `.gi
 | `report_items` | id, submission_id, boq_item_id, quantity_done, crew, confidence, confirmed_by | One row per confirmed work item |
 | `reports` | id, project_id, date, status (draft / locked), total_cost, pdf_url | Locked reports cannot be updated or deleted at the database level if possible |
 | `amendments` | id, report_id, author, note, created_at | The dispute log: append-only, no update or delete |
-| `telegram_users` | telegram_id, display_name, project_id, role | Links a foreman's Telegram account to a project |
+| `telegram_users` | telegram_id, display_name, project_id, role | Current prototype link; task 10A separates stable identity/profile from per-project memberships |
 
 Enforce append-only behaviour in code and, where Supabase allows, with row-level policies that block update and delete on `reports` once locked and on `amendments` always.
+
+---
+
+### Account and project access — task 10A (builder amendment, 19 November 2026)
+
+- **Private by default.** A project code identifies a project; knowing it never grants access. The public demonstration exposes only the original fictional seed, excluding real submissions, amendments, media and live financial totals, even when testing on that demo project. Until task 10A, only accounts explicitly authorized by the builder may use the live bot.
+- **Professional identity.** Ask the person to type and confirm the name to appear on records when they start the bot, or reuse their confirmed browser profile. Telegram display names are metadata, not professional attribution. Support Unicode and single-word names; validate length and reject blank/control-character input. A name alone never authenticates someone or grants a role. Store stable identity IDs and snapshot the name and role at each confirmation, approval and amendment; profile edits never rename old evidence.
+- **One account, several projects.** Store profiles separately from project memberships. Each membership has a project, person, foreman/PM role and active/revoked state. Link browser and Telegram identities through expiring, single-use challenges requiring proof of both accounts; a display name, supplied Telegram ID or email match alone is insufficient. Relinking revokes the old connection without changing historical attribution.
+- **Owner-controlled team access.** Only the owner can invite, change roles, remove members, transfer ownership or archive a project. Owners choose foreman or PM per invitation; invitees cannot promote themselves. PMs can submit and confirm, review project records, approve and manage the BoQ. Foremen can submit, confirm and amend their own records but cannot approve or read another foreman's private records. Existing report approval and immutable evidence rules remain in force.
+- **Invitations.** Provide a copyable invite link addressed to a verified email identity, with a selected project and role, an expiry, one successful use and owner cancellation. Store only a hash of the secret. A forwarded, expired, cancelled or already consumed invitation cannot grant another person access. Re-check the owner's authority and project status during atomic acceptance. Show plain errors without revealing a project's private details. Do not add company administration or notification infrastructure.
+- **One-person projects.** A creator starts as owner/PM and may perform intake, confirmation and approval themselves. Keep confirmation and approval as separate deliberate actions; label the submitter and approver truthfully, including when they are the same person. Do not imply independent review or bypass confirmation.
+- **Authorization on every request.** Check active project membership and the required role for web/bot actions, reports, PDFs, media, BoQ, summaries and logs. Check referenced resources belong to that authorized project. A forwarded old bearer link must not replace authenticated membership. Revoke active sessions/capabilities on account unlinking or membership removal; a role downgrade immediately removes approval/admin permissions. Media delivery must also respect revocation; avoid durable publicly accessible storage URLs.
+- **Safe project selection and site dates.** Show the active project clearly before capture and allow switching only among authorized projects. Capture the project and its timezone with each queued submission; reconnecting must never send it to whichever project is now active. Default the demo to Africa/Lagos. Re-check access, archival and original project before retry; retain a blocked queued submission and explain the required action. Never silently reassign audio, photos or reports.
+- **Account recovery.** Use email verification, password recovery, safe login/logout and session expiry. Require recent authentication for ownership transfer, identity relinking and other account-sensitive actions. Rate-limit authentication, invite acceptance and intake; validate files and request sizes, keep secrets out of client code/logs and do not expose whether an unrelated private project exists.
+- **Ownership continuity.** Exactly one active owner must remain. Transfer only to an existing active member who accepts; the new owner is a PM. Prevent removing or downgrading the current owner until transfer succeeds. A PM's review rights alone do not grant team administration.
+- **Archive and history.** Archiving blocks new intake, confirmation, approvals, amendments, invites and BoQ edits while preserving authorized read access to every old record. Memberships may still be revoked and owners may restore a project. Preserve locked reports, original media, amendments, names, rates, currency and timestamps; account removal must never cascade-delete evidence.
+- **Audit trail.** Record grants, invitation acceptance/cancellation, role changes, removal, relinking, ownership transfer and archive/restore events with server-derived actor, project and timestamp. Keep this append-only administrative history separate from report amendments. Audit retention must not expose private project data to former members.
+- **Worldwide money.** Use each project's selected currency and supplied BoQ rates, with display precision appropriate to that currency. Keep decimal calculations exact and money snapshots immutable. Do not apply naira rounding rules to other currencies or sum different currencies together; no exchange-rate service or invented foreign rates.
+- **Acceptance evidence.** Exercise two independent owners, an invited foreman/PM, one account with different roles on two projects, and a solo owner/PM. Verify stranger and forwarded-link denial, invite replay/expiry/cancellation, privilege escalation rejection, immediate revocation on report/PDF/media routes, blocked offline retries after removal/archive, professional-name snapshots and preserved locked history after profile edits, ownership transfer and archive/restore. Use disposable fixtures; do not modify genuine evidence merely to demonstrate denial.
 
 ---
 
@@ -375,14 +396,14 @@ WhatsApp stays in the product story as **phase 2**: the intake layer is delibera
 1. In Telegram, open **@BotFather**, send `/newbot`, name it (display name: *SiteLedger*; username must end in `bot`, for example `SiteLedgerSiteBot` — pick an available variant).
 2. Copy the bot token into `TELEGRAM_BOT_TOKEN` in `.env.local` and in Vercel. Never paste the token into code, chat screenshots, or the demo video.
 3. Set the webhook to the deployed app: `https://<your-domain>/api/telegram/webhook`, with the secret in `TELEGRAM_WEBHOOK_SECRET`, and verify the webhook route checks that secret on every request.
-4. Create a deep link for onboarding: `https://t.me/<bot-username>?start=<project-code>`. Opening it links that Telegram account to the demo project in `telegram_users`.
+4. Create a deep link for onboarding: `https://t.me/<bot-username>?start=<project-code>`. Opening it connects an already authorized account; the code itself must not grant access. Task 10A uses owner-controlled invitations and collects a confirmed professional name before intake.
 5. Test with a real phone before building anything else on top of it: voice note in, acknowledgement back, within 10 seconds.
 
 ### Bot behaviour
 
 | User sends | Bot does |
 | --- | --- |
-| `/start <project-code>` | Links the account, replies with a plain welcome and what to send |
+| `/start <project-code>` | Checks granted project access and replies with one next step; task 10A collects the professional name and allows selection among authorized projects |
 | Voice note | Saves it, replies "Got it — working on your report", starts transcription |
 | Photo (with or without the voice note) | Attaches it to today's open submission for that user |
 | `/today` | Replies with today's summary: total ₦, items, % complete link |
@@ -454,9 +475,9 @@ Use one accent colour. If everything is orange, nothing is. Currency is always f
 2. **Confirm:** extracted items as an editable BoQ-style table, photo findings below, one "Confirm and cost it" button.
 3. **Report (web + PDF share the same design):** the daily report, stamped when locked.
 4. **Project dashboard:** three lead numbers, BoQ progress table, variance flags.
-5. **Dispute log:** locked reports and amendments in timestamp order, mono type, nothing editable.
+5. **Dispute log:** newest locked reports and amendments first, ordered by recording timestamp with stable ties, mono type, nothing editable; chronology in storage remains unchanged.
 6. **Price list / BoQ settings:** the seed rates, clearly labelled "Demo rates — verify before real use", editable by the PM.
-7. **Onboarding:** connect Telegram in two steps with the deep link and a QR code.
+7. **Onboarding:** check project access and confirm a professional name when connecting Telegram. Task 10A adds browser account/recovery, project selection/creation and owner team management; keep each step short and show the selected project.
 
 ### States every screen must handle
 
@@ -571,7 +592,7 @@ Work in this order. Do not start a task until the previous task's acceptance cri
 8. **Dispute log.** Locking, amendment flow, blocked edit/delete. *Accept:* attempting to edit a locked report is impossible in UI and API. Commit: `Log: append-only dispute log`.
 9. **Photo analysis.** Implement `analysePhoto()` and show findings as suggestions on the confirm screen. *Accept:* the demo defect photo produces a "possible" finding a human can dismiss. Commit: `AI: photo findings`.
 10. **In-app upload and offline queue.** Record/upload in the web app; IndexedDB queue with retry. *Accept:* a submission made in airplane mode sends itself when reconnected. Commit: `Web: upload and offline queue`.
-10A. **Browser accounts and project management (builder amendment, 18 November 2026).** After the core flow passes, add email/password sign-in and recovery, link the same user to Telegram, and create/select/archive projects with access to their existing records. Include project currency selection from section 10. Scope data to the authorized account/project; use only foreman and PM roles. Archiving retains all locked evidence and amendments. *Accept:* a user signs in from another browser, opens their own projects and history, creates/selects a project with its currency, links Telegram, and cannot read or modify another user's projects; archived records and their original currency remain accessible and unchanged. Integrate per-project dashboard/analysis in task 11. Commit: `Accounts: browser access and project management`.
+10A. **Browser accounts, project management and authorized teams (builder amendments, 18–19 November 2026).** After the core flow passes, add email/password sign-in, verification and recovery; professional profiles and securely linked Telegram identity; project creation/selection/archive/restore with currency/timezone; owner-controlled targeted invitations, membership removal and role changes per project. Keep foreman and PM work roles and support one-person owner/PM projects. Implement all section 8 access requirements and preserve locked evidence and currency. *Accept:* the section 8 identity, multi-project, solo-project, invitation, authorization/revocation, offline queue, ownership and archive checks pass; a user signs in from another browser and opens only their authorized projects/history. Integrate project dashboards in task 11. Commit: `Accounts: browser access and project management`.
 11. **Dashboard and price list screens.** Three lead numbers, BoQ progress, variance; editable demo rates with the verify-before-use label, and user-supplied project BoQ rates in the selected currency. Apply section 10's project currency amendment across money displays; never combine totals in different currencies. *Accept:* figures match the costing tests and all money uses the correct project/report currency. Commit: `UI: dashboard and price list`.
 12. **UI polish pass.** Apply section 12 fully: palette, type, ruled tables, stamp, real photos, states for empty/loading/error/offline. *Accept:* no item from the "looks AI-generated" list remains on any screen. Commit: `Design: site diary polish`.
 13. **Deploy.** Production deploy, environment variables set, Telegram webhook pointed at production, working URL tested on a phone over mobile data. *Accept:* the full demo flow works on the deployed URL, not just locally. Commit: `Ship: production deploy`.
@@ -683,7 +704,8 @@ Paste one at the start of the relevant session. `AGENTS.md` already points Codex
 
 SiteLedger AI is done when all of the following are true at once:
 
-- A stranger can open the live URL, follow the Telegram deep link, send a voice note, confirm the extraction, and receive a costed report and PDF — without the builder's help.
+- An invited user can verify their account, confirm a professional name, join only an authorized project, connect Telegram, send a voice note, confirm the extraction, and receive a costed report and PDF without manual database help. An uninvited stranger can view the fictional public demo but cannot access private projects.
+- Task 10A's team, multi-project role, solo-project, revocation and archive requirements pass before submission.
 - The money maths is tested, hand-checked, and sourced only from the price list.
 - A locked report demonstrably cannot be edited, and an amendment can be added.
 - The GitHub repo is public, runs from its README, contains a genuine and populated `/.kiro` directory, and contains no secrets.

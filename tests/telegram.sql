@@ -24,15 +24,33 @@ begin
     raise exception 'Unlinked user created evidence';
   end if;
   receipt := public.prepare_telegram_intake(910003, payload || '{"kind":"start","project_code":"LEKKI-DEMO-01"}', owner_id);
+  if exists (select 1 from public.telegram_users where telegram_id = 910000001)
+    or receipt->>'submission_id' is not null or receipt->>'storage_path' is not null then
+    raise exception 'Knowing the public demo code must not grant membership or create evidence';
+  end if;
+  -- Only a trusted server grant may authorize an account before task 10A invitations.
+  insert into public.telegram_users(telegram_id, display_name, project_id, role)
+  select 910000001, 'Professional test name', id, 'foreman' from public.projects where project_code='LEKKI-DEMO-01';
+  receipt := public.prepare_telegram_intake(910000, payload || '{"kind":"start","project_code":"LEKKI-DEMO-01","role":"pm"}', owner_id);
   if (select role from public.telegram_users where telegram_id = 910000001) <> 'foreman' then
-    raise exception 'Start must link the foreman';
+    raise exception 'Start must preserve the authorized foreman';
   end if;
   update public.telegram_users set role = 'pm' where telegram_id = 910000001;
   receipt := public.prepare_telegram_intake(910004, payload || '{"kind":"start","project_code":"LEKKI-DEMO-01"}', owner_id);
   if (select role from public.telegram_users where telegram_id = 910000001) <> 'pm' then
     raise exception 'Start must preserve an existing PM role on the same project';
   end if;
-  raise notice 'PASS: invalid/unlinked intake refused; start links and preserves existing PM';
+  if (select display_name from public.telegram_users where telegram_id=910000001) <> 'Professional test name' then
+    raise exception 'Start must not overwrite the stored name with a Telegram display name';
+  end if;
+  insert into public.projects(project_code,name,client,location,is_demo)
+  values('OTHER-AUTHORIZED-SITE','Other fictional site','Fictional client','Lagos',true);
+  receipt := public.prepare_telegram_intake(910099, payload || '{"kind":"start","project_code":"OTHER-AUTHORIZED-SITE","role":"pm"}', owner_id);
+  if (select project_id from public.telegram_users where telegram_id=910000001)
+    <> (select id from public.projects where project_code='LEKKI-DEMO-01') then
+    raise exception 'Start must not reassign membership to a different site';
+  end if;
+  raise notice 'PASS: known code cannot enroll or reassign accounts; authorized roles/names preserved';
 
   photo_payload := payload || '{"kind":"photo","file_id":"test-photo","content_type":"image/jpeg","text":"East elevation"}';
   receipt := public.prepare_telegram_intake(910005, photo_payload, owner_id);

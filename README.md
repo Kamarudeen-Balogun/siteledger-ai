@@ -4,7 +4,7 @@ SiteLedger turns a foreman's voice note and site photos into a human-confirmed d
 
 ## Current state
 
-The builder approved an additional pre-submission milestone on 18 November 2026: finish the core report flow, then add email/password browser access, recovery, linked Telegram identity and private project creation/selection/archive in task 10A. Projects will select a currency and use BoQ rates supplied in that currency; the demo stays NGN, without exchange-rate conversion. Existing reports retain their original currency. Per-project dashboards and analysis follow in task 11, with totals kept separate for different currencies. These capabilities are planned and not yet implemented.
+The builder approved an additional pre-submission milestone on 18 November 2026: finish the core report flow, then add email/password browser access, recovery, linked Telegram identity and private project creation/selection/archive in task 10A. Projects will select a currency and use BoQ rates supplied in that currency; the demo stays NGN, without exchange-rate conversion. Existing reports retain their original currency. Per-project dashboards and analysis follow in task 11, with totals kept separate for different currencies. The 19 November builder amendment adds owner-controlled invitations and team membership, professional names, separate roles per project, one-person owner/PM workflows and access revocation. The detailed safeguards and acceptance checks are in brief section 8. These task 10A capabilities are planned and not yet implemented.
 
 The foundation is a Next.js App Router application with TypeScript, Tailwind CSS, a site-diary placeholder, and tracked `.kiro` preparation files. Task 2 adds the eight database tables, protected record snapshots, the fictional demo history, and a read-only demo summary query. Task 3 implements Telegram account linking and private voice/photo storage, with retry protection and WAT daily grouping.
 
@@ -16,7 +16,7 @@ Task 6 adds the pure `costReport(items, priceList)` engine with 21 tests. It cal
 
 Task 7 adds private daily reports and server-generated A4 PDFs headed **Perkins Limited**, the builder's chosen firm name. **Confirm and cost it** saves the human confirmation, costs it against the BoQ and opens a draft report. The document includes weather, work, progress, red variance, materials, delays, issues, attached photos and signature blocks. The builder's confirmed note now has a verified ₦551,000 draft and PDF; original evidence and locked history were preserved.
 
-Task 8 adds PM approval, immutable locked reports, append-only amendment notes and private timestamp-ordered dispute logs. The PM must review the current draft and acknowledge locking. Changed drafts cannot be approved through an old view. Amendments retain the original report and resolve the author from the linked account; retries do not duplicate approval or amendments. The builder's separate **Kamarudeen Balogun** Telegram account was assigned PM with their authorization; the original account remains foreman. A read-only live check verified both interfaces and preserved the real draft for the builder's own approval.
+Task 8 adds PM approval, immutable locked reports, append-only amendment notes and private timestamp-ordered dispute logs. The PM must review the current draft and acknowledge locking. Changed drafts cannot be approved through an old view. Amendments retain the original report and resolve the author from the linked account; retries do not duplicate approval or amendments. The builder's separate **Kamarudeen Balogun** Telegram account was assigned PM with their authorization; the original account remains foreman. The builder approved the real ₦551,000 report and saved a test amendment on 19 November; a read-only check confirmed the lock, amendment and unchanged transcript/extraction. Log display now shows newest records first. See [the task 8 follow-up](.kiro/specs/siteledger/task-8-follow-up.md).
 
 The planned project **4-Bedroom Duplex, Lekki Phase 1, Lagos** and its client and report history are fictional demo data. Rates in the brief are illustrative demo rates, not live market prices.
 
@@ -31,7 +31,7 @@ npm ci
 npm run dev
 ```
 
-Open <http://localhost:3000>. The placeholder runs without credentials; the demo summary endpoint needs a configured database.
+Open <http://localhost:3000>. The placeholder and frozen fictional demo summary run without credentials; private report and bot flows need configured services.
 
 Before implementing integrations, copy `.env.example` to `.env.local` and fill the relevant values locally. Real `.env` files must not be committed.
 
@@ -85,7 +85,7 @@ Configuration references: [Codex project configuration](https://developers.opena
 
 ### Demo summary
 
-`GET /api/projects/LEKKI-DEMO-01/summary` returns the demo project's contract sum, stored cumulative cost, report count, amendment count, and BoQ progress. Only projects marked `is_demo` are exposed by this endpoint. Database reads use the service-role key on the server; browser roles cannot access the tables directly. Missing configuration or a database outage returns a plain 503 response.
+`GET /api/projects/LEKKI-DEMO-01/summary` returns a frozen JSON export of the original fictional seed in `lib/data/demo-summary.json`: 12 reports, one amendment and their BoQ progress. It makes no database call, so new private records or live rate changes on the demo project cannot become public totals. Other project codes return 404. Database roles remain restricted for private routes.
 
 The seed includes 12 approved reports dated 3–16 November 2026, 168 / 420 m² of 225mm blockwork, one rain delay, one defect follow-up amendment, and an excavation overrun. Stored costs capture the BoQ rate at confirmation; later rate edits preserve locked history. The summary aggregates stored records; it is not the task 6 costing engine or the task 11 dashboard.
 
@@ -95,7 +95,7 @@ Task 2 validation: migrations and seed pass on PostgreSQL 17; `npm run db:check`
 
 ### Telegram intake — task 3
 
-The bot is [@SiteLedgerNGbot](https://t.me/SiteLedgerNGbot?start=LEKKI-DEMO-01). Open the project link and tap **Start**, then send a voice note and 1–5 photos. `/help` describes intake; `/today` reports whether a site note is saved at this build stage. Other text and photo captions are preserved as notes. Reports and costed summaries follow the later tasks.
+The bot is [@SiteLedgerNGbot](https://t.me/SiteLedgerNGbot?start=LEKKI-DEMO-01). Only a previously authorized account can use the project link: tap **Start**, then send a voice note and 1–5 photos. Knowing the public demo code grants no access; unapproved accounts must ask the project owner. The current test accounts were explicitly authorized by the builder. Self-service targeted invitations and professional-name onboarding arrive in task 10A. `/help` describes intake; `/today` reports whether a site note is saved at this build stage. Other text and photo captions are preserved as notes. Reports and costed summaries follow the later tasks.
 
 Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET` in the ignored `.env.local`. The webhook secret must contain 1–256 letters, digits, underscores, or hyphens. Run the app on an HTTPS origin (a temporary tunnel works during development), then register the webhook:
 

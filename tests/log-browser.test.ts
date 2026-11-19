@@ -25,6 +25,9 @@ test("PM locks reviewed work; UI/API/database protect originals while linked ame
   page.setDefaultTimeout(15000);page.setDefaultNavigationTimeout(20000);
   const errors:string[]=[];page.on("pageerror",error=>errors.push(error.message));
   try {
+    const publicBefore = await (await page.request.get(`${base}/api/projects/LEKKI-DEMO-01/summary`)).json();
+    assert.equal(publicBefore.project.locked_report_count,12);
+    assert.equal(publicBefore.project.amendment_count,1);
     await page.goto(`${base}/confirm/${id}?access=${encodeURIComponent(token)}`,{waitUntil:"domcontentloaded"});
     await page.locator('[name="w0.boq"]').selectOption(boq);
     await page.getByRole("button",{name:"Confirm and cost it",exact:true}).click();
@@ -61,8 +64,20 @@ test("PM locks reviewed work; UI/API/database protect originals while linked ame
     assert.equal((await page.request.post(endpoint,{headers,data:{...payload,note:"Changed retry"}})).status(),409);
     assert.equal((await page.request.delete(endpoint,{headers})).status(),405);
     assert.equal(sql(`select count(*) from public.amendments a join public.reports r on r.id=a.report_id where r.submission_id='${id}';`),"2");
+    // Even a live write on the demo project must not enter the public preview.
+    sql(`update public.telegram_users set project_id=(select id from public.projects where project_code='LEKKI-DEMO-01') where telegram_id=800091;
+      insert into public.amendments(report_id,author,note)
+      values('40000000-0000-4000-8000-000000000001','QA PM','Private demo-project note that must not be public');`);
+    const publicAfter=await page.request.get(`${base}/api/projects/LEKKI-DEMO-01/summary`);
+    assert.equal(publicAfter.status(),200);
+    assert.deepEqual(await publicAfter.json(),publicBefore);
+    assert.equal((await page.request.get(`${base}/api/projects/LOCAL-BROWSER-LOG/summary`)).status(),404);
+    sql(`update public.telegram_users set project_id='${project}' where telegram_id=800091;`);
     await page.getByRole("link",{name:"Dispute log",exact:true}).click();
     await page.getByText("QA inspection completed; original observation retained.",{exact:true}).waitFor();
+    assert.match(await page.locator("ol > li").nth(0).innerText(), /A second QA correction for retry verification\./);
+    assert.match(await page.locator("ol > li").nth(1).innerText(), /QA inspection completed; original observation retained\./);
+    assert.match(await page.locator("ol > li").nth(2).innerText(), /LOCKED REPORT/);
     assert.equal(await page.getByRole("link",{name:"Open original report",exact:true}).count(),2);
     await page.screenshot({path:"supabase/.temp/task-8/mobile-log.png",fullPage:true});
     await page.setViewportSize({width:1280,height:900});await page.screenshot({path:"supabase/.temp/task-8/desktop-log.png",fullPage:true});
