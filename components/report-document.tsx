@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, type ReportView } from "@/lib/reports/model";
+import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, lockDate, type ReportView } from "@/lib/reports/model";
 import { formatNaira } from "@/lib/costing/format-naira";
 
 export function ReportDocument({ report, access }: { report: ReportView; access?: string }) {
@@ -9,7 +9,7 @@ export function ReportDocument({ report, access }: { report: ReportView; access?
     <header className="report-header">
       <p className="report-eyebrow">Daily site record / {doc.currency}</p>
       <p className="report-firm">{doc.firm_name}</p>
-      {report.status === "locked" && <div className="report-stamp">LOCKED<span>{source.date}</span></div>}
+      {report.status === "locked" && <div className="report-stamp">LOCKED<span>{lockDate(report)}</span></div>}
       <h1>Daily site report</h1>
       <dl className="report-meta">{[["Project", source.project.name], ["Client", source.project.client], ["Location", source.project.location],
         ["Date", displayDate(source.date)], ["Weather", doc.weather || "Not recorded"]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>

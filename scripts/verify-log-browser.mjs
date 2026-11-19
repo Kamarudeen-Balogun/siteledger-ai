@@ -1,0 +1,103 @@
+// This irreversible-flow check uses a disposable clone, never the live app DB.
+import { spawn, spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { createServer } from "node:http";
+import { join } from "node:path";
+const root = process.cwd(), suffix = randomUUID().slice(0,8);
+const database = `siteledger_log_qa_${suffix}`, container = `siteledger_log_qa_${suffix}`;
+const dbContainer = "supabase_db_siteledger-ai", base = "http://127.0.0.1:3012", api = "http://127.0.0.1:55423", gateway = "http://127.0.0.1:55424";
+function command(name, args, input) {
+  const result = spawnSync(name, args, { cwd: root, input, encoding: "utf8", windowsHide: true, maxBuffer: 20 * 1024 * 1024 });
+  if (result.status !== 0) {
+    const detail = (result.stderr ?? "").replace(/postgres(?:ql)?:\/\/\S+/g,"[database connection]")
+      .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g,"[credential]").slice(0,700);
+    throw new Error(`Local QA command failed: ${name} (${result.status}): ${detail}`);
+  }
+  return result.stdout;
+}
+const inspect = JSON.parse(command("docker", ["inspect", "supabase_rest_siteledger-ai"]))[0];
+const restEnv = Object.fromEntries(inspect.Config.Env.map(value => { const i=value.indexOf("="); return [value.slice(0,i),value.slice(i+1)]; }));
+const network = Object.keys(inspect.NetworkSettings.Networks).find(value => value.includes("siteledger-ai"));
+if (!network || !restEnv.PGRST_DB_URI) throw new Error("SiteLedger local REST configuration is required.");
+const localCliEnv = { ...process.env, SUPABASE_HOME: join(root,"supabase/.temp/cli-home"), SUPABASE_PROFILE: "supabase" };
+const status = spawnSync(process.platform === "win32" ? process.env.ComSpec ?? "cmd.exe" : "supabase",
+  process.platform === "win32" ? ["/d","/s","/c","supabase.cmd status -o json"] : ["status","-o","json"],
+  { cwd: root, env: localCliEnv, encoding: "utf8", windowsHide: true });
+if (status.status !== 0) throw new Error("Start SiteLedger local Supabase first.");
+const settings = JSON.parse(status.stdout);
+if (settings.API_URL !== "http://127.0.0.1:55421" || !settings.SERVICE_ROLE_KEY) throw new Error("Expected SiteLedger local credentials.");
+const uri = new URL(restEnv.PGRST_DB_URI); uri.pathname = `/${database}`;
+let created = false, started = false, preview, proxy;
+async function ready(url, expected, authenticated = false) {
+  const end = Date.now() + 30000;
+  let last = "no response";
+  while (Date.now() < end) {
+    try { const response = await fetch(url, { signal: AbortSignal.timeout(3000),
+      method: authenticated ? "POST" : "GET", body: authenticated ? "{}" : undefined,
+      headers: authenticated ? { Authorization: `Bearer ${settings.SERVICE_ROLE_KEY}`, "Content-Type": "application/json" } : {} });
+      last = `HTTP ${response.status}`;
+      if (response.ok && (!expected || (await response.text()).includes(expected))) return; } catch(error) { last = error.name; }
+    await new Promise(resolve => setTimeout(resolve,250));
+  }
+  throw new Error(`Local QA preview did not become ready (${last}).`);
+}
+try {
+  command("docker", ["exec",dbContainer,"createdb","-U","postgres","--template=template0",database]); created = true;
+  command("docker",["exec",dbContainer,"psql","-U","postgres","-d",database,"-v","ON_ERROR_STOP=1","-c","drop schema public cascade;"]);
+  const dump = command("docker", ["exec",dbContainer,"pg_dump","-U","postgres","-d","postgres","--schema=public","--no-owner","--no-acl"]);
+  command("docker", ["exec","-i",dbContainer,"psql","-U","postgres","-d",database,"-v","ON_ERROR_STOP=1"], dump);
+  // Recreate the server-only access boundary inside this fresh test database;
+  // hosted platform default ACLs are owned by roles the local restore cannot alter.
+  command("docker",["exec",dbContainer,"psql","-U","postgres","-d",database,"-v","ON_ERROR_STOP=1","-c",
+    "grant usage on schema public to anon,authenticated,service_role; revoke all on all tables in schema public from public,anon,authenticated; grant select,insert,update,delete on all tables in schema public to service_role; revoke all on all functions in schema public from public,anon,authenticated; grant execute on all functions in schema public to service_role;"]);
+  const envArgs = Object.entries(restEnv).filter(([key]) => key.startsWith("PGRST_") && !["PGRST_DB_URI","PGRST_DB_SCHEMAS","PGRST_DB_EXTRA_SEARCH_PATH","PGRST_DB_PRE_REQUEST"].includes(key))
+    .flatMap(([key,value]) => ["--env",`${key}=${value}`]);
+  command("docker", ["run","--detach","--rm","--name",container,"--network",network,"--publish","127.0.0.1:55423:3000",
+    ...envArgs,"--env",`PGRST_DB_URI=${uri}`,"--env","PGRST_DB_SCHEMAS=public","--env","PGRST_DB_EXTRA_SEARCH_PATH=public",inspect.Config.Image]); started = true;
+  await ready(api + "/rpc/get_demo_dispute_log", undefined, true);
+  // The application uses Supabase's /rest/v1 prefix. A local loopback gateway
+  // strips that prefix for the disposable REST server; no external URL is used.
+  proxy = createServer(async (request,response) => {
+    if (!request.url?.startsWith("/rest/v1/")) { response.writeHead(404);response.end();return; }
+    try {
+      const chunks=[];let length=0;
+      for await(const chunk of request) { length+=chunk.length;if(length>1024*1024){response.writeHead(413);response.end();return;}chunks.push(chunk); }
+      const headers=Object.fromEntries(Object.entries(request.headers).filter(([key])=>!["host","connection","content-length"].includes(key))
+        .map(([key,value])=>[key,Array.isArray(value)?value.join(","):value]));
+      const result=await fetch(new URL(request.url.slice("/rest/v1".length),api),{method:request.method,headers,
+        body:chunks.length?Buffer.concat(chunks):undefined,redirect:"error",signal:AbortSignal.timeout(10000)});
+      response.writeHead(result.status,{"Content-Type":result.headers.get("content-type")??"application/json"});
+      response.end(Buffer.from(await result.arrayBuffer()));
+    } catch {response.writeHead(503);response.end();}
+  });
+  await new Promise((resolve,reject)=>{proxy.once("error",reject);proxy.listen(55424,"127.0.0.1",resolve);});
+  const env = { ...process.env, NEXT_PUBLIC_SUPABASE_URL: gateway, NEXT_PUBLIC_SUPABASE_ANON_KEY: settings.ANON_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: settings.SERVICE_ROLE_KEY, TELEGRAM_WEBHOOK_SECRET: "local-log-preview", SITELEDGER_APP_URL: base,
+    TELEGRAM_BOT_TOKEN: "", GROQ_API_KEY: "", GEMINI_API_KEY: "", GONKAROUTER_API_KEY: "" };
+  preview = spawn(process.execPath, ["node_modules/next/dist/bin/next","start","--hostname","127.0.0.1","--port","3012"],
+    { cwd: root, env, stdio: "ignore", windowsHide: true });
+  await ready(base + "/reports/demo", "Perkins Limited");
+  console.info("Isolated local clone ready; hosted data and the normal local stack are not used for browser writes.");
+  const check = spawn(process.execPath, ["--conditions=react-server","--import","tsx","--test","tests/log-browser.test.ts"],
+    { cwd: root, env: { ...env, SITELEDGER_LOG_QA_DATABASE: database }, stdio: "inherit", windowsHide: true });
+  const code = await new Promise(resolve => check.on("exit",resolve));
+  process.exitCode = code ?? 1;
+} catch(error) {
+  if (started) {
+    const logs = spawnSync("docker",["logs","--tail","6",container],{encoding:"utf8",windowsHide:true});
+    let detail = String(logs.stdout ?? "") + String(logs.stderr ?? "");
+    for (const value of [settings.SERVICE_ROLE_KEY,settings.ANON_KEY,restEnv.PGRST_JWT_SECRET]) if(value) detail=detail.split(value).join("[credential]");
+    console.error(detail.replace(/postgres(?:ql)?:\/\/\S+/g,"[database connection]"));
+  }
+  throw error;
+} finally {
+  if (preview) {
+    preview.kill();
+    await Promise.race([new Promise(resolve => preview.once("exit",resolve)), new Promise(resolve => setTimeout(resolve,3000))]);
+  }
+  if(proxy){proxy.closeAllConnections();await new Promise(resolve=>proxy.close(resolve));}
+  if (!/^siteledger_log_qa_[a-f0-9]{8}$/.test(database) || container !== database) throw new Error("Unsafe QA cleanup target.");
+  if (started) command("docker",["rm","--force",container]);
+  if (created) command("docker",["exec",dbContainer,"dropdb","-U","postgres","--force",database]);
+  console.info("Disposable QA API and database removed. Original records preserved.");
+}

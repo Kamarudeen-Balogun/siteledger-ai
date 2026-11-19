@@ -14,7 +14,9 @@ Task 5 adds the private mobile confirmation screen. Work items, materials, delay
 
 Task 6 adds the pure `costReport(items, priceList)` engine with 21 tests. It calculates exact costs, cumulative quantities, completion, earned value, planned variance, overruns and crew productivity. Money uses decimal arithmetic and returns decimal strings; only the NGN display formatter rounds to the nearest ₦10. A read-only check of the builder's saved confirmation matches PostgreSQL: 18 m² blockwork costs ₦261,000 and 2 m³ concrete costs ₦290,000, totalling ₦551,000.
 
-Task 7 adds private daily reports and server-generated A4 PDFs headed **Perkins Limited**, the builder's chosen firm name. **Confirm and cost it** saves the human confirmation, costs it against the BoQ and opens a draft report. The document includes weather, work, progress, red variance, materials, delays, issues, attached photos and signature blocks. The builder's confirmed note now has a verified ₦551,000 draft and PDF; original evidence and locked history were preserved. Approval, locking and the amendment interface are task 8.
+Task 7 adds private daily reports and server-generated A4 PDFs headed **Perkins Limited**, the builder's chosen firm name. **Confirm and cost it** saves the human confirmation, costs it against the BoQ and opens a draft report. The document includes weather, work, progress, red variance, materials, delays, issues, attached photos and signature blocks. The builder's confirmed note now has a verified ₦551,000 draft and PDF; original evidence and locked history were preserved.
+
+Task 8 adds PM approval, immutable locked reports, append-only amendment notes and private timestamp-ordered dispute logs. The PM must review the current draft and acknowledge locking. Changed drafts cannot be approved through an old view. Amendments retain the original report and resolve the author from the linked account; retries do not duplicate approval or amendments. The builder's separate **Kamarudeen Balogun** Telegram account was assigned PM with their authorization; the original account remains foreman. A read-only live check verified both interfaces and preserved the real draft for the builder's own approval.
 
 The planned project **4-Bedroom Duplex, Lekki Phase 1, Lagos** and its client and report history are fictional demo data. Rates in the brief are illustrative demo rates, not live market prices.
 
@@ -172,6 +174,30 @@ For the isolated production browser check, run `npm run build`, then `node scrip
 
 Verification covers 61 automated tests across intake, AI, confirmation, costing, reports and the mobile browser flow, plus five local SQL suites, lint, TypeScript and the production build. The final demo PDF was visually checked on both A4 pages, with footer/page numbers, signature blocks, naira figures and red overrun. The builder's confirmed draft exports the exact ₦551,000 total. Its note has no attached photos: the four photos remain on the earlier unconfirmed note. The actual renderer included all four in a clearly labelled local PDF fixture without moving them, confirming that note or inventing findings. See [task 7 evidence and Kiro review prompt](.kiro/specs/siteledger/task-7-handoff.md).
 
+## Approval and dispute log (task 8)
+
+Apply `supabase/migrations/20261119000100_dispute_log.sql` and `20261119000200_pm_review_navigation.sql` after the report migration. Both have been applied to SiteLedger's local and scoped hosted databases. Existing locked reports, original transcripts, extractions, photos and amendment contents remain unchanged.
+
+In the PM Telegram account, open the **SiteLedger** Mini App menu. PM navigation prioritizes pending drafts across dates, then today's notes, and otherwise allows reopening the latest existing report. This makes a prior-day draft reviewable and its locked dispute log reachable. Foreman navigation keeps its existing today-only behavior. The same project/role checks protect every private read.
+
+Open **Open costed report**, review the document, tick the acknowledgement and choose **Approve and lock report**. The server verifies the reviewed document version and rechecks the confirmation, BoQ, pending evidence and locked history under database locks. Approval stores the server-resolved PM name and lock time, and existing triggers lock the source evidence atomically. A retry retains the original approval and timestamp. The web/PDF stamp shows the lock date in WAT, even for a prior-day report. Foremen cannot approve.
+
+Locked reports show **Add an amendment** and **Dispute log**. A correction is a new note linked to the original, with its author and timestamp; it does not rewrite quantities, totals or the original PDF. Amendment timestamps are recorded after the report lock even when a request waits on approval. Reusing the same request ID/text returns the existing amendment; changing the text for that ID is rejected. Neither reports nor amendments have edit/delete actions. APIs and database triggers also enforce the protection.
+
+Private logs show a foreman's own locked records or the linked PM's project records. Links to earlier reports retain the original review link's expiry. The public `/log/demo` contains only the 12 original fictional seeded reports and their original amendment, excluding real Telegram work and new private corrections.
+
+```sh
+npm run test:log
+npm run db:check-log
+npm run build
+npx playwright install chromium
+npm run test:log-browser
+```
+
+The last command starts a disposable database clone, a private test REST server/gateway and a production preview on port 3012; ports 55423 and 55424 must be free. It requires SiteLedger's local Docker/Supabase stack. It never changes `.env.local` or writes browser fixtures into the original local/hosted application databases. Its locked QA records disappear with the disposable database, without disabling the application guards. It removes the temporary API, gateway and database when finished. PDFs/screenshots remain ignored under `supabase/.temp/task-8/`.
+
+Task 8 verification totals **66 automated tests**: 64 unit/API tests and both report/log browser tests, plus six transactional SQL suites, lint, TypeScript and the production build. The browser check covers foreman-to-PM handoff, prior-day PM navigation, approval, a locked PDF, absent edit/rebuild controls, blocked API methods, amendments, retry conflicts, unchanged original documents, denied stranger access and mobile/desktop logs. The locked A4 PDF was visually checked. A live read-only check verified the builder's PM/foreman screens, ₦551,000 draft and configured HTTPS phone-test origin. No real report was approved by the agent. See [task 8 evidence and Kiro review prompt](.kiro/specs/siteledger/task-8-handoff.md).
+
 ## Project structure
 
 ```text
@@ -187,6 +213,7 @@ lib/
   confirm/             private review access, validation and evidence reads
   costing/             pure costing function and types
   reports/             verified report sources, snapshots and private draft creation
+  log/                 PM approval, append-only amendments and private dispute-log access
   telegram/            intake handlers
   pdf/                 report template
 supabase/

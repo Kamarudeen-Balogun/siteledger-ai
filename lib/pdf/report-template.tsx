@@ -1,7 +1,7 @@
 import "server-only";
 import { join } from "node:path";
 import { Document, Page, Text, View, Image as PdfImage, Font, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
-import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, type ReportView } from "../reports/model";
+import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, lockDate, type ReportView } from "../reports/model";
 import { formatNaira } from "../costing/format-naira";
 
 Font.register({ family: "PublicSans", fonts: [
@@ -45,7 +45,7 @@ export async function renderReportPdf(report: ReportView, photos: string[] = [])
     <Page size="A4" style={styles.page}>
       <Text style={styles.eyebrow}>DAILY SITE RECORD / {doc.currency}</Text>
       <Text style={styles.firm}>{doc.firm_name}</Text>
-      {report.status === "locked" && <View style={styles.stamp}><Text>LOCKED</Text><Text>{source.date}</Text></View>}
+      {report.status === "locked" && <View style={styles.stamp}><Text>LOCKED</Text><Text>{lockDate(report)}</Text></View>}
       <Text style={styles.title}>Daily site report</Text>
       <View style={styles.rule}>
         {[['Project', source.project.name], ['Client', source.project.client], ['Location', source.project.location],

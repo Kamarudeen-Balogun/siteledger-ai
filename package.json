@@ -22,7 +22,10 @@
     "test:costing": "node --import tsx --test tests/costing.test.ts",
     "test:reports": "node --conditions=react-server --import tsx --test tests/reports.test.ts",
     "db:check-reports": "node scripts/check-database.mjs tests/reports.sql",
-    "test:report-browser": "node --conditions=react-server --import tsx --test tests/report-browser.test.ts"
+    "test:report-browser": "node --conditions=react-server --import tsx --test tests/report-browser.test.ts",
+    "test:log": "node --conditions=react-server --import tsx --test tests/log.test.ts",
+    "db:check-log": "node scripts/check-database.mjs tests/log.sql",
+    "test:log-browser": "node scripts/verify-log-browser.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",

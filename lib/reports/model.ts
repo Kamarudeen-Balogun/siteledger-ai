@@ -43,5 +43,6 @@ export function reportFromInput(input: ReportInput): ReportView | null {
 export const displayUnit = (unit: string) => ({ m2: "m²", m3: "m³" }[unit] ?? unit);
 export const displayDate = (date: string) => new Intl.DateTimeFormat("en-NG", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Lagos" }).format(new Date(date + "T12:00:00+01:00"));
 export const displayTimestamp = (date: string) => new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Lagos" }).format(new Date(date)) + " WAT";
+export const lockDate = (report: ReportView) => report.locked_at ? new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Africa/Lagos" }).format(new Date(report.locked_at)) : report.document.source.date;
 export const displayRatio = (value: string, digits = 1) => new Intl.NumberFormat("en-NG", { maximumFractionDigits: digits }).format(Number(value));
 export const displayProductivity = (value: string) => new Intl.NumberFormat("en-NG", { maximumSignificantDigits: 3 }).format(Number(value));
