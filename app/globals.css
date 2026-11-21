@@ -30,6 +30,11 @@ body {
   color: #1c1917;
 }
 
+.action-dialog { position: fixed; inset: 0; margin: auto; width: min(calc(100% - 32px), 520px); max-height: calc(100dvh - 48px); padding: 0; overflow-y: auto; color: var(--foreground); background: var(--background); border: 1px solid var(--foreground); border-top: 4px solid var(--accent); animation: dialog-enter 140ms ease-out; }
+.action-dialog::backdrop { background: rgb(28 25 23 / 45%); }
+@keyframes dialog-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .action-dialog { animation: none; } }
+
 @font-face { font-family: "Report Sans"; src: url("/fonts/PublicSans-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Report Sans"; src: url("/fonts/PublicSans-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
 @font-face { font-family: "Report Serif"; src: url("/fonts/SourceSerif4-Regular.ttf") format("truetype"); font-display: swap; }

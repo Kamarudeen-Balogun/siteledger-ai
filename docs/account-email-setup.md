@@ -6,8 +6,12 @@ Use the Free plans; no billing upgrade or automatic top-up is needed.
 
 ## Turnstile
 
-1. In Cloudflare Turnstile, create a Managed widget for localhost and the app's
-   hostname when available.
+1. In Cloudflare Turnstile, create a Managed widget. Under Settings / Hostname
+   Management, allow each hostname where the app runs. For this development
+   preview, add `chip-chaplain-tapeless.ngrok-free.dev`, `localhost` and
+   `127.0.0.1`, then save. Enter hostnames only, without a scheme, port or path.
+   Add the production hostname when deploying; update this list if the tunnel
+   hostname changes.
 2. Set NEXT_PUBLIC_TURNSTILE_SITE_KEY in .env.local and later the hosting settings.
 3. In Supabase Authentication / Bot and Abuse Protection, enable CAPTCHA with
    Turnstile and its secret key. Store the secret there, never in Git or chat.
@@ -15,6 +19,26 @@ Use the Free plans; no billing upgrade or automatic top-up is needed.
    New users enter the signup email code before their first login.
 5. Enable the Postgres Before User Created hook public.account_signup_hook after
    its migration is tested and applied. It caps native signup attempts as well.
+
+The public site key and the secret saved in Supabase must belong to the same
+widget. Error `110200` means the current hostname is not authorized; errors
+`110100` and `110110` mean the site key needs correcting. The app offers **Retry
+bot check** after a failure or expiry. Authentication remains disabled until a
+fresh challenge succeeds. Keep native CAPTCHA enabled and use production keys
+for the hosted app.
+
+## Telegram command suggestions
+
+Run `npm run telegram:configure-menu` after the HTTPS account page, webhook and
+account schema are ready. It publishes `/start`, `/account`, `/projects`,
+`/today`, `/reports`, `/help` and `/logout` to default and private-chat scopes,
+for both the default language and English, and verifies each saved list.
+
+Telegram's `setMyCommands` API writes the command settings used by BotFather's
+`/setcommands`; manual BotFather setup is unnecessary. A private-chat or language
+override can hide a newer default list. Open @SiteLedgerNGbot and type `/` to see
+the suggestions; reopen the chat if Telegram still shows a cached list. The
+SiteLedger menu button opens the secure account Mini App.
 
 ## Resend sender
 
@@ -67,3 +91,9 @@ and saved in Supabase. A read-only Auth check confirmed email confirmation on.
 Domain verification
 and delivery have not been observed by Codex. Preview rendering does not prove
 Gmail/Outlook rendering or delivery. The builder later confirms the Before User Created hook, all three HTML templates and the HTTPS Site URL saved. Native local SMTP/browser acceptance passes; actual hosted Resend delivery remains unobserved.
+
+21 November 2026 follow-up: real-widget checks found error `110200` on the
+local and tunnel hostnames. The builder saved the three allowed hostnames
+above; the error disappeared, and the builder confirmed **Success** with
+**Sign in** enabled in a regular browser. Automated Chromium did not complete
+the real challenge; disposable browser tests verify the retry/expiry flow.

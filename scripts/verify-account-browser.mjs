@@ -15,7 +15,7 @@ const restName = `${database}_rest`, authName = `${database}_auth`;
 const base = "http://127.0.0.1:3016", restUrl = "http://127.0.0.1:55531", authUrl = "http://127.0.0.1:55533", gateway = "http://127.0.0.1:55534";
 const smtpPort = 55532, captchaToken = "XXXX.DUMMY.TOKEN.XXXX", dummyBot = "account-acceptance-dummy-bot";
 const out = join(root,"supabase/.temp/task-10a/browser"), mail = [], media = new Map();
-let created = false, restStarted = false, authStarted = false, preview, proxy, smtp, browser;
+let created = false, restStarted = false, authStarted = false, preview, proxy, smtp, browser, forceAccountError = false;
 const keepAlive = setInterval(()=>{},1000);
 function command(name,args,input) {
   const result=spawnSync(name,args,{cwd:root,input,encoding:"utf8",windowsHide:true,maxBuffer:30*1024*1024});
@@ -76,6 +76,7 @@ try {
       if(request.url?.startsWith("/templates/")){const name=request.url.split("/").pop();if(!["signup.html","magic-link.html","recovery.html"].includes(name)){response.writeHead(404);response.end();return;}response.writeHead(200,{"Content-Type":"text/html"});response.end(await readFile(join(root,"supabase/templates",name)));return;}
       const chunks=[];let length=0;for await(const chunk of request){length+=chunk.length;if(length>4*1024*1024){response.writeHead(413);response.end();return;}chunks.push(chunk);}
       const body=Buffer.concat(chunks),path=request.url??"/";
+      if (forceAccountError && path === "/rest/v1/rpc/account_session") { response.writeHead(503,{"Content-Type":"application/json"});response.end('{"error":"private-fixture-details-must-not-appear"}');return; }
       if(path.startsWith("/storage/v1/object/")){
         const object=path.slice("/storage/v1/object/".length).replace(/^authenticated\//,"");
         if(request.headers.apikey!==settings.SERVICE_ROLE_KEY){response.writeHead(404);response.end();return;}
@@ -131,7 +132,7 @@ try {
   const invitations=[];
   for(const [i,role,context] of [[2,"foreman",foreman],[3,"pm",pm]]){const invitation=await action(owner,"projects/actions","invite",{project_id:project.id,email:emails[i],role});invitations.push(invitation);const secret=new URL(invitation.url).hash.slice(8);
     await action(other,"projects/actions","accept_invite",{secret},404);
-    if (i===2) {const acceptance=await context.newPage();await acceptance.goto(invitation.url);await acceptance.getByRole("checkbox").check();await acceptance.getByRole("button",{name:"Accept invitation",exact:true}).click();await acceptance.waitForURL(`${base}/projects/${project.id}`);}
+    if (i===2) {const acceptance=await context.newPage();await acceptance.goto(invitation.url);await acceptance.getByRole("checkbox").check();await acceptance.getByRole("button",{name:"Accept invitation",exact:true}).click();await acceptance.getByRole("dialog").getByRole("button",{name:"Accept invitation",exact:true}).click();await acceptance.waitForURL(`${base}/projects/${project.id}`);}
     else await action(context,"projects/actions","accept_invite",{secret});
     await action(context,"projects/actions","accept_invite",{secret},404);
   }
@@ -142,6 +143,16 @@ try {
   const cancelled=await action(owner,"projects/actions","invite",{project_id:project.id,email:emails[1],role:"foreman"});
   await action(owner,"projects/actions","cancel_invite",{project_id:project.id,invitation_id:cancelled.id});await action(other,"projects/actions","accept_invite",{secret:new URL(cancelled.url).hash.slice(8)},404);
   await page.goto(`${base}/projects/${project.id}/team`);await page.getByRole("heading",{name:"Active team",exact:true}).waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));await page.screenshot({path:join(out,"project-team-mobile.png"),fullPage:true});
+  await page.getByRole("button",{name:"Archive project",exact:true}).click();
+  const modal=page.getByRole("dialog");await modal.waitFor();assert.equal(await page.evaluate(()=>document.activeElement?.textContent),"Cancel");
+  await page.keyboard.press("Tab");assert.ok(await page.evaluate(()=>Boolean(document.activeElement?.closest("dialog"))),"Focus stays in the modal");
+  await page.screenshot({path:join(out,"archive-confirmation-mobile.png"),fullPage:true});
+  await page.keyboard.press("Escape");await modal.waitFor({state:"hidden"});assert.equal(sql(`select archived_at is null from public.account_projects where project_id='${project.id}';`),"t","Escape makes no archive mutation");
+  assert.equal(await page.evaluate(()=>document.activeElement?.textContent),"Archive project","Focus returns to the triggering action");
+  await page.getByRole("button",{name:"Archive project",exact:true}).click();await modal.getByRole("button",{name:"Cancel",exact:true}).click();assert.equal(sql(`select archived_at is null from public.account_projects where project_id='${project.id}';`),"t");
+  await page.getByRole("button",{name:"Archive project",exact:true}).click();await modal.getByRole("button",{name:"Archive project",exact:true}).click();await page.getByRole("button",{name:"Restore project",exact:true}).waitFor();
+  assert.equal(sql(`select count(*) from public.account_project_events where project_id='${project.id}' and action='archived';`),"1","Explicit confirmation performs the existing action once");
+  await page.getByRole("button",{name:"Restore project",exact:true}).click();await modal.getByRole("button",{name:"Restore project",exact:true}).click();await page.getByRole("button",{name:"Archive project",exact:true}).waitFor();
   console.log("Independent owners, targeted invites, replay/cancellation and different roles on two projects pass.");
   // Supply only the brief's NGN demo rate. A foreign decimal is a labelled fixture.
   const boq=sql(`insert into public.boq_items(project_id,item_code,section,description,unit,boq_quantity,rate) values('${project.id}','BLK-QA','Blockwork','Sandcrete blocks 225mm hollow, laid','m2',420,14500) returning id;`).split("\n")[0];
@@ -171,7 +182,8 @@ try {
   const version=createHash("sha256").update(JSON.stringify(report.report.document)).digest("hex");
   // Read the rendered version from the actual page; JSONB order is not JS source order.
   const reviewPage=await pm.newPage();await reviewPage.goto(`${base}/reports/${noteId}`);await reviewPage.getByRole("heading",{name:"Approve this daily record"}).waitFor();
-  await reviewPage.locator('form input[type="checkbox"]').check();await reviewPage.getByRole("button",{name:"Approve and lock report"}).click();await reviewPage.locator(".report-stamp").waitFor();
+  await reviewPage.locator('form input[type="checkbox"]').check();await reviewPage.getByRole("button",{name:"Approve and lock report",exact:true}).click();await reviewPage.getByRole("dialog").getByRole("button",{name:"Cancel",exact:true}).click();assert.equal(sql(`select status from public.reports where submission_id='${noteId}';`),"draft");
+  await reviewPage.getByRole("button",{name:"Approve and lock report",exact:true}).click();await reviewPage.getByRole("dialog").getByRole("button",{name:"Approve and lock report",exact:true}).click();await reviewPage.locator(".report-stamp").waitFor();
   await reviewPage.screenshot({path:join(out,"locked-report-mobile.png"),fullPage:true});
   assert.equal(sql(`select status from public.reports where submission_id='${noteId}';`),"locked");
   await action(foreman,"reports",`${noteId}/approve`,{document_version:version},403);
@@ -180,6 +192,8 @@ try {
   const pdf=await pm.request.get(`${base}/api/reports/${noteId}/pdf`);assert.equal(pdf.status(),200);
   const {writeFile}=await import("node:fs/promises");await writeFile(join(out,"locked-report.pdf"),await pdf.body());
   const original=sql(`select content_snapshot::text from public.reports where submission_id='${noteId}';`);
+  await reviewPage.locator('[name="note"]').fill("A correction for dialog cancellation QA.");await reviewPage.getByRole("button",{name:"Save amendment",exact:true}).click();await reviewPage.getByRole("dialog").getByRole("button",{name:"Cancel",exact:true}).click();
+  assert.equal(await reviewPage.locator('[name="note"]').inputValue(),"A correction for dialog cancellation QA.");assert.equal(sql(`select count(*) from public.amendments a join public.reports r on r.id=a.report_id where r.submission_id='${noteId}';`),"0");
   // Browser offline emulation tests the real IndexedDB queue and service worker.
   await foreman.route("https://telegram.org/js/telegram-web-app.js",route=>route.fulfill({contentType:"application/javascript",body:"window.Telegram={WebApp:{initData:'',ready(){},expand(){}}};"}));
   const diary=await foreman.newPage();await diary.goto(base+"/today");await diary.getByRole("button",{name:"Record voice note",exact:true}).waitFor();
@@ -226,6 +240,14 @@ try {
   await action(other,"account","reset_password",{email:emails[1],token:await codeFor(emails[1],mailStart),password:"changed-native-qa-password"});
   await action(other,"account","signin",{email:emails[1],password,captcha_token:captchaToken},400);
   const recovered=(await action(other,"account","signin",{email:emails[1],password:"changed-native-qa-password",captcha_token:captchaToken})).account;assert.equal(recovered.profile_id,accounts[1].profile_id);
+  const statusPage=await owner.newPage();const missing=await statusPage.goto(base+"/missing-acceptance-route");assert.equal(missing.status(),404);await statusPage.getByRole("heading",{name:"This page isn’t available."}).waitFor();assert.ok(await statusPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await statusPage.screenshot({path:join(out,"not-found-mobile.png"),fullPage:true});
+  forceAccountError=true;await statusPage.goto(base+"/account");await statusPage.getByRole("heading",{name:"We couldn’t open this page."}).waitFor();assert.equal((await statusPage.locator("body").innerText()).includes("private-fixture-details"),false);await statusPage.screenshot({path:join(out,"application-error-mobile.png"),fullPage:true});
+  forceAccountError=false;await statusPage.getByRole("button",{name:"Try again",exact:true}).click();await statusPage.getByRole("heading",{name:"Your account",exact:true}).waitFor();
+  const checkContext=await browser.newContext(),checkPage=await checkContext.newPage();
+  await checkContext.route("https://challenges.cloudflare.com/turnstile/**",route=>route.fulfill({contentType:"application/javascript",body:`window.failCheck=true;window.turnstile={render:(node,options)=>{window.expireCheck=options['expired-callback'];setTimeout(()=>window.failCheck?options['error-callback']('110200'):options.callback(${JSON.stringify(captchaToken)}),10);return 'qa';},remove:()=>{}};`}));
+  await checkPage.goto(base+"/account");await checkPage.getByRole("alert").filter({hasText:"not authorized for the bot check"}).waitFor();assert.equal(await checkPage.getByRole("button",{name:"Sign in",exact:true}).last().isDisabled(),true);
+  await checkPage.evaluate(()=>{window.failCheck=false;});await checkPage.getByRole("button",{name:"Retry bot check",exact:true}).click();await eventually(async()=>await checkPage.getByRole("button",{name:"Sign in",exact:true}).last().isEnabled(),"Retry did not obtain a fresh bot token");
+  await checkPage.evaluate(()=>window.expireCheck());assert.equal(await checkPage.getByRole("button",{name:"Sign in",exact:true}).last().isDisabled(),true,"Expired bot tokens cannot submit authentication");
   assert.deepEqual(errors,[]);
   console.log("Telegram same-profile linking/unlinking, accepted ownership, second-browser history and native email recovery pass.");
   console.log("Task 10A disposable native/browser acceptance passed. Artifacts: supabase/.temp/task-10a/browser.");

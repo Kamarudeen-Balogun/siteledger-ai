@@ -2,7 +2,8 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { readReportInput } from "@/lib/reports/data";
-import { reportFromInput } from "@/lib/reports/model";
+import { reportFromInput, displayDate } from "@/lib/reports/model";
+import { formatMoney } from "@/lib/costing/format-money";
 import { ReportDocument } from "@/components/report-document";
 import { ReportActions } from "@/components/report-actions";
 import { ApprovalForm } from "@/components/approval-form";
@@ -36,7 +37,7 @@ async function Report(props: Props) {
       <ReportDocument report={report} />
       <div className="report-toolbar">
         {report.status === "draft" && !report.stale && !reviewer?.archived && reviewer?.role === "pm" &&
-          <ApprovalForm id={id} version={reportVersion(report)} reviewer={reviewer.name} />}
+          <ApprovalForm id={id} version={reportVersion(report)} reviewer={reviewer.name} project={report.document.source.project.name} date={displayDate(report.document.source.date)} amount={formatMoney(report.document.costing.total_cost,report.document.currency)} />}
         {report.status === "draft" && reviewer?.role === "foreman" && <p className="my-5">Awaiting project manager approval. Your draft remains correctable until it is locked.</p>}
         {report.status === "locked" && !reviewer?.archived && <div id="amendment"><AmendmentForm id={id} /></div>}
       </div>

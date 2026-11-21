@@ -53,6 +53,11 @@ First-time Telegram users tap **Open SiteLedger** to use the same secure signup/
 | `/help` | See the intake and confirmation steps |
 | `/logout` | Disconnect Telegram access while preserving records |
 
+Type `/` in the bot chat to see these suggestions. The setup script publishes
+and verifies default/private-chat and English menus through Telegram's API,
+which updates the same settings as BotFather. Manual `/setcommands` setup is
+unnecessary.
+
 Interrupted Telegram uploads retain their original receipts. After access is restored, select the original project and use `/today` to resume queued media. Retries preserve the submission and never overwrite evidence.
 
 | Project access | Permissions |
@@ -65,11 +70,16 @@ An account can be a foreman on one project and a PM on another. A solo owner/PM 
 
 Invitations target a verified email, specify a role, expire after seven days and succeed once. Owners can cancel them. Removal immediately blocks new report, PDF and media requests. Archiving blocks new work while preserving authorized read access; the owner can restore the project.
 
+Consequential account, team and report actions show a review dialog before
+saving. Cancel or Escape keeps the action unsaved and returns focus to its
+button. Custom unavailable-page screens offer account/project navigation and
+retry guidance without exposing private error details.
+
 ## Current build status
 
 The core voice/photo → confirmation → costing → PDF → locked log flow is implemented, along with private accounts, projects, teams, secure Telegram linking and recovery.
 
-New projects start with an **empty BoQ**. The supplied-rate editor and dashboards are task 11. The approved private guest trial is task 10B, after task 10A is committed. Production deployment and the final demonstration/Kiro write-up remain later milestones. See [the ordered tasks](.kiro/specs/siteledger/tasks.md) and [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
+New projects start with an **empty BoQ**. The supplied-rate editor and dashboards are task 11. The approved private guest trial is task 10B, following the completed account resilience milestone 10A1. Production deployment and the final demonstration/Kiro write-up remain later milestones. See [the ordered tasks](.kiro/specs/siteledger/tasks.md) and [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
 
 The public `/reports/demo`, `/log/demo` and demo summary expose only the original fictional seed, excluding genuine uploads, private amendments and live totals. Rates are **illustrative, not live market prices**; use QS-verified rates for real work.
 
@@ -109,7 +119,7 @@ npm run telegram:configure-menu
 npm run setup:verify
 ```
 
-Menu setup verifies the bot, webhook, account page and database functions before publishing all seven commands. It preserves pending updates and prints no credentials. The workspace's `supabase_siteledger` MCP connection is scoped separately from unrelated projects.
+Menu setup verifies the bot, webhook, account page and database functions before publishing all seven commands in default/private-chat and English scopes. It preserves pending updates and prints no credentials. The workspace's `supabase_siteledger` MCP connection is scoped separately from unrelated projects.
 
 ### Offline use
 

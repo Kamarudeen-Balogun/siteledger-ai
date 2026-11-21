@@ -4,6 +4,7 @@ import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Turnstile } from "./turnstile";
+import { useActionConfirmation } from "./action-confirmation";
 import type { Account } from "@/lib/auth/types";
 import { clearCachedContext } from "@/lib/web/queue";
 
@@ -81,6 +82,7 @@ export function TelegramAccountEntry() {
   return <><Script src="https://telegram.org/js/telegram-web-app.js" onReady={() => { void connect(); }} /><Feedback error={error} />{error && <button className={button} onClick={connect}>Reconnect Telegram</button>}</>;
 }
 export function TelegramConnect({ account, siteKey }: { account: Account; siteKey: string }) {
+  const { confirm, confirmation } = useActionConfirmation();
   const router = useRouter(), [initData, setInitData] = useState(""), [error, setError] = useState(""), [busy, setBusy] = useState(false);
   const [other, setOther] = useState(false), [token, setToken] = useState(""), [reset, setReset] = useState(0);
   function ready() {
@@ -88,7 +90,9 @@ export function TelegramConnect({ account, siteKey }: { account: Account; siteKe
     if (app?.initData) { app.ready(); app.expand(); setInitData(app.initData); }
   }
   async function connect(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true); setError(""); const form = new FormData(event.currentTarget);
+    event.preventDefault(); const form = new FormData(event.currentTarget);
+    if (!await confirm({title:"Connect these Telegram and website accounts?",description:"The accounts must both be yours. Their existing records and permissions stay preserved; earlier names and signatures will not change.",confirmLabel:"Connect Telegram",detail:<p>{account.professional_name ?? account.email}</p>})) return;
+    setBusy(true); setError("");
     try {
       await accountAction("connect_telegram", { init_data: initData, combine_profiles: form.get("confirm") === "yes",
         ...(other ? { other_email: form.get("other_email"), other_password: form.get("other_password"), captcha_token: token } : {}) });
@@ -96,7 +100,7 @@ export function TelegramConnect({ account, siteKey }: { account: Account; siteKe
     } catch (error) { const text = error instanceof Error ? error.message : "Could not connect Telegram."; setError(text); if (text.includes("already has website access")) setOther(true); }
     finally { setBusy(false); setReset(value => value + 1); }
   }
-  return <><Script src="https://telegram.org/js/telegram-web-app.js" onReady={ready} />{initData && !account.telegram_linked && account.source === "browser" && <section className="my-7 max-w-md border-y border-rule py-6">
+  return <>{confirmation}<Script src="https://telegram.org/js/telegram-web-app.js" onReady={ready} />{initData && !account.telegram_linked && account.source === "browser" && <section className="my-7 max-w-md border-y border-rule py-6">
     <h2 className="font-serif text-2xl">Connect this Telegram account</h2><p className="my-4 leading-7">You are signed in as {account.professional_name ?? "your website account"}. Connect the Telegram account you opened this Mini App from, keeping your project records together.</p>
     <form onSubmit={connect}><label className="my-4 flex min-h-12 items-center gap-3"><input type="checkbox" name="confirm" value="yes" required className="h-6 w-6 shrink-0" />I confirm that both accounts are mine and want to connect them.</label>
       {other && <><p className="my-4 leading-7">Telegram is already connected to another website login. Prove that login too.</p><Label title="Other website email"><input className={field} name="other_email" type="email" required autoComplete="email" /></Label><Label title="Other website password"><input className={field} name="other_password" type="password" required minLength={12} maxLength={128} autoComplete="current-password" /></Label><Turnstile siteKey={siteKey} onToken={setToken} reset={reset} /></>}
@@ -104,6 +108,7 @@ export function TelegramConnect({ account, siteKey }: { account: Account; siteKe
   </section>}</>;
 }
 export function ProfessionalProfile({ account }: { account: Account }) {
+  const { confirm, confirmation } = useActionConfirmation();
   const router = useRouter(), [error, setError] = useState(""), [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError("");
@@ -113,21 +118,24 @@ export function ProfessionalProfile({ account }: { account: Account }) {
     finally { setBusy(false); }
   }
   async function logout() {
+    if (!await confirm({title:"Sign out of SiteLedger?",description:"Your records stay preserved. Queued files remain on this device, and you will need to sign in again to send them.",confirmLabel:"Sign out",detail:<p>{account.professional_name ?? account.email}</p>})) return;
     setBusy(true); setError("");
     try { await accountAction("logout"); await clearCachedContext().catch(()=>undefined); router.refresh(); }
     catch (error) { setError(error instanceof Error ? error.message : "Could not sign out."); }
     finally { setBusy(false); }
   }
-  return <section className="my-7 max-w-md"><h2 className="font-serif text-2xl">Your professional name</h2><p className="mt-3 leading-7">Type the name to appear on confirmations, approvals and amendments. Previous records keep their original names.</p>
+  return <section className="my-7 max-w-md">{confirmation}<h2 className="font-serif text-2xl">Your professional name</h2><p className="mt-3 leading-7">Type the name to appear on confirmations, approvals and amendments. Previous records keep their original names.</p>
     <form onSubmit={submit}><Label title="Name"><input className={field} name="name" defaultValue={account.professional_name ?? ""} required maxLength={120} autoComplete="name" /></Label><label className="my-4 flex min-h-12 items-center gap-3"><input type="checkbox" required name="confirm_name" value="yes" className="h-6 w-6 shrink-0" />I confirm this professional name.</label><button className={primary} disabled={busy}>Confirm name</button></form>
     <Feedback error={error} message={message} /><button type="button" className={`${button} mt-5`} onClick={logout} disabled={busy}>Sign out</button>
   </section>;
 }
 export function TelegramLink({ siteKey, account }: { siteKey: string; account: Account }) {
+  const { confirm, confirmation } = useActionConfirmation();
   const router = useRouter(), [error, setError] = useState(""), [busy, setBusy] = useState(false), [token, setToken] = useState(""), [reset, setReset] = useState(0);
   const [link, setLink] = useState<{ id: string; url: string } | null>(null), [status, setStatus] = useState<{ proved: boolean; combining_profiles: boolean; other_browser_proof_required: boolean; telegram_id: number } | null>(null);
   const [message, setMessage] = useState("");
   async function run(action: string, input: Record<string, unknown> = {}) {
+    if ((action === "link_finish" || action === "unlink_telegram") && !await confirm({title:action === "unlink_telegram" ? "Disconnect Telegram access?" : "Confirm this account connection?",description:action === "unlink_telegram" ? "Telegram sessions will stop working immediately. Your website account and all original records remain preserved." : "Connect the identities you have proved. Existing records and permissions are retained; historical attribution stays unchanged.",confirmLabel:action === "unlink_telegram" ? "Disconnect Telegram" : "Confirm connection",danger:action === "unlink_telegram",detail:<p>{account.professional_name ?? account.email}</p>})) return;
     setBusy(true); setError(""); setMessage("");
     try { const data = await accountAction(action, input); if (action === "link_create") { setLink(data); setStatus(null); }
       else if (action === "link_status") setStatus(data);
@@ -137,7 +145,7 @@ export function TelegramLink({ siteKey, account }: { siteKey: string; account: A
   }
   function reauthenticate(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); void run("reauthenticate", { password: form.get("password"), captcha_token: token }); }
   function finish(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); void run("link_finish", { id: link?.id, combine_profiles: form.get("combine_profiles") === "yes", ...(status?.other_browser_proof_required ? { other_email: form.get("other_email"), other_password: form.get("other_password"), captcha_token: token } : {}) }); }
-  return <section className="mt-8 border-t border-rule pt-7"><h2 className="font-serif text-2xl">Telegram connection</h2><p className="my-4 leading-7">{account.telegram_linked ? "Your Telegram access is connected to this person profile." : "Connect Telegram to this website account. You must open the link in your Telegram account, then confirm here."}</p>
+  return <section className="mt-8 border-t border-rule pt-7">{confirmation}<h2 className="font-serif text-2xl">Telegram connection</h2><p className="my-4 leading-7">{account.telegram_linked ? "Your Telegram access is connected to this person profile." : "Connect Telegram to this website account. You must open the link in your Telegram account, then confirm here."}</p>
     <form onSubmit={reauthenticate} className="max-w-md"><Label title="Confirm your current password before changing connections"><input className={field} name="password" type="password" minLength={12} maxLength={128} required autoComplete="current-password" /></Label><Turnstile siteKey={siteKey} onToken={setToken} reset={reset} /><button className={button} disabled={busy || !token}>Confirm password</button></form>
     <div className="my-5 flex flex-wrap gap-3"><button type="button" className={primary} disabled={busy} onClick={() => void run("link_create")}>Start a Telegram link</button>{account.telegram_linked && <button type="button" className={button} disabled={busy} onClick={() => void run("unlink_telegram")}>Disconnect Telegram</button>}</div>
     {link && <div className="border-t border-rule py-5"><a href={link.url} className="inline-flex min-h-12 items-center underline" target="_blank" rel="noreferrer">Open this one-use link in Telegram</a><p className="my-3 leading-7">It expires after 10 minutes. Return here after the bot acknowledges it.</p><button type="button" className={button} disabled={busy} onClick={() => void run("link_status", { id: link.id })}>Check Telegram proof</button></div>}
@@ -159,12 +167,14 @@ export function EmailProof({ siteKey, account }: { siteKey: string; account: Acc
   return <section className="mt-8 max-w-md border-t border-rule pt-7"><h2 className="font-serif text-2xl">Email for project invitations</h2><p className="my-4 leading-7">Prove ownership of {account.email} before accepting an invitation addressed to it. This is separate from signup.</p><Turnstile siteKey={siteKey} onToken={setToken} reset={reset} /><button className={button} disabled={busy || !token} onClick={() => void run("request_email_proof", { captcha_token: token })}>Send email code</button><form className="mt-5" onSubmit={event => { event.preventDefault(); void run("verify_email", { token: new FormData(event.currentTarget).get("token") }); }}><Label title="Six-digit email code"><input className={field} name="token" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required autoComplete="one-time-code" /></Label><button className={primary} disabled={busy}>Verify email ownership</button></form><Feedback error={error} message={message} /></section>;
 }
 export function PasswordRecovery({ siteKey }: { siteKey: string }) {
+  const { confirm, confirmation } = useActionConfirmation();
   const [email, setEmail] = useState(""), [error, setError] = useState(""), [message, setMessage] = useState(""), [busy, setBusy] = useState(false), [token, setToken] = useState(""), [reset, setReset] = useState(0);
   async function run(action: string, input: Record<string, unknown>) {
+    if (action === "reset_password" && !await confirm({title:"Change your account password?",description:"Your current password will be replaced. Site records stay preserved; sign in again with the new password after the reset.",confirmLabel:"Change password",detail:<p>{email}</p>})) return;
     setError(""); setBusy(true);
     try { const data = await accountAction(action, input); setMessage(data.message); }
     catch (error) { setError(error instanceof Error ? error.message : "Could not reset your password."); }
     finally { setBusy(false); setReset(value => value + 1); }
   }
-  return <div className="max-w-md"><p className="my-5 leading-7">Request a one-use recovery code, then enter it with your new password. Your site evidence stays preserved.</p><Label title="Account email"><input className={field} type="email" value={email} onChange={event => setEmail(event.target.value)} required autoComplete="email" /></Label><Turnstile siteKey={siteKey} onToken={setToken} reset={reset} /><button className={button} disabled={busy || !token || !email} onClick={() => void run("recover", { email, captcha_token: token })}>Send recovery code</button><form className="mt-7 border-t border-rule pt-5" onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget); void run("reset_password", { email, token: form.get("token"), password: form.get("password") }); }}><Label title="Six-digit recovery code"><input className={field} name="token" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" /></Label><Label title="New password"><input className={field} name="password" type="password" minLength={12} maxLength={128} required autoComplete="new-password" /></Label><button className={primary} disabled={busy || !email}>Change password</button></form><Feedback error={error} message={message} /><Link href="/account" className="mt-5 inline-flex min-h-12 items-center underline">Return to sign in</Link></div>;
+  return <div className="max-w-md">{confirmation}<p className="my-5 leading-7">Request a one-use recovery code, then enter it with your new password. Your site evidence stays preserved.</p><Label title="Account email"><input className={field} type="email" value={email} onChange={event => setEmail(event.target.value)} required autoComplete="email" /></Label><Turnstile siteKey={siteKey} onToken={setToken} reset={reset} /><button className={button} disabled={busy || !token || !email} onClick={() => void run("recover", { email, captcha_token: token })}>Send recovery code</button><form className="mt-7 border-t border-rule pt-5" onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget); void run("reset_password", { email, token: form.get("token"), password: form.get("password") }); }}><Label title="Six-digit recovery code"><input className={field} name="token" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" /></Label><Label title="New password"><input className={field} name="password" type="password" minLength={12} maxLength={128} required autoComplete="new-password" /></Label><button className={primary} disabled={busy || !email}>Change password</button></form><Feedback error={error} message={message} /><Link href="/account" className="mt-5 inline-flex min-h-12 items-center underline">Return to sign in</Link></div>;
 }

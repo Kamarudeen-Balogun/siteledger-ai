@@ -34,13 +34,15 @@ try {
   if (!database || !service) throw new Error("Database configuration");
   const ready = await fetch(new URL("/rest/v1/rpc/account_bot_today", database), {method:"POST",headers:{apikey:service,...(service.startsWith("eyJ")?{Authorization:`Bearer ${service}`} : {}),"Content-Type":"application/json"},body:JSON.stringify({p_telegram:0}),signal:AbortSignal.timeout(10000)});
   if (!ready.ok) throw new Error("Account bot schema unavailable");
-  await call("setMyCommands", { commands });
+  const commandScopes = [{}, {scope:{type:"all_private_chats"}}, {language_code:"en"}, {scope:{type:"all_private_chats"},language_code:"en"}];
+  for (const scope of commandScopes) await call("setMyCommands", { commands, ...scope });
   await call("setChatMenuButton", { menu_button: { type: "web_app", text: "SiteLedger", web_app: { url: menuUrl } } });
   const menu = await call("getChatMenuButton");
-  const savedCommands = await call("getMyCommands");
-  if (menu.type !== "web_app" || menu.web_app?.url !== menuUrl
-    || JSON.stringify(savedCommands) !== JSON.stringify(commands)) throw new Error("Settings not saved");
-  console.log("SiteLedger account Mini App and all seven commands configured and verified.");
+  if (menu.type !== "web_app" || menu.web_app?.url !== menuUrl) throw new Error("Settings not saved");
+  for (const scope of commandScopes) {
+    if (JSON.stringify(await call("getMyCommands",scope)) !== JSON.stringify(commands)) throw new Error("Settings not saved");
+  }
+  console.log("Seven slash suggestions verified in default/private-chat and English menus; account Mini App verified.");
 } catch {
   console.error("Could not configure SiteLedger's menu. Check the HTTPS app and bot configuration. No credentials printed.");
   process.exitCode = 1;
