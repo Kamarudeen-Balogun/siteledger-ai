@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import type { ReviewRecord } from "@/lib/confirm/data";
 import type { WorkItem, SiteExtraction } from "@/lib/ai/extraction-schema";
 import { validateConfirmation, type Confirmation } from "@/lib/confirm/validation";
@@ -101,6 +102,7 @@ export function ConfirmForm({ record, access }: { record: ReviewRecord; access: 
     <TelegramFrame />
     <header className="border-b border-rule py-7"><p className="font-mono text-sm tracking-wide">SITELEDGER / SITE DIARY</p>
       <h1 className="mt-4 font-serif text-3xl">Review your site note</h1><p className="mt-3 leading-7">{record.project_name}</p>
+      <Link href={`/today#from=${record.id}&access=${encodeURIComponent(access)}`} className="mt-4 inline-flex min-h-12 items-center underline">Record a new site note</Link>
       <p className="mt-2 font-mono text-sm">{date} WAT</p><p className="mt-2">Sent by {record.submitted_by}</p></header>
     <div ref={feedback} tabIndex={-1} className="outline-none">
       {error ? <div role="alert" className="mt-5 border-l-4 border-[#B91C1C] bg-red-50 p-5 text-[#B91C1C]"><p className="font-semibold">Your changes need another check</p><p className="mt-2">{error}</p></div>

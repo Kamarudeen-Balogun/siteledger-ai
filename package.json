@@ -30,7 +30,10 @@
     "db:check-photos": "node scripts/check-database.mjs tests/photos.sql",
     "test:photos-browser": "node scripts/verify-log-browser.mjs photos",
     "test:photos-demo-browser": "node scripts/verify-log-browser.mjs photos-demo",
-    "ai:analyse-demo-photos": "node --env-file=.env.local --conditions=react-server --import tsx scripts/analyse-demo-photos.ts"
+    "ai:analyse-demo-photos": "node --env-file=.env.local --conditions=react-server --import tsx scripts/analyse-demo-photos.ts",
+    "test:web": "node --conditions=react-server --import tsx --test tests/web.test.ts",
+    "db:check-web": "node scripts/check-database.mjs tests/web.sql",
+    "test:web-browser": "node scripts/verify-log-browser.mjs web"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",

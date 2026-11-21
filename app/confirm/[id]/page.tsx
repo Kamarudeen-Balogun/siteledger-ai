@@ -5,6 +5,7 @@ import { getReview } from "@/lib/confirm/data";
 import { ConfirmForm } from "@/components/confirm-form";
 import { after } from "next/server";
 import { processSubmissionPhotos } from "@/lib/ai/process-photos";
+import { processSubmission } from "@/lib/ai/process-submission";
 
 export const maxDuration = 120;
 
@@ -20,7 +21,11 @@ async function Review(props: Props) {
   const record = await getReview(id, typeof query.access === "string" ? query.access : "").catch(() => undefined);
   if (record === undefined) return <Message title="Your site note is saved">We couldn’t load it just now. Reopen your review button to try again.</Message>;
   if (!record) return <Message title="Open your private review button">Use “Review site note” in your Telegram chat with SiteLedger. If the link expired, send /today for a fresh button.</Message>;
-  if (record.pending_photo_analysis) after(() => processSubmissionPhotos(record.id));
+  const voicePending=["queued","processing"].includes(record.job_status??"");
+  if (record.pending_photo_analysis||voicePending) after(async()=>{await Promise.all([
+    record.pending_photo_analysis?processSubmissionPhotos(record.id):undefined,
+    voicePending?processSubmission(record.id):undefined,
+  ]);});
   // Start editable fields from the completed extraction after a listening refresh.
   // Photo-only refreshes retain the form so they cannot discard someone's edits.
   return <ConfirmForm key={`${record.id}:${record.job_status}`} record={record} access={query.access!} />;

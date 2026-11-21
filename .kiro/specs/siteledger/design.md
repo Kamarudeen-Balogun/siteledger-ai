@@ -60,6 +60,14 @@ Whisper receives a short site-vocabulary context rather than chat instructions. 
 
 ## Task 10A — authorized project teams (planned)
 
+Task 10's Today screen now uses current authorized Telegram/private-review
+access, scoped capture capabilities and service-only staged uploads. IndexedDB
+retains the captured project/actor/timezone/date and blobs; actor/project changes
+never reassign a note. Uploads validate byte size, type and SHA-256 before
+publishing one submission after all files are saved. Public-shell caching excludes
+private data. The client capture time supplies the site date, with server receipt
+separately recorded. See task-10-handoff.md for acceptance and interim-access limits.
+
 The builder deliberately expanded task 10A on 19 November; implement the full requirements and acceptance scenarios in brief section 8 after tasks 9–10. Profiles hold stable identity and the explicitly confirmed professional name. Browser auth and proven Telegram linkage resolve to the same profile. Project memberships hold foreman/PM role and active/revoked state independently for each project; the current global telegram_users project/role is only the prototype model. Projects have an owner and currency/timezone. Ownership is an administrative permission of a PM member, not a third work role.
 
 Owner-issued, hashed, targeted invitation secrets bind project, intended verified email and chosen role. Acceptance atomically checks expiry, cancellation, one-use status, active owner authority and project state. Owner-controlled membership and administrative events must be audited; never store invite secrets in evidence or logs. Transfer requires acceptance by an active member and preserves one owner. Archive blocks new work and keeps authorized old records; revocation remains available while archived.

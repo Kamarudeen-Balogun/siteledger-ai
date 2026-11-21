@@ -1,5 +1,6 @@
 "use client";
 import Script from "next/script";
+import Link from "next/link";
 import { useState } from "react";
 
 type TelegramWindow = Window & { Telegram?: { WebApp?: { initData: string; ready: () => void; expand: () => void } } };
@@ -27,5 +28,6 @@ export function TelegramReview() {
     <h1 className="mt-6 font-serif text-3xl">{opening ? "Opening your site note…" : "Your site diary"}</h1>
     <p className="mt-5 text-base leading-7" role={error ? "alert" : "status"}>{error || "Connecting your Telegram account to today’s voice note and photos."}</p>
     {!opening && <button type="button" className="mt-6 min-h-12 bg-accent px-5 py-3 text-white" onClick={openNote}>Try again</button>}
+    <Link href="/today" className="mt-5 flex min-h-12 items-center underline">Record a new note in the web diary</Link>
   </main>;
 }

@@ -24,7 +24,7 @@ export type ProcessingDependencies = {
 async function downloadAudio(job: VoiceJob): Promise<AudioInput> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key || !/^site-evidence\/[a-f0-9-]{36}\/[a-f0-9-]{36}\/\d+\.(ogg|mp3|m4a)$/.test(job.audio_url))
+  if (!url || !key || !/^site-evidence\/[a-f0-9-]{36}\/[a-f0-9-]{36}\/\d+\.(ogg|mp3|m4a|webm|wav)$/.test(job.audio_url))
     throw new Error("Stored audio is unavailable.");
   const response = await fetch(new URL(`/storage/v1/object/authenticated/${job.audio_url}`, url), {
     headers: { apikey: key, ...(key.startsWith("eyJ") ? { Authorization: `Bearer ${key}` } : {}) },
