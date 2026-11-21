@@ -1,37 +1,15 @@
 import Link from "next/link";
+import Image from "next/image";
+import { PublicSite } from "@/components/public-site";
+import { DemoLedger } from "@/components/demo-ledger";
+export const metadata={title:"SiteLedger AI — From site voice note to costed record",description:"Record site work by voice, confirm the quantities, cost them against your BoQ and preserve an approved report with photos and amendments."};
 export default function Home() {
-  return (
-    <main className="mx-auto flex min-h-svh w-full max-w-5xl flex-col px-6 sm:px-10">
-      <header className="flex items-center gap-4 border-b border-rule py-7">
-        <span
-          aria-hidden="true"
-          className="flex size-12 items-center justify-center border border-accent font-mono text-lg font-semibold text-accent"
-        >
-          SL
-        </span>
-        <div>
-          <h1 className="font-serif text-2xl font-semibold">SiteLedger AI</h1>
-          <p className="mt-1 text-sm">Daily site records, costed in naira.</p>
-        </div>
-      </header>
-
-      <section aria-labelledby="diary-heading" className="flex-1 py-14 sm:py-20">
-        <p className="font-mono text-xs uppercase tracking-widest">Site diary</p>
-        <h2
-          id="diary-heading"
-          className="mt-5 max-w-xl font-serif text-4xl leading-tight sm:text-5xl"
-        >
-          Daily site records.
-        </h2>
-        <p className="mt-5 max-w-lg text-base leading-7">
-          Your diary will hold the day’s work, confirmed quantities, and costs
-          against the Bill of Quantities.
-        </p>
-        <Link href="/reports/demo" className="mt-6 inline-flex min-h-12 items-center bg-accent px-5 py-3 font-semibold text-white">Open demo daily report</Link>
-        <Link href="/today" className="mt-4 flex min-h-12 items-center underline">Open your web site diary</Link>
-        <Link href="/account" className="mt-3 flex min-h-12 items-center underline">Sign in or create your private account</Link>
-      </section>
-
-    </main>
-  );
+  return <PublicSite current="/">
+    <section className="landing-hero content-width" aria-labelledby="hero-title"><div className="hero-copy"><p className="eyebrow">For the site. For the record.</p><h1 id="hero-title">The day’s work.<br/><span className="text-accent">With the money attached.</span></h1><p className="hero-description">Turn a foreman’s voice note and photos into a daily report, costed against the Bill of Quantities. Check the quantities. Approve the record. Keep the proof.</p><div className="mt-8 flex flex-wrap gap-3"><Link href="/account" className="public-button bg-accent font-semibold text-white">Open SiteLedger</Link><Link href="/reports/demo" className="public-button border border-ink">View a sample report</Link></div><p className="mt-5 text-sm leading-6">Telegram or web intake · Human-confirmed quantities · Project BoQ rates</p></div><div className="hero-record"><DemoLedger/></div></section>
+    <div className="content-width"><div className="landing-principles"><p><span className="eyebrow">01 / Money</span>Cost the work against your BoQ.</p><p><span className="eyebrow">02 / Proof</span>Keep quantities, photos and approvals together.</p><p><span className="eyebrow">03 / Site fit</span>Speak in chat. Queue web notes offline.</p></div></div>
+    <section id="how-it-works" className="landing-section content-width" aria-labelledby="workflow-title"><div className="section-heading"><p className="eyebrow">From the site to the client</p><h2 id="workflow-title">A clear record.<br/>One deliberate step at a time.</h2><p>AI helps with the first draft. A person checks the work. The price list decides the money.</p></div><ol className="workflow-list">{[["Send what happened","Record a voice note and attach site photos in Telegram or the web diary. Web notes can wait on your device until data returns."],["Check the quantities","Review the transcript, work items, crew and possible photo findings. Correct unclear values before costing."],["Cost and review","Confirmed quantities meet your supplied BoQ rates. Open the daily report and download its client-ready PDF."],["Approve and preserve","A PM approves the draft in a separate action. The locked original stays intact; later corrections become linked amendments."]].map(([title,text],i)=><li key={title}><span className="workflow-number" aria-hidden="true">0{i+1}</span><div><h3>{title}</h3><p>{text}</p></div></li>)}</ol></section>
+    <section className="landing-section content-width" aria-labelledby="evidence-title"><figure className="site-photo"><Image src="/demo/photos/synthetic-blockwork.jpg" alt="Synthetic demonstration of sandcrete blockwork on a construction site" width={1200} height={800} sizes="(min-width: 1024px) 50vw, 100vw"/><figcaption>Synthetic demonstration image · not real site evidence</figcaption></figure><div className="section-heading"><p className="eyebrow">An account of the work</p><h2 id="evidence-title">Built for the questions that come later.</h2><p>What was completed? Who confirmed it? Which rate was used? An approved report keeps those answers with the original record.</p><ul className="ruled-points"><li>Professional names and roles recorded at each action.</li><li>Possible photo findings people can correct or dismiss.</li><li>Locked originals and a separate amendment history.</li><li>Private projects with owner-controlled team access.</li></ul><Link className="inline-flex min-h-12 items-center underline" href="/log/demo">Explore the fictional dispute log</Link></div></section>
+    <section className="audience-section content-width" aria-labelledby="audience-title"><p className="eyebrow">A shared record. Different jobs.</p><h2 id="audience-title" className="section-title">Easy on site. Clear at the desk.</h2><div className="audience-columns">{[["Foremen & site engineers","Send voice and photos. Check your own work without learning a complex dashboard."],["PMs & quantity surveyors","Review quantities and rates on a wider screen. Approve the current draft deliberately."],["Clients & consultants","Read the approved PDF with work items, costs, observations and signatures. No account needed to read a PDF you receive."]].map(([title,text])=><div key={title}><h3>{title}</h3><p>{text}</p></div>)}</div></section>
+    <section className="landing-close content-width"><div><p className="eyebrow">Start with the record</p><h2>See what a costed day looks like.</h2><p>The public sample is fictional. Your project records are private.</p></div><Link href="/reports/demo" className="public-button bg-accent font-semibold text-white">Open the sample report</Link></section>
+  </PublicSite>;
 }

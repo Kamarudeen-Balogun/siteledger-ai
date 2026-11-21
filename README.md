@@ -10,6 +10,12 @@ The Nigerian demonstration uses naira, Nigerian English and Pidgin. Private proj
 
 ## See the product
 
+<img src="docs/images/landing-desktop.png" width="760" alt="Desktop SiteLedger landing page with a warm-paper layout, product introduction and fictional 551,000-naira cost illustration">
+
+The public landing page explains the workflow and opens the fictional sample or
+private account access. About, Help/FAQ, Contact, Privacy and Terms share its navigation.
+Account, project, team and report screens also adapt to desktop widths.
+
 <img src="docs/images/costed-report.png" width="360" alt="Mobile locked report showing 18 square metres of blockwork and a cost of 261,000 naira">
 <img src="docs/images/account-confirmation.png" width="360" alt="Mobile signup confirmation with a six-digit email code and professional-name confirmation">
 
@@ -77,7 +83,7 @@ retry guidance without exposing private error details.
 
 ## Current build status
 
-The core voice/photo → confirmation → costing → PDF → locked log flow is implemented, along with private accounts, projects, teams, secure Telegram linking and recovery.
+The core voice/photo → confirmation → costing → PDF → locked log flow is implemented, along with private accounts, projects, teams, secure Telegram linking and recovery. The six public pages and desktop presentation are task 10A2.
 
 New projects start with an **empty BoQ**. The supplied-rate editor and dashboards are task 11. The approved private guest trial is task 10B, following the completed account resilience milestone 10A1. Production deployment and the final demonstration/Kiro write-up remain later milestones. See [the ordered tasks](.kiro/specs/siteledger/tasks.md) and [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
 
@@ -143,12 +149,18 @@ npm run db:check-fresh
 npm run build
 npx playwright install chromium
 npm run test:account-browser
+node scripts/verify-public-pages.mjs
 npm run preview:account-emails
 ```
 
 Browser acceptance uses a disposable clone with separate native Auth, SMTP, REST and media fixtures. It checks signup/recovery codes, linking, invitations, confirmation, costing, locking/PDF, offline reload/retry and removal. It does not send Resend emails or write genuine evidence. Older report/log/photo/web browser command names now run this account-aware suite.
 
 Artifacts remain under ignored `supabase/.temp/task-10a/`. [Task 10A evidence](.kiro/specs/siteledger/task-10a-handoff.md) records actual checks. Offline emulation and scripted findings establish workflow behavior, not real-site speech or defect accuracy. [Language coverage](docs/voice-languages.md) separates provider support from tested recordings.
+
+Public page verification uses a running local preview on port 3011. Set
+`SITELEDGER_PUBLIC_QA_URL` to another localhost origin when needed. It checks
+390/768/1440px layouts, internal links, keyboard controls and the labelled cost
+illustration; screenshots are saved in `supabase/.temp/task-10a2/`.
 
 ## Architecture
 

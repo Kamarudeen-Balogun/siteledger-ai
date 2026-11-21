@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { getDemoReport } from "@/lib/reports/data";
 import { ReportDocument } from "@/components/report-document";
+import { WorkspaceHeader } from "@/components/workspace-header";
 export const metadata: Metadata = { title: "Demo daily report — SiteLedger", robots: { index: false, follow: false } };
 async function Demo() {
   await connection();
@@ -13,5 +14,5 @@ async function Demo() {
     <Link href="/log/demo" className="min-h-12 py-3 underline">Open demo dispute log</Link><p>Fictional seeded record · 6 November 2026</p></nav><ReportDocument report={report} /></>;
 }
 export default function Page() {
-  return <main className="mx-auto max-w-5xl px-5 py-7 sm:px-8"><Suspense fallback={<p role="status">Opening the demo report…</p>}><Demo /></Suspense></main>;
+  return <main className="mx-auto max-w-6xl px-5 py-7 sm:px-10"><WorkspaceHeader current="reports"/><Suspense fallback={<p role="status">Opening the demo report…</p>}><Demo /></Suspense></main>;
 }

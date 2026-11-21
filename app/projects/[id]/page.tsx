@@ -7,6 +7,7 @@ import { formatMoney } from "@/lib/costing/format-money";
 import { displayDate } from "@/lib/reports/model";
 import { OwnershipAcceptance } from "@/components/project-forms";
 import { TelegramAccountEntry } from "@/components/account-forms";
+import { WorkspaceHeader } from "@/components/workspace-header";
 export const metadata = { title: "Project records — SiteLedger", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
 async function History({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -23,7 +24,7 @@ async function History({ params }: { params: Promise<{ id: string }> }) {
     <OwnershipAcceptance projectId={id} transfers={data.transfers} timezone={access.timezone} />
     <section className="mt-7 border-t border-rule pt-6"><h2 className="font-serif text-2xl">Site records</h2>
       <p className="mt-3 leading-7">{access.role === "pm" ? "You can review this project's site records." : "Your own site records appear here."}</p>
-      {data.submissions.length === 0 ? <p className="my-6">No site notes recorded yet.</p> : <ol className="mt-5">{data.submissions.map(note => <li key={note.id} className="border-b border-rule py-5">
+      {data.submissions.length === 0 ? <p className="my-6">No site notes recorded yet.</p> : <ol className="record-list mt-5">{data.submissions.map(note => <li key={note.id} className="border-b border-rule py-5">
         <p className="font-mono text-sm">{displayDate(note.date)} / {note.report_status === "locked" ? "LOCKED REPORT" : note.status.toUpperCase()}</p>
         <p className="my-3">Recorded by {note.submitted_by}</p><div className="flex flex-wrap gap-4"><Link className="inline-flex min-h-12 items-center underline" href={`/confirm/${note.id}`}>View site note</Link>
           {(note.report_id || note.status === "confirmed") && <Link className="inline-flex min-h-12 items-center underline" href={`/reports/${note.id}`}>Open report</Link>}
@@ -32,5 +33,5 @@ async function History({ params }: { params: Promise<{ id: string }> }) {
     </section></>;
 }
 export default function ProjectPage(props: { params: Promise<{ id: string }> }) {
-  return <main className="mx-auto min-h-screen max-w-4xl px-5 pb-16 pt-7"><Suspense fallback={<p role="status">Opening authorized project records…</p>}><History {...props} /></Suspense></main>;
+  return <main className="mx-auto min-h-screen max-w-6xl px-5 pb-16 pt-7 sm:px-10"><WorkspaceHeader current="projects"/><Suspense fallback={<p role="status">Opening authorized project records…</p>}><History {...props} /></Suspense></main>;
 }

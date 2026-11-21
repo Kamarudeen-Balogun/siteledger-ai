@@ -248,6 +248,14 @@ try {
   await checkPage.goto(base+"/account");await checkPage.getByRole("alert").filter({hasText:"not authorized for the bot check"}).waitFor();assert.equal(await checkPage.getByRole("button",{name:"Sign in",exact:true}).last().isDisabled(),true);
   await checkPage.evaluate(()=>{window.failCheck=false;});await checkPage.getByRole("button",{name:"Retry bot check",exact:true}).click();await eventually(async()=>await checkPage.getByRole("button",{name:"Sign in",exact:true}).last().isEnabled(),"Retry did not obtain a fresh bot token");
   await checkPage.evaluate(()=>window.expireCheck());assert.equal(await checkPage.getByRole("button",{name:"Sign in",exact:true}).last().isDisabled(),true,"Expired bot tokens cannot submit authentication");
+  for (const [context,path,name] of [[owner,"/account","account"],[owner,"/projects","projects"],[pm,`/projects/${project.id}/team`,"team"],[pm,`/reports/${noteId}`,"report"]]) {
+    const desktop=await context.newPage();await desktop.setViewportSize({width:1440,height:1000});await desktop.goto(base+path);await desktop.locator("main").waitFor();await desktop.evaluate(()=>document.fonts.ready);
+    assert.ok(await desktop.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${name} desktop layout overflows`);
+    if(name==="account"||name==="projects")await desktop.locator(name==="account"?".account-columns":".project-columns").waitFor();
+    if(name==="team")await desktop.getByRole("heading",{name:"Active team",exact:true}).waitFor();
+    if(name==="report")await desktop.locator(".report-stamp").waitFor();
+    await desktop.screenshot({path:join(out,`${name}-desktop.png`),fullPage:true});await desktop.close();
+  }
   assert.deepEqual(errors,[]);
   console.log("Telegram same-profile linking/unlinking, accepted ownership, second-browser history and native email recovery pass.");
   console.log("Task 10A disposable native/browser acceptance passed. Artifacts: supabase/.temp/task-10a/browser.");
