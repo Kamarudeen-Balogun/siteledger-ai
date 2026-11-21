@@ -20,6 +20,8 @@ begin
     (sid,project_uuid,800080,'Local QA foreman','telegram','Original local QA transcript',values_json,'extracted','2026-11-18 16:00:00+01'),
     (sid2,project_uuid,800082,'Other QA foreman','telegram','Second local QA transcript',values_json,'extracted','2026-11-19 16:00:00+01');
   insert into public.submission_photos(id,submission_id,storage_url) values(photo_uuid,sid,'Local transactional photo fixture');
+  perform public.claim_photo_analysis(photo_uuid,nonce);
+  perform public.finish_photo_analysis(photo_uuid,nonce,null,'photo_unavailable');
   perform public.confirm_site_submission(sid,800080,values_json,jsonb_build_array(boq_uuid),jsonb_build_array(jsonb_build_object('id',photo_uuid,'note','Original QA observation')));
   perform public.confirm_site_submission(sid2,800082,values_json,jsonb_build_array(boq_uuid),'[]');
   src := public.get_site_report_input(sid,800081)->'source';

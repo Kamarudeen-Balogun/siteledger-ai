@@ -6,6 +6,7 @@ import type { ReviewRecord } from "@/lib/confirm/data";
 import type { WorkItem, SiteExtraction } from "@/lib/ai/extraction-schema";
 import { validateConfirmation, type Confirmation } from "@/lib/confirm/validation";
 import { TelegramFrame } from "@/components/telegram-frame";
+import { PhotoObservations } from "@/components/photo-observations";
 
 const empty: SiteExtraction = { work_items: [], materials: [], delays: [], issues: [], raw_language_notes: "" };
 const inputClass = "min-h-12 w-full rounded-none border border-rule bg-white/50 px-3 py-2 text-base outline-offset-2 focus:outline-accent";
@@ -31,12 +32,6 @@ function Score({ name, value }: { name: string; value: number }) {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return <section className="border-t border-rule py-7"><h2 className="mb-5 font-serif text-2xl">{title}</h2>{children}</section>;
 }
-function strings(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) return value.map(strings).filter(Boolean).join("\n");
-  if (value && typeof value === "object") return Object.values(value).map(strings).filter(Boolean).join("\n");
-  return "";
-}
 export function ConfirmForm({ record, access }: { record: ReviewRecord; access: string }) {
   const router = useRouter();
   const source = record.confirmed_extraction ?? record.extraction ?? empty;
@@ -54,10 +49,10 @@ export function ConfirmForm({ record, access }: { record: ReviewRecord; access: 
   const locked = record.status === "locked";
   const low = (confidence: number) => !record.confirmed_extraction && confidence < 0.6;
   useEffect(() => {
-    if (!listening && !record.pending_media) return;
+    if (!listening && !record.pending_media && !record.pending_photo_analysis) return;
     const timer = setInterval(() => { if (navigator.onLine) router.refresh(); }, 3000);
     return () => clearInterval(timer);
-  }, [listening, record.pending_media, router]);
+  }, [listening, record.pending_media, record.pending_photo_analysis, router]);
   useEffect(() => {
     if (!focusFeedback.current || saving || (!saved && !error)) return;
     feedback.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -183,9 +178,7 @@ export function ConfirmForm({ record, access }: { record: ReviewRecord; access: 
         {!record.photos.length && <p>No photos are attached to this note. You can send them in the same Telegram chat.</p>}
         <div className="grid gap-7 sm:grid-cols-2">{record.photos.map((photo, i) => <div key={photo.id}>
           <Image src={mediaUrl(photo.id)} alt={`Site evidence photo ${i + 1}`} width={800} height={600} unoptimized className="h-auto w-full border border-rule" />
-          <label className="mt-3 block">Photo {i + 1} observations {photo.ai_findings ? "— possible findings, please check" : ""}
-            <textarea className={inputClass + " mt-2 min-h-24"} name={`photo.${photo.id}`} maxLength={5000}
-              defaultValue={photo.confirmed_findings?.note ?? strings(photo.ai_findings)} placeholder="Add a note or clear any suggestion you disagree with." /></label>
+          <PhotoObservations photo={photo} number={i + 1} onEdit={() => setDirty(true)} />
         </div>)}</div>
       </Section>
       <Section title="Issues and language notes">
@@ -194,9 +187,10 @@ export function ConfirmForm({ record, access }: { record: ReviewRecord; access: 
       </Section>
       </fieldset>
       {record.pending_media && <p role="status" className="mb-4 border-l-4 border-amber-700 p-4">A photo is still saving. You can review the fields now; wait before confirming.</p>}
+      {record.pending_photo_analysis && <p role="status" className="mb-4 border-l-4 border-amber-700 p-4">Checking your photos… Review the fields now; findings will appear here before you confirm.</p>}
       {saved && !dirty && !error && <p className="mb-4 border-l-4 border-[#657055] bg-[#EEF0E7] p-4 font-semibold">Site note confirmed. Your changes are saved.</p>}
       <p className="mb-4">By confirming, you confirm that these are the quantities and observations from your site.</p>
-      <button type="submit" disabled={saving || locked || record.pending_media || (!!saved && !dirty)} className="min-h-14 w-full bg-accent px-6 py-4 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
+      <button type="submit" disabled={saving || locked || record.pending_media || record.pending_photo_analysis || (!!saved && !dirty)} className="min-h-14 w-full bg-accent px-6 py-4 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
         {saving ? costing ? "Costing against the BoQ…" : "Saving your confirmation…" : saved ? dirty ? "Confirm changes and rebuild report" : "Confirmed — saved" : "Confirm and cost it"}</button>
       </form>}
   </main>;

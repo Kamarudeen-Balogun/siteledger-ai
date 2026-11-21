@@ -3,9 +3,13 @@ import { spawn, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { join } from "node:path";
+import { readFile } from "node:fs/promises";
 const root = process.cwd(), suffix = randomUUID().slice(0,8);
-const database = `siteledger_log_qa_${suffix}`, container = `siteledger_log_qa_${suffix}`;
-const dbContainer = "supabase_db_siteledger-ai", base = "http://127.0.0.1:3012", api = "http://127.0.0.1:55423", gateway = "http://127.0.0.1:55424";
+const demoPhotoCheck = process.argv[2] === "photos-demo";
+const photoCheck = process.argv[2] === "photos" || demoPhotoCheck, kind = photoCheck ? "photo" : "log";
+const database = `siteledger_${kind}_qa_${suffix}`, container = database;
+const previewPort = photoCheck ? 3013 : 3012, restPort = photoCheck ? 55425 : 55423, gatewayPort = photoCheck ? 55426 : 55424;
+const dbContainer = "supabase_db_siteledger-ai", base = `http://127.0.0.1:${previewPort}`, api = `http://127.0.0.1:${restPort}`, gateway = `http://127.0.0.1:${gatewayPort}`;
 function command(name, args, input) {
   const result = spawnSync(name, args, { cwd: root, input, encoding: "utf8", windowsHide: true, maxBuffer: 20 * 1024 * 1024 });
   if (result.status !== 0) {
@@ -52,12 +56,24 @@ try {
     "grant usage on schema public to anon,authenticated,service_role; revoke all on all tables in schema public from public,anon,authenticated; grant select,insert,update,delete on all tables in schema public to service_role; revoke all on all functions in schema public from public,anon,authenticated; grant execute on all functions in schema public to service_role;"]);
   const envArgs = Object.entries(restEnv).filter(([key]) => key.startsWith("PGRST_") && !["PGRST_DB_URI","PGRST_DB_SCHEMAS","PGRST_DB_EXTRA_SEARCH_PATH","PGRST_DB_PRE_REQUEST"].includes(key))
     .flatMap(([key,value]) => ["--env",`${key}=${value}`]);
-  command("docker", ["run","--detach","--rm","--name",container,"--network",network,"--publish","127.0.0.1:55423:3000",
+  command("docker", ["run","--detach","--rm","--name",container,"--network",network,"--publish",`127.0.0.1:${restPort}:3000`,
     ...envArgs,"--env",`PGRST_DB_URI=${uri}`,"--env","PGRST_DB_SCHEMAS=public","--env","PGRST_DB_EXTRA_SEARCH_PATH=public",inspect.Config.Image]); started = true;
   await ready(api + "/rpc/get_demo_dispute_log", undefined, true);
   // The application uses Supabase's /rest/v1 prefix. A local loopback gateway
   // strips that prefix for the disposable REST server; no external URL is used.
   proxy = createServer(async (request,response) => {
+    // A tiny PNG fixture tests media/report plumbing. It is not a site photo
+    // and the scripted findings in this browser test are not provider evidence.
+    if (photoCheck && /^\/storage\/v1\/object\/authenticated\/site-evidence\/10000000-0000-4000-8000-000000000001\/79000000-0000-4000-8000-000000000091\/790009[123]\.jpg$/.test(request.url ?? "")) {
+      if (demoPhotoCheck) {
+        const index = Number(request.url.match(/790009([123])\.jpg$/)[1]) - 1;
+        const name = ["synthetic-column-voids", "synthetic-blockwork", "synthetic-unprotected-edge"][index];
+        response.writeHead(200,{"Content-Type":"image/jpeg"});
+        response.end(await readFile(join(root,`public/demo/photos/${name}.jpg`))); return;
+      }
+      response.writeHead(200,{"Content-Type":"image/png"});
+      response.end(Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=","base64")); return;
+    }
     if (!request.url?.startsWith("/rest/v1/")) { response.writeHead(404);response.end();return; }
     try {
       const chunks=[];let length=0;
@@ -70,16 +86,16 @@ try {
       response.end(Buffer.from(await result.arrayBuffer()));
     } catch {response.writeHead(503);response.end();}
   });
-  await new Promise((resolve,reject)=>{proxy.once("error",reject);proxy.listen(55424,"127.0.0.1",resolve);});
+  await new Promise((resolve,reject)=>{proxy.once("error",reject);proxy.listen(gatewayPort,"127.0.0.1",resolve);});
   const env = { ...process.env, NEXT_PUBLIC_SUPABASE_URL: gateway, NEXT_PUBLIC_SUPABASE_ANON_KEY: settings.ANON_KEY,
-    SUPABASE_SERVICE_ROLE_KEY: settings.SERVICE_ROLE_KEY, TELEGRAM_WEBHOOK_SECRET: "local-log-preview", SITELEDGER_APP_URL: base,
+    SUPABASE_SERVICE_ROLE_KEY: settings.SERVICE_ROLE_KEY, TELEGRAM_WEBHOOK_SECRET: `local-${kind}-preview`, SITELEDGER_APP_URL: base,
     TELEGRAM_BOT_TOKEN: "", GROQ_API_KEY: "", GEMINI_API_KEY: "", GONKAROUTER_API_KEY: "" };
-  preview = spawn(process.execPath, ["node_modules/next/dist/bin/next","start","--hostname","127.0.0.1","--port","3012"],
+  preview = spawn(process.execPath, ["node_modules/next/dist/bin/next","start","--hostname","127.0.0.1","--port",String(previewPort)],
     { cwd: root, env, stdio: "ignore", windowsHide: true });
   await ready(base + "/reports/demo", "Perkins Limited");
   console.info("Isolated local clone ready; hosted data and the normal local stack are not used for browser writes.");
-  const check = spawn(process.execPath, ["--conditions=react-server","--import","tsx","--test","tests/log-browser.test.ts"],
-    { cwd: root, env: { ...env, SITELEDGER_LOG_QA_DATABASE: database }, stdio: "inherit", windowsHide: true });
+  const check = spawn(process.execPath, ["--conditions=react-server","--import","tsx","--test",`tests/${demoPhotoCheck ? "photos-demo" : photoCheck ? "photos" : "log"}-browser.test.ts`],
+    { cwd: root, env: { ...env, [photoCheck ? "SITELEDGER_PHOTO_QA_DATABASE" : "SITELEDGER_LOG_QA_DATABASE"]: database }, stdio: "inherit", windowsHide: true });
   const code = await new Promise(resolve => check.on("exit",resolve));
   process.exitCode = code ?? 1;
 } catch(error) {
@@ -96,7 +112,7 @@ try {
     await Promise.race([new Promise(resolve => preview.once("exit",resolve)), new Promise(resolve => setTimeout(resolve,3000))]);
   }
   if(proxy){proxy.closeAllConnections();await new Promise(resolve=>proxy.close(resolve));}
-  if (!/^siteledger_log_qa_[a-f0-9]{8}$/.test(database) || container !== database) throw new Error("Unsafe QA cleanup target.");
+  if (!/^siteledger_(?:log|photo)_qa_[a-f0-9]{8}$/.test(database) || container !== database) throw new Error("Unsafe QA cleanup target.");
   if (started) command("docker",["rm","--force",container]);
   if (created) command("docker",["exec",dbContainer,"dropdb","-U","postgres","--force",database]);
   console.info("Disposable QA API and database removed. Original records preserved.");

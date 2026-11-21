@@ -8,8 +8,9 @@ export type ReviewRecord = {
   status: "received" | "extracted" | "confirmed" | "locked";
   transcript: string | null; extraction: SiteExtraction | null; confirmed_extraction: SiteExtraction | null;
   confirmed_boq_ids: string[] | null; confirmed_by: string | null; confirmed_at: string | null;
-  audio_url: string | null; job_status: string | null; pending_media: boolean;
-  photos: { id: string; storage_url: string; ai_findings: unknown; confirmed_findings: { note?: string } | null }[];
+  audio_url: string | null; job_status: string | null; pending_media: boolean; pending_photo_analysis?: boolean;
+  photos: { id: string; storage_url: string; ai_findings: unknown; confirmed_findings: { note?: string } | null;
+    analysis_status?: "queued" | "processing" | "analysed" | "manual_entry" | null }[];
   boq: BoqChoice[];
 };
 export async function getReview(id: string, token: string): Promise<ReviewRecord | null> {

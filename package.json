@@ -25,7 +25,12 @@
     "test:report-browser": "node --conditions=react-server --import tsx --test tests/report-browser.test.ts",
     "test:log": "node --conditions=react-server --import tsx --test tests/log.test.ts",
     "db:check-log": "node scripts/check-database.mjs tests/log.sql",
-    "test:log-browser": "node scripts/verify-log-browser.mjs"
+    "test:log-browser": "node scripts/verify-log-browser.mjs",
+    "test:photos": "node --conditions=react-server --import tsx --test tests/photos.test.ts",
+    "db:check-photos": "node scripts/check-database.mjs tests/photos.sql",
+    "test:photos-browser": "node scripts/verify-log-browser.mjs photos",
+    "test:photos-demo-browser": "node scripts/verify-log-browser.mjs photos-demo",
+    "ai:analyse-demo-photos": "node --env-file=.env.local --conditions=react-server --import tsx scripts/analyse-demo-photos.ts"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",

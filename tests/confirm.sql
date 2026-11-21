@@ -4,7 +4,7 @@ do $$
 declare sid uuid := '70000000-0000-4000-8000-000000000005';
   project uuid := '10000000-0000-4000-8000-000000000001';
   chosen uuid; raw jsonb; confirmed jsonb; result jsonb; photo uuid;
-  before_reports bigint; before_items bigint;
+  before_reports bigint; before_items bigint; photo_lease uuid := gen_random_uuid();
 begin
   select id into chosen from public.boq_items where project_id = project and item_code = 'BLK-225';
   if chosen is null then select id into chosen from public.boq_items where project_id = project and unit = 'm2' limit 1; end if;
@@ -16,6 +16,9 @@ begin
   insert into public.submissions(id,project_id,telegram_id,submitted_by,source,transcript,extraction,status)
     values(sid,project,7000005,'Confirmation test foreman','telegram','We don set some blockwork.',raw,'extracted');
   insert into public.submission_photos(submission_id,storage_url) values(sid,'site-evidence/test.jpg') returning id into photo;
+  -- This suite exercises confirmation, using a completed manual photo review.
+  perform public.claim_photo_analysis(photo,photo_lease);
+  perform public.finish_photo_analysis(photo,photo_lease,null,'photo_unavailable');
   if public.get_confirmation_record(sid,7000006) is not null then raise exception 'Other users can read a private note'; end if;
   result := public.get_confirmation_record(sid,7000005);
   if (result->'boq'->0) ? 'rate' then raise exception 'Confirmation leaked rates'; end if;

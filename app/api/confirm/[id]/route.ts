@@ -15,8 +15,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   try {
     const record = await getReview(id, token);
     if (!record) return Response.json({ error: "Site note unavailable." }, { status: 404, headers });
-    if (record.status === "locked" || record.pending_media || ["queued", "processing"].includes(record.job_status ?? ""))
-      return Response.json({ error: record.status === "locked" ? "This report is locked." : "Wait for your audio and photos to finish saving." }, { status: 409, headers });
+    if (record.status === "locked" || record.pending_media || record.pending_photo_analysis || ["queued", "processing"].includes(record.job_status ?? ""))
+      return Response.json({ error: record.status === "locked" ? "This report is locked." : "Wait for your audio and photos to finish processing." }, { status: 409, headers });
     const text = await request.text();
     if (text.length > 100000) return Response.json({ error: "The review is too large." }, { status: 413, headers });
     let input: unknown;

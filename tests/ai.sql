@@ -68,6 +68,9 @@ begin
     if sqlerrm not like 'Wait for pending site evidence%' then raise; end if;
   end;
   perform public.finish_telegram_media(920001, owner_id);
+  -- Photo processing finishes independently before the human can confirm.
+  perform public.claim_photo_analysis(id,owner_id) from public.submission_photos where submission_id = sid;
+  perform public.finish_photo_analysis(id,owner_id,null,'analysis_failed') from public.submission_photos where submission_id = sid;
   update public.submissions set status = 'confirmed' where id = sid;
   photo := public.prepare_telegram_intake(920002, payload, owner_id);
   if (photo->>'submission_id')::uuid = sid then raise exception 'Confirmed evidence received another photo'; end if;

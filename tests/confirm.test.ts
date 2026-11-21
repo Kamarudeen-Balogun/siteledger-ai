@@ -86,11 +86,11 @@ test("API denies unsigned/foreign-origin reviews, blocks unfinished evidence, an
   process.env.SITELEDGER_APP_URL = "https://siteledger.test"; process.env.TELEGRAM_WEBHOOK_SECRET = secret;
   process.env.SUPABASE_SERVICE_ROLE_KEY = "sb_secret_test"; process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.test";
   const token = createReviewToken(id, 42, secret);
-  let state = "extracted", pending = false;
+  let state = "extracted", pending = false, pendingPhotos = false;
   const calls: { url: string; body: Record<string, unknown> }[] = [];
   globalThis.fetch = async (url, options) => {
     const body = JSON.parse(options?.body as string); calls.push({ url: String(url), body });
-    if (String(url).endsWith("get_confirmation_record")) return Response.json({ status: state, pending_media: pending, job_status: "extracted", boq, photos: [] });
+    if (String(url).endsWith("get_confirmation_record")) return Response.json({ status: state, pending_media: pending, pending_photo_analysis: pendingPhotos, job_status: "extracted", boq, photos: [] });
     assert.ok(String(url).endsWith("confirm_site_submission"));
     assert.equal(body.p_telegram_id, 42); assert.deepEqual(body.p_values, input.values);
     assert.equal(body.p_transcript, undefined); assert.equal(body.p_price, undefined); assert.equal(body.p_confirmed_by, undefined);
@@ -105,7 +105,8 @@ test("API denies unsigned/foreign-origin reviews, blocks unfinished evidence, an
     assert.equal((await POST(request("https://siteledger.test", "bad"), context)).status, 401); assert.equal(calls.length, 0);
     state = "locked"; assert.equal((await POST(request("https://siteledger.test", token), context)).status, 409);
     state = "extracted"; pending = true; assert.equal((await POST(request("https://siteledger.test", token), context)).status, 409);
-    pending = false; assert.equal((await POST(request("https://siteledger.test", token, { ...input, total_cost: 1 }), context)).status, 422);
+    pending = false; pendingPhotos = true; assert.equal((await POST(request("https://siteledger.test", token), context)).status, 409);
+    pendingPhotos = false; assert.equal((await POST(request("https://siteledger.test", token, { ...input, total_cost: 1 }), context)).status, 422);
     assert.equal((await POST(request("https://siteledger.test", token), context)).status, 200);
     assert.equal(calls.filter(call => call.url.endsWith("confirm_site_submission")).length, 1);
   } finally { globalThis.fetch = savedFetch; names.forEach((name, i) => { if (saved[i] === undefined) delete process.env[name]; else process.env[name] = saved[i]; }); }
