@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Costing tests on save",
+      "trigger": "PostFileSave",
+      "description": "Run npm run test:costing after saving a costing .ts file. Read-only; does not modify files.",
+      "matcher": "costing.*\\.ts$",
+      "action": {
+        "type": "command",
+        "command": "npm run test:costing"
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Hooks to configure in Kiro
 
-This directory is tracked from day one. No hook execution is claimed yet.
+This directory is tracked from day one. Kiro recreated `lint-on-save.json` and added `costing-test-on-save.json` during the task 8 review. Both use the installed v1 JSON format and `PostFileSave`; automatic execution has not been proved. See [the recorded hook test](../../docs/kiro-hook-test.md) and [focused diagnostic](../../docs/kiro-hook-follow-up.md). A missing save-hook stdout block alone is inconclusive.
 
 Configure and verify these hooks in the installed Kiro version:
 
