@@ -29,11 +29,9 @@ export default function Home() {
         </p>
         <Link href="/reports/demo" className="mt-6 inline-flex min-h-12 items-center bg-accent px-5 py-3 font-semibold text-white">Open demo daily report</Link>
         <Link href="/today" className="mt-4 flex min-h-12 items-center underline">Open your web site diary</Link>
+        <Link href="/account" className="mt-3 flex min-h-12 items-center underline">Sign in or create your private account</Link>
       </section>
 
-      <footer className="border-t border-rule py-5 font-mono text-xs leading-6">
-        SiteLedger AI · Site records · Quantities · Costs
-      </footer>
     </main>
   );
 }

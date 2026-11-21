@@ -1,7 +1,7 @@
+import { secretHash } from "../lib/auth/session";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildDocument, reportFromInput, displayProductivity, ReportStateError, type ReportSource, type ReportInput } from "../lib/reports/model";
-import { createReviewToken } from "../lib/confirm/access";
 import { POST } from "../app/api/reports/[id]/route";
 
 const id = "70000000-0000-4000-8000-000000000071", secret = "test-report-secret";
@@ -78,12 +78,13 @@ test("report API gates access, rejects caller money, blocks unfinished work, and
   const saves: Record<string, unknown>[] = [];
   globalThis.fetch = async (url, options) => {
     const body = JSON.parse(options?.body as string);
-    if (String(url).endsWith("get_site_report_input")) { assert.equal(body.p_telegram_id, 42); return Response.json(input); }
-    assert.ok(String(url).endsWith("save_site_draft")); saves.push(body); return Response.json("80000000-0000-4000-8000-000000000071");
+    if (String(url).endsWith("account_record_access")) return Response.json(input ? {role:"pm",professional_name:"Demo PM"} : null);
+    if (String(url).endsWith("account_report_input")) { assert.equal(body.p_hash, secretHash(token)); return Response.json(input); }
+    assert.ok(String(url).endsWith("account_save_draft")); saves.push(body); return Response.json("80000000-0000-4000-8000-000000000071");
   };
-  const token = createReviewToken(id, 42, secret);
+  const token = "a".repeat(43);
   const request = (body: unknown = { weather: "  Rain  " }, access = token, origin = "https://siteledger.test") => new Request(`https://siteledger.test/api/reports/${id}`, {
-    method: "POST", headers: { Origin: origin, Authorization: `Bearer ${access}` }, body: JSON.stringify(body),
+    method: "POST", headers: { Origin: origin, Cookie: `siteledger_session=${access}` }, body: JSON.stringify(body),
   });
   const context = { params: Promise.resolve({ id }) };
   try {

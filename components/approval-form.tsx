@@ -1,7 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-export function ApprovalForm({ id, access, version, reviewer }: { id: string; access: string; version: string; reviewer: string }) {
+export function ApprovalForm({ id, version, reviewer }: { id: string; version: string; reviewer: string }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false), [error, setError] = useState("");
   async function approve(event: FormEvent<HTMLFormElement>) {
@@ -9,7 +9,7 @@ export function ApprovalForm({ id, access, version, reviewer }: { id: string; ac
     if (!navigator.onLine) { setError("Reconnect before approving. Your draft is saved."); return; }
     setSaving(true);
     try {
-      const response = await fetch(`/api/reports/${id}/approve`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${access}` },
+      const response = await fetch(`/api/reports/${id}/approve`, { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ document_version: version }), signal: AbortSignal.timeout(20000) });
       const result = await response.json();
       if (!response.ok) { setError(result.error || "Could not approve. Reopen the draft and try again."); return; }

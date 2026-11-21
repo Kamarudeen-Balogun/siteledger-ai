@@ -6,6 +6,8 @@ import { ConfirmForm } from "@/components/confirm-form";
 import { after } from "next/server";
 import { processSubmissionPhotos } from "@/lib/ai/process-photos";
 import { processSubmission } from "@/lib/ai/process-submission";
+import Link from "next/link";
+import { TelegramAccountEntry } from "@/components/account-forms";
 
 export const maxDuration = 120;
 
@@ -17,10 +19,10 @@ function Message({ title, children }: { title: string; children: React.ReactNode
 }
 async function Review(props: Props) {
   await connection();
-  const [{ id }, query] = await Promise.all([props.params, props.searchParams]);
-  const record = await getReview(id, typeof query.access === "string" ? query.access : "").catch(() => undefined);
+  const { id } = await props.params;
+  const record = await getReview(id).catch(() => undefined);
   if (record === undefined) return <Message title="Your site note is saved">We couldn’t load it just now. Reopen your review button to try again.</Message>;
-  if (!record) return <Message title="Open your private review button">Use “Review site note” in your Telegram chat with SiteLedger. If the link expired, send /today for a fresh button.</Message>;
+  if (!record) return <Message title="Sign in to review your site note"><TelegramAccountEntry /><Link href="/account" className="inline-flex min-h-12 items-center underline">Open your account</Link><p>Project membership is required to open this record.</p></Message>;
   const voicePending=["queued","processing"].includes(record.job_status??"");
   if (record.pending_photo_analysis||voicePending) after(async()=>{await Promise.all([
     record.pending_photo_analysis?processSubmissionPhotos(record.id):undefined,
@@ -28,7 +30,7 @@ async function Review(props: Props) {
   ]);});
   // Start editable fields from the completed extraction after a listening refresh.
   // Photo-only refreshes retain the form so they cannot discard someone's edits.
-  return <ConfirmForm key={`${record.id}:${record.job_status}`} record={record} access={query.access!} />;
+  return <ConfirmForm key={`${record.id}:${record.job_status}`} record={record} />;
 }
 export default function Page(props: Props) {
   return <Suspense fallback={<Message title="Opening your site note…">Loading your voice note and photos.</Message>}><Review {...props} /></Suspense>;

@@ -127,4 +127,16 @@ begin
     '2026-11-12 15:40:00+01');
 end;
 $$;
+-- A fresh clone seeds after migrations. Freeze the fictional sources here too,
+-- so later private activity or BoQ edits cannot enter the public demonstration.
+do $$ begin
+  if to_regclass('public.account_legacy_report_sources') is not null then
+    insert into public.account_legacy_report_sources(report_id,source)
+      select r.id,public.assemble_report_input(r.submission_id)->'source'
+      from public.reports r join public.submissions s on s.id=r.submission_id
+      join public.projects p on p.id=r.project_id
+      where p.project_code='LEKKI-DEMO-01' and p.is_demo and s.telegram_id is null and r.status='locked' and r.content_snapshot is null
+      on conflict(report_id) do nothing;
+  end if;
+end $$;
 commit;

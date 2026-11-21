@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import Script from "next/script";
 import Link from "next/link";
-import { listQueue,loadContext,saveContext,enqueue,drainQueue } from "@/lib/web/queue";
+import { listQueue,loadContext,saveContext,enqueue,drainQueue,belongsToActor } from "@/lib/web/queue";
 import { audioType,describeFiles,photoForUpload } from "@/lib/web/files";
 import { validManifest,type CaptureContext,type QueueEntry } from "@/lib/web/types";
 
@@ -23,12 +23,10 @@ export function CaptureDiary() {
   const [now,setNow]=useState(0),[captureProject,setCaptureProject]=useState<CaptureContext|null>(null);
   const scope=useRef<CaptureContext|null>(null),captured=useRef(""),recorder=useRef<MediaRecorder|null>(null),stream=useRef<MediaStream|null>(null);
   const timer=useRef<ReturnType<typeof setInterval>|null>(null),sending=useRef(false),active=useRef<CaptureContext|null>(null),alive=useRef(true);
-  const entry=useRef<{review_id:string;access:string}|null>(null);
   const readyToSend=useRef(false);
   const telegramLaunch=useRef(false);
   const savePending=useRef(false);
-  const sourceKey=async()=>entry.current ? [...new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(entry.current.access)))].map(n=>n.toString(16).padStart(2,"0")).join("") : undefined;
-  const refresh=async()=>{const values=await listQueue();if(alive.current)setRows(values);};
+  const refresh=async()=>{const values=await listQueue();if(alive.current)setRows(values.filter(row=>active.current&&belongsToActor(row,active.current)));};
   const send=async()=>{
     if(!readyToSend.current||sending.current||!active.current||!navigator.onLine)return;
     const current=active.current;
@@ -38,30 +36,33 @@ export function CaptureDiary() {
   async function connect() {
     if(!navigator.onLine){setOpening(false);readyToSend.current=!!active.current;return;}
     const app=(window as Window & {Telegram?:{WebApp?:{initData:string;ready:()=>void;expand:()=>void}}}).Telegram?.WebApp;
-    const input=entry.current ?? (app?.initData ? {init_data:app.initData}:null);
-    if(!input){setOpening(false);readyToSend.current=!!active.current;if(!active.current)setError("Open your private review link, or open SiteLedger from the Telegram bot menu.");else void send();return;}
     readyToSend.current=false;app?.ready();app?.expand();setOpening(true);
     try {
-      const response=await fetch("/api/web/access",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(input),cache:"no-store",signal:AbortSignal.timeout(15000)});
+      const load=()=>fetch("/api/web/access",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}",cache:"no-store",signal:AbortSignal.timeout(15000)});
+      let response=await load();
+      if(response.status===401&&app?.initData){
+        const login=await fetch("/api/account/telegram",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({init_data:app.initData}),cache:"no-store"});
+        const account=await login.json();if(account.account)response=await load();
+      }
       const data=await response.json();if(!response.ok)throw new Error(data.error);
-      if(typeof data.access!=="string"||typeof data.project_id!=="string"||!Number.isSafeInteger(data.actor_id))throw new Error("Project access is unavailable.");
-      const authorized={...data,source_key:await sourceKey()};await saveContext(authorized);active.current=authorized;readyToSend.current=true;window.history.replaceState(null,"","/today");setContext(authorized);setError("");await refresh();void send();
-    } catch(e){setError(e instanceof Error ? e.message:"Could not connect. Your files are kept.");}
+      if(typeof data.access!=="string"||typeof data.project_id!=="string"||typeof data.actor_id!=="string")throw new Error("Project access is unavailable.");
+      const authorized={...data};await saveContext(authorized);active.current=authorized;readyToSend.current=true;
+      window.history.replaceState(null,"","/today");setContext(authorized);setError("");await refresh();void send();
+    } catch(e){setError(e instanceof Error?e.message:"Could not connect. Your files are kept.");}
     finally{setOpening(false);}
   }
   useEffect(()=>{
     alive.current=true;
     const query=new URLSearchParams(window.location.hash.slice(1)||window.location.search);
     telegramLaunch.current=query.has("tgWebAppData");
-    if(query.get("from")&&query.get("access"))entry.current={review_id:query.get("from")!,access:query.get("access")!};
-    if(entry.current)window.history.replaceState(null,"","/today");
     void (async()=>{
       try{await refresh();setOnline(navigator.onLine);setNow(Date.now());const cached=await loadContext();
-        if(cached&&!active.current&&!telegramLaunch.current&&(!entry.current||cached.source_key===await sourceKey())){active.current=cached;setContext(cached);}
-        if(entry.current)await connect();else if((window as Window & {Telegram?:{WebApp?:unknown}}).Telegram?.WebApp)await connect();else if(!navigator.onLine)setOpening(false);}
+        if(cached&&!navigator.onLine&&!active.current&&!telegramLaunch.current){active.current=cached;setContext(cached);await refresh();}
+        if(navigator.onLine)await connect();else setOpening(false);}
       catch{setError("Device storage is unavailable. Keep this page open and try again.");setOpening(false);}
     })();
     const retry=()=>{setOnline(navigator.onLine);setNow(Date.now());if(navigator.onLine)void send();};
+    const reconnect=()=>{setOnline(navigator.onLine);setNow(Date.now());if(navigator.onLine)void connect();};
     const incoming=()=>{
       const parameters=new URLSearchParams(window.location.hash.slice(1));
       if(parameters.has("tgWebAppData")){
@@ -69,19 +70,16 @@ export function CaptureDiary() {
         else window.location.reload();
         return;
       }
-      if(!parameters.get("from")||!parameters.get("access"))return;
-      if(scope.current){setError("Save the current note on this device before opening another authorized diary.");return;}
-      entry.current={review_id:parameters.get("from")!,access:parameters.get("access")!};
-      readyToSend.current=false;active.current=null;setContext(null);window.history.replaceState(null,"","/today");void connect();
+
     };
-    window.addEventListener("online",retry);window.addEventListener("offline",retry);window.addEventListener("focus",retry);
+    window.addEventListener("online",reconnect);window.addEventListener("offline",retry);window.addEventListener("focus",reconnect);
     window.addEventListener("hashchange",incoming);
     const interval=setInterval(retry,15000);
     if("serviceWorker" in navigator)void navigator.serviceWorker.register("/siteledger-worker.js",{scope:"/"}).then(async()=>{
       const registration=await navigator.serviceWorker.ready;
       registration.active?.postMessage({type:"CACHE_STATIC",urls:performance.getEntriesByType("resource").map(resource=>resource.name)});
     }).catch(()=>undefined);
-    return()=>{alive.current=false;clearInterval(interval);window.removeEventListener("online",retry);window.removeEventListener("offline",retry);window.removeEventListener("focus",retry);window.removeEventListener("hashchange",incoming);
+    return()=>{alive.current=false;clearInterval(interval);window.removeEventListener("online",reconnect);window.removeEventListener("offline",retry);window.removeEventListener("focus",reconnect);window.removeEventListener("hashchange",incoming);
       if(timer.current)clearInterval(timer.current);if(recorder.current?.state==="recording")recorder.current.stop();stream.current?.getTracks().forEach(track=>track.stop());};
   // Bootstrap once; current authorization is held in active.current for retries.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,14 +126,15 @@ export function CaptureDiary() {
   const pending=visible.filter(row=>row.status!=="sent"),sent=visible.filter(row=>row.status==="sent").slice(0,3);
   const busy=opening||saving||preparing||starting||!context||context.expires<=now/1000;
   return <main className="mx-auto min-h-svh max-w-3xl px-5 py-8 text-base" style={{fontFamily:'"Report Sans", Arial, sans-serif'}}>
-    <Script src="https://telegram.org/js/telegram-web-app.js" onReady={()=>{if(!entry.current)void connect();}} onError={()=>{setOpening(false);if(!active.current)setError("Open your private review link to use the web diary.");else if(!entry.current){readyToSend.current=true;void send();}}}/>
+    <Script src="https://telegram.org/js/telegram-web-app.js" onReady={()=>{void connect();}} onError={()=>{setOpening(false);if(!active.current)setError("Sign in and select an authorized project to use the web diary.");else{readyToSend.current=true;void send();}}}/>
     <p className="border-b border-rule pb-5 font-mono text-xs tracking-widest">SITELEDGER / SITE DIARY</p>
     <h1 className="mt-7 font-serif text-4xl" style={{fontFamily:'"Report Serif", Georgia, serif'}}>Today on site</h1>
     {context ? <div className="mt-5 border-b border-rule pb-6"><p className="font-semibold">{(captureProject??context).project_name}</p>
-      <p className="mt-2">{(captureProject??context).actor_name} · {(captureProject??context).timezone}</p><p className="mt-2 font-mono text-sm">{new Intl.DateTimeFormat("en-GB",{dateStyle:"long",timeZone:context.timezone}).format(new Date(now))}</p></div>:
-      <p className="mt-5 leading-7">{opening ? "Opening your authorized project…":"Use your private review link or the SiteLedger bot menu to open this diary."}</p>}
+      <p className="mt-2">{(captureProject??context).actor_name} · {(captureProject??context).role === "pm" ? "PM" : "Foreman"} · {(captureProject??context).timezone}</p><p className="mt-2 font-mono text-sm">{new Intl.DateTimeFormat("en-GB",{dateStyle:"long",timeZone:context.timezone}).format(new Date(now))}</p></div>:
+      <p className="mt-5 leading-7">{opening ? "Opening your authorized project…":"Sign in and choose one of your authorized projects to open this diary."}</p>}
+    <Link href="/projects" className="mt-4 inline-flex min-h-12 items-center underline">Choose an authorized project</Link>
     {!online&&<p role="status" className="mt-5 border-l-4 border-amber-700 bg-amber-50 p-4">Offline. Saved notes stay on this device and will send when data returns.</p>}
-    {context&&context.expires<=now/1000&&<p role="alert" className="mt-5 border-l-4 border-amber-700 p-4">Capture access expired. Reopen your private review link or the bot menu. Queued files are kept.</p>}
+    {context&&context.expires<=now/1000&&<p role="alert" className="mt-5 border-l-4 border-amber-700 p-4">Your session expired. Sign in and select the original project. Queued files are kept.</p>}
     {error&&<p role="alert" className="mt-5 border-l-4 border-amber-700 p-4">{error}</p>}
     {context&&<section aria-label="New site note" className="border-b border-rule py-7">
       <p className="mb-5 leading-7">Say what was done, the quantities and crew, deliveries, delays and issues. Aim for 30–90 seconds.</p>

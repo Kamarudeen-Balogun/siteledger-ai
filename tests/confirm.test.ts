@@ -1,3 +1,4 @@
+import { secretHash } from "../lib/auth/session";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createReviewToken, verifyReviewToken } from "../lib/confirm/access";
@@ -32,32 +33,24 @@ test("Telegram menu access trusts signed fresh data and rejects altered users, d
   assert.equal(verifyTelegramAccess(signed + "&user=%7B%22id%22%3A99%7D", token, now), null);
   assert.equal(verifyTelegramAccess("user=%7B%22id%22%3A42%7D", token, now), null);
 });
-test("Telegram menu resolves the signed account's own latest note without trusting browser identity", async () => {
-  const names = ["SITELEDGER_APP_URL", "TELEGRAM_BOT_TOKEN", "TELEGRAM_WEBHOOK_SECRET", "SUPABASE_SERVICE_ROLE_KEY", "NEXT_PUBLIC_SUPABASE_URL"];
-  const saved = names.map(name => process.env[name]); const savedFetch = globalThis.fetch;
-  process.env.SITELEDGER_APP_URL = "https://siteledger.test"; process.env.TELEGRAM_BOT_TOKEN = "test-bot-token";
-  process.env.TELEGRAM_WEBHOOK_SECRET = secret; process.env.SUPABASE_SERVICE_ROLE_KEY = "sb_secret_test";
-  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.test";
-  let calls = 0, latest: string | null = id;
-  globalThis.fetch = async (url, options) => {
-    calls++; assert.ok(String(url).endsWith("latest_confirmation_submission"));
-    assert.deepEqual(JSON.parse(options?.body as string), { p_telegram_id: 42 });
-    return Response.json(latest);
-  };
-  const request = (data: unknown, origin = "https://siteledger.test") => new Request("https://siteledger.test/api/confirm/access", {
-    method: "POST", headers: { Origin: origin }, body: JSON.stringify(data),
+test("old Telegram menu uses current linked identity and never mints a bearer review link", async context => {
+  process.env.SITELEDGER_APP_URL="https://siteledger.test";process.env.TELEGRAM_BOT_TOKEN="test-bot-token";
+  process.env.NEXT_PUBLIC_SUPABASE_URL="https://supabase.test";process.env.SUPABASE_SERVICE_ROLE_KEY="sb_secret_test";
+  let linked=true,calls=0;
+  context.mock.method(globalThis,"fetch",async (url: URL | RequestInfo,options?: RequestInit)=>{
+    calls++; const path=new URL(String(url)).pathname;
+    if(path.endsWith("account_limit"))return Response.json(true);
+    assert.ok(path.endsWith("account_telegram_session"));const body=JSON.parse(String(options?.body));assert.equal(body.p_telegram,42);assert.match(body.p_proof_hash,/^[a-f0-9]{64}$/);
+    return Response.json(linked?{profile_id:id,source:"telegram"}:{needs_login:true});
   });
-  try {
-    const signed = signedTelegramData(process.env.TELEGRAM_BOT_TOKEN, Date.now());
-    assert.equal((await openTelegramReview(request({ init_data: signed }, "https://elsewhere.test"))).status, 403);
-    assert.equal((await openTelegramReview(request({ init_data: "fake" }))).status, 401);
-    assert.equal((await openTelegramReview(request({ init_data: signed, telegram_id: 99 }))).status, 401);
-    assert.equal(calls, 0);
-    const response = await openTelegramReview(request({ init_data: signed })); assert.equal(response.status, 200);
-    const result = await response.json(); const url = new URL(result.url, "https://siteledger.test");
-    assert.equal(verifyReviewToken(url.searchParams.get("access")!, id, secret)?.telegramId, 42);
-    latest = null; assert.equal((await openTelegramReview(request({ init_data: signed }))).status, 404);
-  } finally { globalThis.fetch = savedFetch; names.forEach((name, i) => { if (saved[i] === undefined) delete process.env[name]; else process.env[name] = saved[i]; }); }
+  const request=(data:unknown,origin="https://siteledger.test")=>new Request(origin+"/api/confirm/access",{method:"POST",headers:{Origin:origin},body:JSON.stringify(data)});
+  const signed=signedTelegramData(process.env.TELEGRAM_BOT_TOKEN,Date.now());
+  assert.equal((await openTelegramReview(request({init_data:signed},"https://elsewhere.test"))).status,403);
+  assert.equal((await openTelegramReview(request({init_data:"fake"}))).status,401);
+  assert.equal((await openTelegramReview(request({init_data:signed,telegram_id:99}))).status,422);assert.equal(calls,0);
+  const response=await openTelegramReview(request({init_data:signed}));assert.equal(response.status,200);assert.match(response.headers.get("set-cookie")!,/HttpOnly/);
+  assert.equal("url" in await response.json(),false);
+  linked=false;const unknown=await openTelegramReview(request({init_data:signed}));assert.equal((await unknown.json()).needs_login,true);assert.equal(unknown.headers.get("set-cookie"),null);
 });
 test("private review links expire and reject tampering, another submission and a wrong key", () => {
   const token = createReviewToken(id, 42, secret, now);
@@ -85,19 +78,19 @@ test("API denies unsigned/foreign-origin reviews, blocks unfinished evidence, an
   const saved = names.map(name => process.env[name]); const savedFetch = globalThis.fetch;
   process.env.SITELEDGER_APP_URL = "https://siteledger.test"; process.env.TELEGRAM_WEBHOOK_SECRET = secret;
   process.env.SUPABASE_SERVICE_ROLE_KEY = "sb_secret_test"; process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.test";
-  const token = createReviewToken(id, 42, secret);
+  const token = "a".repeat(43);
   let state = "extracted", pending = false, pendingPhotos = false;
   const calls: { url: string; body: Record<string, unknown> }[] = [];
   globalThis.fetch = async (url, options) => {
     const body = JSON.parse(options?.body as string); calls.push({ url: String(url), body });
-    if (String(url).endsWith("get_confirmation_record")) return Response.json({ status: state, pending_media: pending, pending_photo_analysis: pendingPhotos, job_status: "extracted", boq, photos: [] });
-    assert.ok(String(url).endsWith("confirm_site_submission"));
-    assert.equal(body.p_telegram_id, 42); assert.deepEqual(body.p_values, input.values);
+    if (String(url).endsWith("account_review")) return Response.json({ status: state, pending_media: pending, pending_photo_analysis: pendingPhotos, job_status: "extracted", boq, photos: [] });
+    assert.ok(String(url).endsWith("account_confirm"));
+    assert.equal(body.p_hash, secretHash(token)); assert.deepEqual(body.p_values, input.values);
     assert.equal(body.p_transcript, undefined); assert.equal(body.p_price, undefined); assert.equal(body.p_confirmed_by, undefined);
     return Response.json({ status: "confirmed", confirmed_by: "Demo foreman" });
   };
   const request = (origin: string, access: string, body: unknown = input) => new Request(`https://siteledger.test/api/confirm/${id}`, {
-    method: "POST", headers: { Origin: origin, Authorization: `Bearer ${access}`, "Content-Type": "application/json" }, body: JSON.stringify(body),
+    method: "POST", headers: { Origin: origin, Cookie: `siteledger_session=${access}`, "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
   const context = { params: Promise.resolve({ id }) };
   try {
@@ -108,6 +101,6 @@ test("API denies unsigned/foreign-origin reviews, blocks unfinished evidence, an
     pending = false; pendingPhotos = true; assert.equal((await POST(request("https://siteledger.test", token), context)).status, 409);
     pendingPhotos = false; assert.equal((await POST(request("https://siteledger.test", token, { ...input, total_cost: 1 }), context)).status, 422);
     assert.equal((await POST(request("https://siteledger.test", token), context)).status, 200);
-    assert.equal(calls.filter(call => call.url.endsWith("confirm_site_submission")).length, 1);
+    assert.equal(calls.filter(call => call.url.endsWith("account_confirm")).length, 1);
   } finally { globalThis.fetch = savedFetch; names.forEach((name, i) => { if (saved[i] === undefined) delete process.env[name]; else process.env[name] = saved[i]; }); }
 });

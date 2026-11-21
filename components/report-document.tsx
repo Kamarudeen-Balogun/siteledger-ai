@@ -1,9 +1,10 @@
 import Image from "next/image";
-import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, lockDate, type ReportView } from "@/lib/reports/model";
-import { formatNaira } from "@/lib/costing/format-naira";
+import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, lockDate, moneyDisplayNote, type ReportView } from "@/lib/reports/model";
+import { formatMoney } from "@/lib/costing/format-money";
 
-export function ReportDocument({ report, access }: { report: ReportView; access?: string }) {
+export function ReportDocument({ report }: { report: ReportView }) {
   const { document: doc } = report, source = doc.source;
+  const money = (amount: string) => formatMoney(amount, doc.currency);
   const prices = new Map(source.price_list.map(price => [price.id, price]));
   return <article className="report-document" aria-label="Daily site report">
     <header className="report-header">
@@ -15,7 +16,7 @@ export function ReportDocument({ report, access }: { report: ReportView; access?
         ["Date", displayDate(source.date)], ["Weather", doc.weather || "Not recorded"]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
       <p className="report-reference">Record {report.id} · {report.status === "locked" ? "Approved and locked" : "Draft — awaiting approval"}</p>
     </header>
-    <section className="report-total"><div><h2>Value of work today</h2><p>Confirmed quantities × BoQ rates</p></div><strong>{formatNaira(doc.costing.total_cost)}</strong></section>
+    <section className="report-total"><div><h2>Value of work today</h2><p>Confirmed quantities × BoQ rates</p></div><strong>{money(doc.costing.total_cost)}</strong></section>
     <section><h2>Work done and BoQ value</h2>
       <p className="report-scroll-hint">Swipe the table to see rates and costs.</p>
       <div className="report-table-scroll" tabIndex={0} role="region" aria-label="Work done and BoQ costs">
@@ -25,11 +26,11 @@ export function ReportDocument({ report, access }: { report: ReportView; access?
             <td><p className="report-eyebrow">{prices.get(item.boq_item_id)?.section}</p><p className="report-work-title">{source.items[i].description}</p>
               <p className="report-note">{prices.get(item.boq_item_id)?.description}</p>
               <p className={item.variance_color === "red" ? "report-variance" : "report-progress"}>Cumulative {item.cumulative_quantity} {displayUnit(item.unit)} · {displayRatio(item.percentage_complete)}% complete</p>
-              <p className="report-note">Value earned {formatNaira(item.value_earned)}</p>
+              <p className="report-note">Value earned {money(item.value_earned)}</p>
               {item.is_overrun && <p className="report-variance">Over BoQ quantity — check this item.</p>}
               {item.is_behind_plan && <p className="report-variance">{displayRatio(item.variance_percentage_points!)} percentage points against plan</p>}
               {item.productivity !== null && <p className="report-note">Crew {item.crew} · {displayProductivity(item.productivity)} {displayUnit(item.unit)} per person per day</p>}
-            </td><td>{item.quantity_done}<span className="block">{displayUnit(item.unit)}</span></td><td>{formatNaira(item.rate)}</td><td className="font-semibold">{formatNaira(item.cost_today)}</td>
+            </td><td>{item.quantity_done}<span className="block">{displayUnit(item.unit)}</span></td><td>{money(item.rate)}</td><td className="font-semibold">{money(item.cost_today)}</td>
           </tr>)}</tbody>
         </table>
       </div>
@@ -45,16 +46,16 @@ export function ReportDocument({ report, access }: { report: ReportView; access?
     <section><h2>Photographic evidence</h2>
       {!source.photos.length && <p className="report-note">No photos were attached to this record.</p>}
       <div className="report-photos">{source.photos.map((photo, i) => <figure key={photo.id}>
-        <Image src={`/api/confirm/${source.submission_id}/media/${photo.id}?access=${encodeURIComponent(access ?? "")}`} width={800} height={600}
+        <Image src={`/api/confirm/${source.submission_id}/media/${photo.id}`} width={800} height={600}
           alt={`Site evidence photo ${i + 1}`} unoptimized className="h-auto w-full" />
         <figcaption>Photo {i + 1} · {photo.note || "No observation recorded."}</figcaption>
       </figure>)}</div>
     </section>
-    <section className="report-signatures"><div><h2>Site foreman / site engineer</h2><p>Recorded by {source.submitted_by}</p><p className="report-signature-line">Signature / date</p></div>
+    <section className="report-signatures"><div><h2>{source.submitted_role === "pm" ? "Site record / PM" : "Site foreman / site engineer"}</h2><p>Recorded by {source.submitted_by}</p><p className="report-signature-line">Signature / date</p></div>
       <div><h2>Project manager / QS</h2><p>{report.approved_by || "Awaiting approval"}</p><p className="report-signature-line">Signature / date</p></div></section>
-    <footer>{source.confirmed_by && <p>Quantities confirmed by {source.confirmed_by}{source.confirmed_at ? ` · ${displayTimestamp(source.confirmed_at)}` : ""}</p>}
-      {report.locked_at && <p>Locked {displayTimestamp(report.locked_at)}</p>}
-      <p>Amounts rounded to the nearest ₦10 for display. Exact values retained in the record.</p>
+    <footer>{source.confirmed_by && <p>Quantities confirmed by {source.confirmed_by}{source.confirmed_role ? ` / ${source.confirmed_role === "pm" ? "PM" : "Foreman"}` : ""}{source.confirmed_at ? ` · ${displayTimestamp(source.confirmed_at, source.project.timezone)}` : ""}</p>}
+      {report.locked_at && <p>Locked {displayTimestamp(report.locked_at, source.project.timezone)}</p>}
+      <p>{moneyDisplayNote(doc.currency)}</p>
       {source.project.is_demo && <p>Demo project and illustrative rates — verify before real use.</p>}
       <p className="report-reference">SITELEDGER / {source.date} / {doc.currency}</p>
     </footer>

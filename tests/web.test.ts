@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createHash,createHmac } from "node:crypto";
+import { createHash } from "node:crypto";
 import { POST as capturePOST } from "../app/api/web/access/route";
 import { captureAccess,verifyCaptureAccess } from "../lib/web/access";
 import { reserveWeb,uploadWeb,finishWeb,type WebDependencies } from "../lib/web/api";
@@ -13,8 +13,8 @@ const manifest:WebManifest={id,project_id:project,captured_at:new Date().toISOSt
   {index:0,content_type:"audio/wav",bytes:voice.length,sha256:digest(voice)},
   {index:1,content_type:"image/jpeg",bytes:photo.length,sha256:digest(photo)}]};
 const secret="local-web-qa",origin="https://siteledger.example";
-const request=(path:string,body?:string|Buffer,token=captureAccess(context,secret).access,type="application/json")=>new Request(origin+path,{method:body instanceof Buffer?"PUT":"POST",
-  headers:{Origin:origin,Authorization:"Bearer "+token,"Content-Type":type},body:typeof body==="string"?body:body?new Uint8Array(body):undefined});
+const request=(path:string,body?:string|Buffer,token="a".repeat(43),type="application/json")=>new Request(origin+path,{method:body instanceof Buffer?"PUT":"POST",
+  headers:{Origin:origin,Cookie:"siteledger_session="+token,"Content-Type":type},body:typeof body==="string"?body:body?new Uint8Array(body):undefined});
 function deps(run:(name:string,args:Record<string,unknown>)=>unknown,upload:WebDependencies["upload"]=async()=>{}):WebDependencies {
   return {rpc:async<T>(name:string,args:Record<string,unknown>)=>run(name,args) as T,upload};
 }
@@ -43,15 +43,16 @@ test("unauthorized, altered and foreign-project reservations cannot reach storag
   let calls=0;const dependency=deps(()=>{calls++;return {id,status:"pending",missing:[0,1]};});
   assert.equal((await reserveWeb(request("/api/web/submissions",JSON.stringify(manifest),"invalid"),dependency)).status,401);
   const foreign={...manifest,project_id:"10000000-0000-4000-8000-000000000002"};
-  assert.equal((await reserveWeb(request("/api/web/submissions",JSON.stringify(foreign)),dependency)).status,400);
+  const denied=deps(()=>({error:"forbidden"}));
+  assert.equal((await reserveWeb(request("/api/web/submissions",JSON.stringify(foreign)),denied)).status,403);
   assert.equal(calls,0);
   const response=await reserveWeb(request("/api/web/submissions",JSON.stringify(manifest)),dependency);assert.equal(response.status,200);assert.equal(calls,1);
 }));
 test("media hash/type checks prevent replacement; failures release the owned lease",async()=>configured(async()=>{
   let uploaded=0,released=0;
   const dependency=deps(name=>{
-    if(name==="claim_web_asset")return {path:`${project}/${id}/0.wav`,asset:manifest.assets[0]};
-    if(name==="release_web_asset"){released++;return;}
+    if(name==="account_claim_web")return {path:`${project}/${id}/0.wav`,asset:manifest.assets[0]};
+    if(name==="account_release_web"){released++;return;}
     return {status:"uploaded"};
   },async()=>{uploaded++;});
   assert.equal((await uploadWeb(request("/media",Buffer.from("RIFF1234WAVEother"),undefined,"audio/wav"),id,0,dependency)).status,400);
@@ -61,26 +62,23 @@ test("media hash/type checks prevent replacement; failures release the owned lea
 }));
 test("lost response retries skip uploaded objects and finalize only complete notes",async()=>configured(async()=>{
   let uploads=0,processing=0;
-  const complete=deps(name=>name==="claim_web_asset"?{status:"uploaded"}:{id,status:"saved",missing:[]},async()=>{uploads++;});
+  const complete=deps(name=>name==="account_claim_web"?{status:"uploaded"}:{id,status:"saved",missing:[]},async()=>{uploads++;});
   assert.equal((await uploadWeb(request("/media",voice,undefined,"audio/wav"),id,0,complete)).status,200);assert.equal(uploads,0);
   const busy=deps(()=>({busy:true}));assert.equal((await finishWeb(request("/finish"),id,busy,()=>processing++)).status,503);assert.equal(processing,0);
   const response=await finishWeb(request("/finish"),id,complete,()=>processing++);
-  assert.equal(response.status,200);assert.equal(processing,1);assert.ok((await response.json()).review_url.startsWith(`/confirm/${id}?access=`));
+  assert.equal(response.status,200);assert.equal(processing,1);assert.equal((await response.json()).review_url, `/confirm/${id}`);
 }));
 test("revocation and rate limits preserve a plain retryable result",async()=>configured(async()=>{
   assert.equal((await reserveWeb(request("/reserve",JSON.stringify(manifest)),deps(()=>({error:"forbidden"})))).status,403);
   assert.equal((await reserveWeb(request("/reserve",JSON.stringify(manifest)),deps(()=>({error:"rate_limited"})))).status,429);
 }));
-test("fresh signed Telegram entry opens capture without an existing note or supplied identity",async()=>configured(async()=>{
-  const previous={bot:process.env.TELEGRAM_BOT_TOKEN,url:process.env.NEXT_PUBLIC_SUPABASE_URL,service:process.env.SUPABASE_SERVICE_ROLE_KEY,fetch:globalThis.fetch};
-  const bot="test-web-bot-token";process.env.TELEGRAM_BOT_TOKEN=bot;process.env.NEXT_PUBLIC_SUPABASE_URL="https://database.example";process.env.SUPABASE_SERVICE_ROLE_KEY="test-service-key";
-  const fields=new URLSearchParams({auth_date:String(Math.floor(Date.now()/1000)),user:JSON.stringify({id:context.actor_id,is_bot:false})});
-  const value=[...fields].sort(([a],[b])=>a.localeCompare(b)).map(([key,value])=>`${key}=${value}`).join("\n");
-  fields.set("hash",createHmac("sha256",createHmac("sha256","WebAppData").update(bot).digest()).update(value).digest("hex"));
-  let calls=0;globalThis.fetch=async(url,options)=>{calls++;assert.ok(String(url).endsWith("/rpc/web_capture_context"));assert.equal(JSON.parse(String(options?.body)).p_actor,context.actor_id);return Response.json(context);};
-  try {
-    const response=await capturePOST(new Request(origin+"/api/web/access",{method:"POST",headers:{Origin:origin},body:JSON.stringify({init_data:fields.toString()})}));
-    assert.equal(response.status,200);assert.equal(verifyCaptureAccess((await response.json()).access,secret)?.project_id,project);assert.equal(calls,1);
-    const rejected=await capturePOST(new Request(origin+"/api/web/access",{method:"POST",headers:{Origin:origin},body:JSON.stringify({init_data:fields.toString(),actor_id:7700999})}));assert.equal(rejected.status,401);assert.equal(calls,1);
-  }finally{globalThis.fetch=previous.fetch;for(const [key,value] of [["TELEGRAM_BOT_TOKEN",previous.bot],["NEXT_PUBLIC_SUPABASE_URL",previous.url],["SUPABASE_SERVICE_ROLE_KEY",previous.service]]){if(value===undefined)delete process.env[key!];else process.env[key!]=value;}}
+test("capture requires an account cookie and derives project and person on the server",async contextTest=>configured(async()=>{
+  process.env.NEXT_PUBLIC_SUPABASE_URL="https://database.example";process.env.SUPABASE_SERVICE_ROLE_KEY="test-service-key";
+  let calls=0;
+  contextTest.mock.method(globalThis,"fetch",async(url: URL | RequestInfo,options?: RequestInit)=>{calls++;assert.ok(String(url).endsWith("/rpc/account_capture_context"));const args=JSON.parse(String(options?.body));assert.match(args.p_hash,/^[a-f0-9]{64}$/);assert.equal(Object.keys(args).length,1);return Response.json(context);});
+  const denied=await capturePOST(request("/api/web/access",JSON.stringify({init_data:"old-launch"}),"invalid"));assert.equal(denied.status,401);assert.equal(calls,0);
+  const spoofed=await capturePOST(request("/api/web/access",JSON.stringify({actor_id:7700999})));assert.equal(spoofed.status,422);assert.equal(calls,0);
+  const response=await capturePOST(request("/api/web/access","{}"));assert.equal(response.status,200);assert.equal(calls,1);
+  const result=await response.json();assert.equal(result.project_id,project);assert.match(result.access,/^[A-Za-z0-9_-]{43}$/);
+  assert.equal(verifyCaptureAccess(result.access,secret),null,"retry nonce cannot authenticate old capture routes");
 }));

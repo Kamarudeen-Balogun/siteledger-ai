@@ -1,23 +1,18 @@
-import { verifyTelegramAccess } from "@/lib/confirm/telegram-access";
-import { verifyReviewToken } from "@/lib/confirm/access";
-import { captureAccess } from "@/lib/web/access";
+import { requestSessionHash, sessionToken } from "@/lib/auth/session";
+import { smallJson } from "@/lib/auth/request";
 import { intakeRpc } from "@/lib/telegram/storage";
 import type { CaptureContext } from "@/lib/web/types";
-const headers = {"Cache-Control":"private, no-store","Referrer-Policy":"no-referrer"};
-export async function POST(request: Request) {
-  if(request.headers.get("origin") !== process.env.SITELEDGER_APP_URL) return Response.json({error:"Open your authorized site diary."},{status:403,headers});
-  if(Number(request.headers.get("content-length")??0)>12000) return Response.json({error:"Access request is too large."},{status:413,headers});
-  try {
-    const text = await request.text(); if(text.length > 12000) return Response.json({error:"Access request is too large."},{status:413,headers});
-    const input = JSON.parse(text); let actor: number | null = null;let review:string|null=null;
-    if(input && Object.keys(input).length === 1 && typeof input.init_data === "string") actor=verifyTelegramAccess(input.init_data,process.env.TELEGRAM_BOT_TOKEN??"");
-    else if(input && Object.keys(input).length === 2 && typeof input.review_id === "string" && typeof input.access === "string") {
-      const claims=verifyReviewToken(input.access,input.review_id,process.env.TELEGRAM_WEBHOOK_SECRET??"");
-      if(claims){actor=claims.telegramId;review=input.review_id;}
-    }
-    if(!actor) return Response.json({error:"Reopen SiteLedger from your private review link or Telegram bot menu."},{status:401,headers});
-    const context=await intakeRpc<Omit<CaptureContext,"access"|"expires"> | null>(review?"web_capture_context_from_review":"web_capture_context",review?{p_actor:actor,p_review:review}:{p_actor:actor});
-    if(!context) return Response.json({error:"Project access is unavailable. Your queued notes stay on this device."},{status:403,headers});
-    return Response.json(captureAccess(context,process.env.TELEGRAM_WEBHOOK_SECRET??""),{headers});
-  } catch {return Response.json({error:"Could not connect. Try again when data returns."},{status:503,headers});}
+const headers={"Cache-Control":"private, no-store","Referrer-Policy":"no-referrer"};
+export async function POST(request:Request){
+  if(request.headers.get("origin")!==process.env.SITELEDGER_APP_URL)return Response.json({error:"Open your site diary on SiteLedger."},{status:403,headers});
+  const hash=requestSessionHash(request);
+  if(!hash)return Response.json({error:"Sign in and select the original project. Your queued files stay on this device."},{status:401,headers});
+  try{
+    const input = await smallJson(request,12000);
+    if (Object.keys(input).length) return Response.json({error:"Capture uses your signed-in account and selected project."},{status:422,headers});
+    const data=await intakeRpc<CaptureContext & {error?:string}|null>("account_capture_context",{p_hash:hash});
+    if(!data || data.error)return Response.json({error:data?.error==="archived"?"This project is archived. Its queued files are kept.":"Select an authorized project before recording. Your saved files are kept."},{status:403,headers});
+    // This retry nonce is not a login credential; every send checks the account.
+    return Response.json({...data,access:sessionToken()},{headers});
+  }catch{return Response.json({error:"Could not open capture. Your saved files are kept; try again."},{status:503,headers});}
 }

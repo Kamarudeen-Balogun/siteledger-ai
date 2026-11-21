@@ -20,6 +20,8 @@ async function transaction<T>(store:string,mode:IDBTransactionMode,action:(objec
 export const listQueue=()=>transaction<QueueEntry[]>(STORE,"readonly",(store,set)=>{const r=store.getAll();r.onsuccess=()=>set(r.result);});
 export const loadContext=()=>transaction<CaptureContext|undefined>(SETTINGS,"readonly",(store,set)=>{const r=store.get("active");r.onsuccess=()=>set(r.result);});
 export const saveContext=(context:CaptureContext)=>transaction<void>(SETTINGS,"readwrite",store=>{store.put(context,"active");});
+export const clearCachedContext=()=>transaction<void>(SETTINGS,"readwrite",store=>{store.delete("active");});
+export const belongsToActor=(entry:QueueEntry,context:CaptureContext)=>String(entry.context.actor_id)===String(context.actor_id)||(context.actor_aliases??[]).includes(String(entry.context.actor_id));
 export async function enqueue(entry:QueueEntry) {
   return transaction<void>(STORE,"readwrite",(store)=>{
     const r=store.getAll();r.onsuccess=()=>{
@@ -32,9 +34,9 @@ export async function claimQueue(id:string,owner:string,context:CaptureContext) 
   return transaction<QueueEntry|null>(STORE,"readwrite",(store,set)=>{
     const r=store.get(id);r.onsuccess=()=>{
       const row:QueueEntry|undefined=r.result;
-      if(!row || row.status==="sent" || row.context.actor_id!==context.actor_id || row.manifest.project_id!==context.project_id
+      if(!row || row.status==="sent" || !belongsToActor(row,context) || row.manifest.project_id!==context.project_id
         || (row.lease_until??0)>Date.now() || (row.status==="blocked" && row.context.access===context.access)){set(null);return;}
-      const claimed={...row,context,status:"sending" as const,owner,lease_until:Date.now()+180000,message:"Sending saved files…"};
+      const claimed={...row,context:{...row.context,access:context.access,expires:context.expires,actor_aliases:context.actor_aliases},status:"sending" as const,owner,lease_until:Date.now()+180000,message:"Sending saved files…"};
       store.put(claimed);set(claimed);
     };
   });
@@ -47,7 +49,7 @@ export async function updateQueue(id:string,owner:string,patch:Partial<QueueEntr
 }
 class SendError extends Error {constructor(message:string,public blocked:boolean){super(message);}}
 async function call(url:string,context:CaptureContext,options:RequestInit) {
-  const response=await fetch(url,{...options,headers:{...options.headers,Authorization:`Bearer ${context.access}`},cache:"no-store",signal:AbortSignal.timeout(60000)});
+  const response=await fetch(url,{...options,headers:{...options.headers},cache:"no-store",signal:AbortSignal.timeout(60000)});
   const body=await response.json();
   if(!response.ok)throw new SendError(body.error??"Could not send yet. Files stay queued.",[400,401,403,404,413].includes(response.status));
   return body;
@@ -77,7 +79,7 @@ export async function drainQueue(context:CaptureContext,onChange:()=>Promise<voi
         if(!online())throw new Error("Original project context changed");
         result=await call(`/api/web/submissions/${row.manifest.id}/finish`,context,{method:"POST"});
       }
-      if(result.id!==row.manifest.id || result.status!=="saved" || typeof result.review_url!=="string" || !result.review_url.startsWith(`/confirm/${row.manifest.id}?access=`))
+      if(result.id!==row.manifest.id || result.status!=="saved" || result.review_url!==`/confirm/${row.manifest.id}`)
         throw new SendError("Could not verify receipt. Your saved files will retry.",false);
       await updateQueue(row.manifest.id,owner,{status:"sent",message:"Saved on the server — review and confirm your note.",files:undefined,review_url:result.review_url,lease_until:0,owner:undefined});
     } catch(error) {

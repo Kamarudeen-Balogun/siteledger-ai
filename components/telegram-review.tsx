@@ -16,9 +16,7 @@ export function TelegramReview() {
         body: JSON.stringify({ init_data: app.initData }), cache: "no-store", signal: AbortSignal.timeout(15000) });
       const result = await response.json();
       if (!response.ok) { setError(result.error); return; }
-      // Stay in Telegram's webview; the private URL is never shown in chat.
-      if (typeof result.url !== "string" || !result.url.startsWith("/confirm/")) throw new Error("Invalid review");
-      window.location.replace(result.url);
+      window.location.replace(result.account ? "/projects" : "/account");
     } catch { setError("Could not connect. Your voice note is saved; try again when data returns."); }
     finally { setOpening(false); }
   }

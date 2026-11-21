@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
+  <title>Reset your SiteLedger password</title>
+  <style>
+    :root { color-scheme: light; supported-color-schemes: light; }
+    body { margin:0; padding:0; width:100% !important; -webkit-text-size-adjust:100%; }
+    table { border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; }
+    a { color:#C2410C; }
+    @media only screen and (max-width:600px) {
+      .outer { padding:16px 12px !important; }
+      .inner { padding-left:24px !important; padding-right:24px !important; }
+      .heading { font-size:34px !important; line-height:40px !important; }
+      .code { font-size:30px !important; letter-spacing:7px !important; }
+    }
+  </style>
+  <!--[if mso]><style>body,table,td,p,a { font-family:Verdana,sans-serif; }</style><![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#EFEAE1;color:#1C1917;font-family:Verdana,Geneva,sans-serif;">
+  <div style="display:none;font-size:1px;line-height:1px;color:#EFEAE1;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">Your one-use code to recover your SiteLedger account.</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#EFEAE1" style="width:100%;background-color:#EFEAE1;">
+    <tr><td class="outer" align="center" style="padding:32px 16px 40px;">
+      <!--[if mso]><table role="presentation" width="560" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#FAF7F2" style="width:100%;max-width:560px;background-color:#FAF7F2;border:1px solid #E7E0D4;">
+        <tr><td style="height:5px;line-height:5px;font-size:1px;background-color:#C2410C;">&nbsp;</td></tr>
+        <tr><td class="inner" style="padding:30px 40px 24px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td width="48" valign="middle" style="width:48px;">
+                <table role="presentation" width="44" cellpadding="0" cellspacing="0"><tr><td align="center" height="44" style="height:44px;border:1px solid #C2410C;color:#C2410C;font-family:'Courier New',Courier,monospace;font-size:18px;font-weight:bold;letter-spacing:1px;">SL</td></tr></table>
+              </td>
+              <td valign="middle" style="padding-left:14px;"><p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:24px;line-height:28px;color:#1C1917;">SiteLedger AI</p><p style="margin:5px 0 0;font-family:'Courier New',Courier,monospace;font-size:10px;line-height:16px;letter-spacing:2px;color:#57534E;">THE DIGITAL SITE DIARY</p></td>
+            </tr>
+          </table>
+        </td></tr>
+        <tr><td class="inner" style="padding:0 40px;"><table role="presentation" width="100%"><tr><td style="border-top:1px solid #E7E0D4;font-size:1px;line-height:1px;">&nbsp;</td></tr></table></td></tr>
+        <tr><td class="inner" style="padding:30px 40px 24px;">
+          <p style="margin:0 0 16px;font-family:'Courier New',Courier,monospace;font-size:11px;line-height:18px;letter-spacing:1.5px;color:#C2410C;">PASSWORD RECOVERY</p>
+          <h1 class="heading" style="margin:0 0 20px;font-family:Georgia,'Times New Roman',serif;font-size:42px;line-height:48px;font-weight:normal;letter-spacing:-1px;color:#1C1917;">Back to your<br />site diary.</h1>
+          <p style="margin:0;font-size:15px;line-height:26px;color:#44403C;">Enter this code on the password recovery page, then choose a new password. Your existing site records stay with you.</p>
+        </td></tr>
+        <tr><td class="inner" style="padding:0 40px 26px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #E7E0D4;border-bottom:1px solid #E7E0D4;">
+            <tr><td style="padding:14px 0 0;font-family:'Courier New',Courier,monospace;font-size:10px;line-height:18px;letter-spacing:1.5px;color:#57534E;">YOUR ONE-USE CODE</td></tr>
+            <tr><td class="code" style="padding:14px 0 18px;font-family:'Courier New',Courier,monospace;font-size:38px;line-height:46px;font-weight:bold;letter-spacing:9px;color:#1C1917;">{{ .Token }}</td></tr>
+            <tr><td style="padding:0 0 16px;font-size:12px;line-height:20px;color:#57534E;overflow-wrap:anywhere;">Requested for <span style="font-weight:bold;color:#1C1917;">{{ .Email }}</span></td></tr>
+          </table>
+        </td></tr>
+        <tr><td class="inner" style="padding:0 40px 26px;">
+          <table role="presentation" cellpadding="0" cellspacing="0"><tr><td bgcolor="#C2410C" style="background-color:#C2410C;text-align:center;">
+            <a href="{{ .SiteURL }}/account/recover" target="_blank" rel="noreferrer" style="display:inline-block;min-height:20px;padding:15px 22px;border:1px solid #C2410C;mso-padding-alt:0;font-family:Verdana,Geneva,sans-serif;font-size:14px;line-height:20px;font-weight:bold;color:#FFFFFF;text-decoration:none;"><!--[if mso]><i style="mso-font-width:100%;mso-text-raise:20pt;letter-spacing:22px;">&nbsp;</i><![endif]--><span style="mso-text-raise:10pt;">Reset your password</span><!--[if mso]><i style="mso-font-width:100%;letter-spacing:22px;">&nbsp;</i><![endif]--></a>
+          </td></tr></table>
+          <p style="margin:18px 0 0;font-size:12px;line-height:21px;color:#57534E;">The code can be used once. Keep it private.</p>
+        </td></tr>
+        <tr><td class="inner" style="padding:0 40px 28px;"><p style="margin:0;font-size:13px;line-height:23px;color:#57534E;">Your reports, original media and amendments remain preserved when you change your password.</p><p style="margin:14px 0 0;font-size:12px;line-height:21px;color:#57534E;">If you did not request this, ignore this email. Your password has not changed.</p></td></tr>
+        <tr><td class="inner" style="padding:22px 40px 26px;border-top:1px solid #E7E0D4;">
+          <p style="margin:0 0 8px;font-family:'Courier New',Courier,monospace;font-size:10px;line-height:18px;letter-spacing:1.5px;color:#57534E;">SITE RECORDS &nbsp;/&nbsp; QUANTITIES &nbsp;/&nbsp; PROOF</p>
+          <p style="margin:0;font-size:12px;line-height:22px;color:#57534E;">Built by <a href="https://codeflowx.dev" target="_blank" rel="noreferrer" style="color:#1C1917;font-weight:bold;text-decoration:underline;">CodeFlowX</a> &middot; <a href="https://github.com/Kamarudeen-Balogun" target="_blank" rel="noreferrer" style="color:#1C1917;text-decoration:underline;">Kamarudeen Balogun</a></p>
+        </td></tr>
+      </table>
+      <!--[if mso]></td></tr></table><![endif]-->
+      <p style="max-width:560px;margin:18px 0 0;font-family:'Courier New',Courier,monospace;font-size:10px;line-height:18px;letter-spacing:1px;color:#78716C;">SITELEDGER AI &nbsp;·&nbsp; YOUR PRIVATE SITE DIARY</p>
+    </td></tr>
+  </table>
+</body>
+</html>

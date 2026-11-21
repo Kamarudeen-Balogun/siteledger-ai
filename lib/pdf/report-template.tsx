@@ -1,8 +1,8 @@
 import "server-only";
 import { join } from "node:path";
 import { Document, Page, Text, View, Image as PdfImage, Font, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
-import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, lockDate, type ReportView } from "../reports/model";
-import { formatNaira } from "../costing/format-naira";
+import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, lockDate, moneyDisplayNote, type ReportView } from "../reports/model";
+import { formatMoney } from "../costing/format-money";
 
 Font.register({ family: "PublicSans", fonts: [
   { src: join(process.cwd(), "public/fonts/PublicSans-Regular.ttf") },
@@ -38,9 +38,10 @@ const styles = StyleSheet.create({
 
 export async function renderReportPdf(report: ReportView, photos: string[] = []) {
   const { document: doc } = report, source = doc.source;
+  const money = (amount: string) => formatMoney(amount, doc.currency);
   if (photos.length !== source.photos.length) throw new Error("Every attached photo is required for export.");
   const prices = new Map(source.price_list.map(price => [price.id, price]));
-  const documentDate = new Date(report.locked_at ?? source.confirmed_at ?? source.date + "T12:00:00+01:00");
+  const documentDate = new Date(report.locked_at ?? source.confirmed_at ?? source.date + "T12:00:00Z");
   const pdf = <Document title={`Daily site report — ${source.date}`} author={doc.firm_name} subject={source.project.name} creationDate={documentDate} modificationDate={documentDate}>
     <Page size="A4" style={styles.page}>
       <Text style={styles.eyebrow}>DAILY SITE RECORD / {doc.currency}</Text>
@@ -53,7 +54,7 @@ export async function renderReportPdf(report: ReportView, photos: string[] = [])
           <View key={label} style={styles.meta}><Text style={styles.label}>{label}</Text><Text style={styles.value}>{value}</Text></View>)}
         <Text style={[styles.small, { marginTop: 8 }]}>Record {report.id} · {report.status === "locked" ? "Approved and locked" : "Draft — awaiting approval"}</Text>
       </View>
-      <View style={styles.total} wrap={false}><View><Text>Value of work today</Text><Text style={styles.small}>Confirmed quantities × BoQ rates</Text></View><Text style={styles.amount}>{formatNaira(doc.costing.total_cost)}</Text></View>
+      <View style={styles.total} wrap={false}><View><Text>Value of work today</Text><Text style={styles.small}>Confirmed quantities × BoQ rates</Text></View><Text style={styles.amount}>{money(doc.costing.total_cost)}</Text></View>
       <Text style={styles.section}>Work done and BoQ value</Text>
       <View style={styles.row} wrap={false}><Text style={styles.colWork}>Work item</Text><Text style={styles.colQty}>Quantity</Text><Text style={styles.colMoney}>Rate</Text><Text style={styles.colMoney}>Cost today</Text></View>
       {!source.items.length && <Text>No measured work recorded today.</Text>}
@@ -62,9 +63,9 @@ export async function renderReportPdf(report: ReportView, photos: string[] = [])
           <Text style={styles.eyebrow}>{prices.get(item.boq_item_id)?.section.toUpperCase()}</Text>
           <Text>{source.items[i].description}</Text><Text style={styles.small}>{prices.get(item.boq_item_id)?.description}</Text>
         </View><Text style={styles.colQty}>{item.quantity_done}{"\n"}{displayUnit(item.unit)}</Text>
-          <Text style={styles.colMoney}>{formatNaira(item.rate)}</Text><Text style={styles.colMoney}>{formatNaira(item.cost_today)}</Text></View>
+          <Text style={styles.colMoney}>{money(item.rate)}</Text><Text style={styles.colMoney}>{money(item.cost_today)}</Text></View>
         <Text style={[styles.progress, ...(item.variance_color === "red" ? [styles.red] : [])]}>
-          Cumulative {item.cumulative_quantity} {displayUnit(item.unit)} · {displayRatio(item.percentage_complete)}% complete · Value earned {formatNaira(item.value_earned)}
+          Cumulative {item.cumulative_quantity} {displayUnit(item.unit)} · {displayRatio(item.percentage_complete)}% complete · Value earned {money(item.value_earned)}
           {item.is_overrun ? " · OVER BOQ QUANTITY" : item.is_behind_plan ? ` · ${displayRatio(item.variance_percentage_points!)} percentage points behind plan` : ""}
         </Text>
         {item.productivity !== null && <Text style={styles.progress}>Crew {item.crew} · {displayProductivity(item.productivity)} {displayUnit(item.unit)} per person per day</Text>}
@@ -82,12 +83,12 @@ export async function renderReportPdf(report: ReportView, photos: string[] = [])
         <View wrap={false}><PdfImage src={photos[i]} style={styles.photo} /><Text>Photo {i + 1}</Text></View><Text>{photo.note || "No observation recorded."}</Text>
       </View>)}
       <View style={styles.signatures} wrap={false}>
-        <View style={styles.signature}><Text>Site foreman / site engineer</Text><Text style={styles.small}>Recorded by {source.submitted_by}</Text><Text style={[styles.small, { marginTop: 14 }]}>Signature / date __________________</Text></View>
+        <View style={styles.signature}><Text>{source.submitted_role === "pm" ? "Site record / PM" : "Site foreman / site engineer"}</Text><Text style={styles.small}>Recorded by {source.submitted_by}</Text><Text style={[styles.small, { marginTop: 14 }]}>Signature / date __________________</Text></View>
         <View style={styles.signature}><Text>Project manager / QS</Text><Text style={styles.small}>{report.approved_by || "Awaiting approval"}</Text><Text style={[styles.small, { marginTop: 14 }]}>Signature / date __________________</Text></View>
       </View>
-      {source.confirmed_by && <Text style={[styles.small, { marginTop: 14 }]}>Quantities confirmed by {source.confirmed_by}{source.confirmed_at ? ` · ${displayTimestamp(source.confirmed_at)}` : ""}</Text>}
-      {report.locked_at && <Text style={styles.small}>Locked {displayTimestamp(report.locked_at)}</Text>}
-      <Text style={[styles.small, { marginTop: 10 }]}>Amounts rounded to the nearest ₦10 for display. Exact values retained in the record.</Text>
+      {source.confirmed_by && <Text style={[styles.small, { marginTop: 14 }]}>Quantities confirmed by {source.confirmed_by}{source.confirmed_at ? ` · ${displayTimestamp(source.confirmed_at, source.project.timezone)}` : ""}</Text>}
+      {report.locked_at && <Text style={styles.small}>Locked {displayTimestamp(report.locked_at, source.project.timezone)}</Text>}
+      <Text style={[styles.small, { marginTop: 10 }]}>{moneyDisplayNote(doc.currency)}</Text>
       {source.project.is_demo && <Text style={styles.small}>Demo project and illustrative rates — verify before real use.</Text>}
       <Text style={styles.footer} fixed render={({ pageNumber, totalPages }) => `SITELEDGER / ${source.date} / ${doc.currency}                              ${pageNumber} / ${totalPages}`} />
     </Page>

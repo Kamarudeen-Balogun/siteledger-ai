@@ -4,11 +4,12 @@ import type { IntakePayload } from "./update";
 export type IntakeReceipt = {
   update_id: number;
   payload: IntakePayload;
-  status: "pending" | "saved";
+  status: "pending" | "saved" | "blocked";
   storage_path: string | null;
   submission_id: string | null;
   reply_text: string;
   reply_sent_at: string | null;
+  reply_path?: string | null;
 };
 export class IntakeUnavailableError extends Error {
   constructor() { super("Site note storage is temporarily unavailable."); }

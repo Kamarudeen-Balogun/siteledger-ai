@@ -6,8 +6,9 @@ export type IntakePayload = {
   chat_id: number;
   display_name: string;
   sent_at: number;
-  kind: "start" | "help" | "today" | "note" | "voice" | "photo" | "unsupported" | "too_large";
+  kind: "start" | "help" | "today" | "account" | "projects" | "reports" | "logout" | "note" | "voice" | "photo" | "unsupported" | "too_large";
   project_code?: string;
+  link_hash?: string;
   text?: string;
   file_id?: string;
   content_type?: string;
@@ -43,14 +44,17 @@ export function parseTelegramUpdate(value: unknown): { updateId: number; payload
   };
   const note = text(message.text, 4096);
   if (note !== undefined) {
-    const command = /^\/(start|help|today)(?:@SiteLedgerNGbot)?(?:\s|$)/i.exec(note);
+    const command = /^\/(start|help|today|account|projects|reports|logout|signin|signup|reset)(?:@SiteLedgerNGbot)?(?:\s|$)/i.exec(note);
     if (command) {
-      payload.kind = command[1].toLowerCase() as "start" | "help" | "today";
+      const name=command[1].toLowerCase();
+      payload.kind = (["signin","signup","reset"].includes(name)?"account":name) as IntakePayload["kind"];
       if (payload.kind === "start") {
         const code = note.slice(command[0].length).trim();
         if (/^[A-Z0-9-]{1,64}$/.test(code)) payload.project_code = code;
+        else if (/^link_[A-Za-z0-9_-]{43}$/.test(code)) payload.link_hash = createHash("sha256").update(code.slice(5)).digest("hex");
       }
-    } else { payload.kind = "note"; payload.text = note; }
+    } else if (note.startsWith("/")) { payload.kind="help"; }
+    else { payload.kind = "note"; payload.text = note; }
     return { updateId: update.update_id, payload };
   }
   const caption = text(message.caption, 1024);
@@ -77,3 +81,4 @@ export function parseTelegramUpdate(value: unknown): { updateId: number; payload
   }
   return { updateId: update.update_id, payload };
 }
+import { createHash } from "node:crypto";

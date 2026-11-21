@@ -1,0 +1,21 @@
+import "server-only";
+import { currentSessionHash } from "../auth/session";
+import type { Account } from "../auth/types";
+import { intakeRpc } from "../telegram/storage";
+import type { PrivateProject } from "./types";
+export type ProjectList = { account: Account; projects: PrivateProject[]; active_project_id: string | null };
+export async function privateProjects(): Promise<ProjectList | null> { return intakeRpc("account_list_projects", { p_hash: await currentSessionHash() }); }
+export async function privateProjectAccess(id: string) { return intakeRpc<Account & { owner: boolean; role: "foreman"|"pm"; archived_at: string | null; project_id: string; currency: string; timezone: string } | null>("account_project_access", { p_hash: await currentSessionHash(), p_project: id }); }
+export type ProjectTeam = { members: { profile_id: string; name: string; role: "foreman"|"pm"; owner: boolean }[];
+  invitations: { id: string; email: string; role: string; expires_at: string; expired: boolean; cancelled_at: string|null; consumed_at: string|null }[];
+  events: { id: string; actor_profile_id: string|null; action: string; timestamp: string; details: Record<string,unknown> }[] };
+export async function privateTeam(id: string): Promise<ProjectTeam | null> { return intakeRpc("account_team", { p_hash: await currentSessionHash(), p_project: id }); }
+export type ProjectHistory = {
+  access: Account & { role: "foreman" | "pm"; owner: boolean; currency: string; timezone: string; archived_at: string | null };
+  project: Pick<PrivateProject, "id" | "name" | "client" | "location" | "contract_sum">;
+  submissions: { id: string; date: string; submitted_by: string; status: string; report_id: string | null; report_status: string | null }[];
+  transfers: { id: string; expires_at: string }[];
+};
+export async function privateHistory(id: string): Promise<ProjectHistory | null> {
+  return intakeRpc("account_project_history", { p_hash: await currentSessionHash(), p_project: id });
+}

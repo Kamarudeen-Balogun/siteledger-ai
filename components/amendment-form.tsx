@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-export function AmendmentForm({ id, access }: { id: string; access: string }) {
+export function AmendmentForm({ id }: { id: string }) {
   const router = useRouter(), requestId = useRef<string | null>(null);
   const [saving, setSaving] = useState(false), [error, setError] = useState(""), [saved, setSaved] = useState(false);
   async function amend(event: FormEvent<HTMLFormElement>) {
@@ -11,7 +11,7 @@ export function AmendmentForm({ id, access }: { id: string; access: string }) {
     if (!navigator.onLine) { setError("Reconnect to save your amendment. Your text is still here."); return; }
     requestId.current ??= crypto.randomUUID(); setSaving(true);
     try {
-      const response = await fetch(`/api/reports/${id}/amendments`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${access}` },
+      const response = await fetch(`/api/reports/${id}/amendments`, { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ note, request_id: requestId.current }), signal: AbortSignal.timeout(20000) });
       const result = await response.json();
       if (!response.ok) { setError(result.error || "Could not save. Your correction is still here."); return; }

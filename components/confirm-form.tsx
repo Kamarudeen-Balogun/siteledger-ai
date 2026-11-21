@@ -33,7 +33,7 @@ function Score({ name, value }: { name: string; value: number }) {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return <section className="border-t border-rule py-7"><h2 className="mb-5 font-serif text-2xl">{title}</h2>{children}</section>;
 }
-export function ConfirmForm({ record, access }: { record: ReviewRecord; access: string }) {
+export function ConfirmForm({ record }: { record: ReviewRecord }) {
   const router = useRouter();
   const source = record.confirmed_extraction ?? record.extraction ?? empty;
   const [work, setWork] = useState(() => source.work_items.map((value, i) => ({ key: "work-" + i, value,
@@ -48,6 +48,7 @@ export function ConfirmForm({ record, access }: { record: ReviewRecord; access: 
   const feedback = useRef<HTMLDivElement>(null), focusFeedback = useRef(false);
   const listening = ["queued", "processing"].includes(record.job_status ?? "");
   const locked = record.status === "locked";
+  const archived = Boolean(record.archived_at);
   const low = (confidence: number) => !record.confirmed_extraction && confidence < 0.6;
   useEffect(() => {
     if (!listening && !record.pending_media && !record.pending_photo_analysis) return;
@@ -60,7 +61,7 @@ export function ConfirmForm({ record, access }: { record: ReviewRecord; access: 
     feedback.current?.focus({ preventScroll: true });
     focusFeedback.current = false;
   }, [saved, error, saving]);
-  const mediaUrl = (id: string) => `/api/confirm/${record.id}/media/${id}?access=${encodeURIComponent(access)}`;
+  const mediaUrl = (id: string) => `/api/confirm/${record.id}/media/${id}`;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     focusFeedback.current = true;
@@ -84,41 +85,42 @@ export function ConfirmForm({ record, access }: { record: ReviewRecord; access: 
     setSaving(true); setError("");
     try {
       const response = await fetch(`/api/confirm/${record.id}`, { method: "POST", headers: {
-        "Content-Type": "application/json", Authorization: `Bearer ${access}`,
+        "Content-Type": "application/json",
       }, body: JSON.stringify(confirmation), cache: "no-store", signal: AbortSignal.timeout(20000) });
       const result = await response.json();
       if (!response.ok) { setError(result.error ?? "Your edits are still here. Try confirming again."); return; }
       setSaved({ by: result.confirmed_by, at: result.confirmed_at }); setDirty(false);
       setCosting(true);
-      const costResponse = await fetch(`/api/reports/${record.id}`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${access}` },
+      const costResponse = await fetch(`/api/reports/${record.id}`, { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}), cache: "no-store", signal: AbortSignal.timeout(20000) });
       if (!costResponse.ok) { setError("Your confirmation is saved. Open the costed report below to try creating it again."); return; }
-      router.push(`/reports/${record.id}?access=${encodeURIComponent(access)}`);
+      router.push(`/reports/${record.id}`);
     } catch { setError("Could not reach SiteLedger. Your edits are still here; try again."); }
     finally { setSaving(false); setCosting(false); }
   }
-  const date = new Intl.DateTimeFormat("en-NG", { dateStyle: "long", timeStyle: "short", timeZone: "Africa/Lagos" }).format(new Date(record.created_at));
+  const date = new Intl.DateTimeFormat("en-NG", { dateStyle: "long", timeStyle: "short", timeZone: record.timezone ?? "Africa/Lagos" }).format(new Date(record.created_at));
   return <main className="mx-auto max-w-5xl px-4 pb-12 sm:px-8">
     <TelegramFrame />
     <header className="border-b border-rule py-7"><p className="font-mono text-sm tracking-wide">SITELEDGER / SITE DIARY</p>
       <h1 className="mt-4 font-serif text-3xl">Review your site note</h1><p className="mt-3 leading-7">{record.project_name}</p>
-      <Link href={`/today#from=${record.id}&access=${encodeURIComponent(access)}`} className="mt-4 inline-flex min-h-12 items-center underline">Record a new site note</Link>
-      <p className="mt-2 font-mono text-sm">{date} WAT</p><p className="mt-2">Sent by {record.submitted_by}</p></header>
+      <Link href={`/today`} className="mt-4 inline-flex min-h-12 items-center underline">Record a new site note</Link>
+      <p className="mt-2 font-mono text-sm">{date} · {record.timezone ?? "Africa/Lagos"}</p><p className="mt-2">Sent by {record.submitted_by}</p></header>
     <div ref={feedback} tabIndex={-1} className="outline-none">
       {error ? <div role="alert" className="mt-5 border-l-4 border-[#B91C1C] bg-red-50 p-5 text-[#B91C1C]"><p className="font-semibold">Your changes need another check</p><p className="mt-2">{error}</p></div>
         : saved && <div role="status" className={"mt-5 border-l-4 p-5 " + (dirty ? "border-amber-700 bg-amber-50" : "border-[#657055] bg-[#EEF0E7]")}>
           <h2 className="font-serif text-2xl">{dirty ? "Changes not yet confirmed" : "Site note confirmed"}</h2>
           <p className="mt-2">{dirty ? "Check your changes and tap Confirm changes to save them." : "Your quantities and observations have been saved."}</p>
-          <p className="mt-2 font-mono text-sm">Confirmed by {saved.by} · {new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Lagos" }).format(new Date(saved.at))} WAT</p>
+          <p className="mt-2 font-mono text-sm">Confirmed by {saved.by} · {new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short", timeZone: record.timezone ?? "Africa/Lagos" }).format(new Date(saved.at))} · {record.timezone ?? "Africa/Lagos"}</p>
           <p className="mt-2">Your original voice note is kept. You can correct this note until its report is locked.</p>
         </div>}
     </div>
-    {saved && !dirty && <a className="mt-4 block min-h-12 py-3 font-semibold underline" href={`/reports/${record.id}?access=${encodeURIComponent(access)}`}>Open costed report</a>}
+    {saved && !dirty && <a className="mt-4 block min-h-12 py-3 font-semibold underline" href={`/reports/${record.id}`}>Open costed report</a>}
     <div className="py-6 text-base leading-7"><p className="font-semibold">Three steps to check your site note</p>
       <ol className="mt-2 list-decimal space-y-1 pl-5"><li>Listen to your voice note or read the original transcript.</li>
         <li>Choose each BoQ item. Check its quantity, measurement unit and crew, then review materials, delays and photos.</li>
         <li>Tap Confirm and cost it. Your confirmed quantities become a costed report.</li></ol>
       <p className="mt-3">An asterisk (*) marks a required field. Unclear values are blank and marked “Check this one”. Nothing is costed or locked before you confirm.</p></div>
+    {archived && <p role="status" className="my-4 border-l-4 border-accent p-4">Archived project. This site note is available for reading; the owner must restore the project before changes.</p>}
     {locked && <p className="my-4 border-2 border-accent p-4 font-mono text-accent">LOCKED — this record cannot be changed.</p>}
     {record.audio_url && <Section title="Your voice note"><audio aria-label="Original site voice note" className="w-full" controls preload="none" src={mediaUrl("audio")} />
       <details className="mt-4"><summary className="min-h-12 cursor-pointer py-3">Read the original transcript</summary>
@@ -126,7 +128,7 @@ export function ConfirmForm({ record, access }: { record: ReviewRecord; access: 
     {listening ? <Section title="Listening to your note…"><p role="status">Your audio and photos are saved. This page will update when your note is ready to check.</p></Section>
       : <form onSubmit={submit} onChange={() => setDirty(true)}>
       {record.job_status === "manual_entry" && <p role="status" className="mb-5 border-l-4 border-amber-700 bg-amber-50 p-4">We couldn’t read this note reliably. Your audio and photos are saved. Enter what happened below.</p>}
-      <fieldset disabled={locked || saving}>
+      <fieldset disabled={locked || archived || saving}>
       <Section title="Work done">
         <p className="mb-5 leading-7">The BoQ is your project’s agreed list of work. Choose the matching item; its unit tells you how the quantity is measured.</p>
         {!work.length && <p className="mb-5">No work items were picked up. Add an item if work was done.</p>}
@@ -192,7 +194,7 @@ export function ConfirmForm({ record, access }: { record: ReviewRecord; access: 
       {record.pending_photo_analysis && <p role="status" className="mb-4 border-l-4 border-amber-700 p-4">Checking your photos… Review the fields now; findings will appear here before you confirm.</p>}
       {saved && !dirty && !error && <p className="mb-4 border-l-4 border-[#657055] bg-[#EEF0E7] p-4 font-semibold">Site note confirmed. Your changes are saved.</p>}
       <p className="mb-4">By confirming, you confirm that these are the quantities and observations from your site.</p>
-      <button type="submit" disabled={saving || locked || record.pending_media || record.pending_photo_analysis || (!!saved && !dirty)} className="min-h-14 w-full bg-accent px-6 py-4 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
+      <button type="submit" disabled={saving || locked || archived || record.pending_media || record.pending_photo_analysis || (!!saved && !dirty)} className="min-h-14 w-full bg-accent px-6 py-4 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
         {saving ? costing ? "Costing against the BoQ…" : "Saving your confirmation…" : saved ? dirty ? "Confirm changes and rebuild report" : "Confirmed — saved" : "Confirm and cost it"}</button>
       </form>}
   </main>;

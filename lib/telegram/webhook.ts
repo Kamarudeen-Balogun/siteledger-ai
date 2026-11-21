@@ -3,7 +3,9 @@ import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { downloadTelegramFile, telegramCall } from "./api";
 import { intakeRpc, uploadEvidence, type IntakeReceipt } from "./storage";
 import { MAX_PHOTO_BYTES, MAX_VOICE_BYTES, parseTelegramUpdate, type IntakePayload } from "./update";
-import { reviewUrl } from "../confirm/access";
+import { reportFromInput, displayRatio, type ReportInput } from "../reports/model";
+import { formatMoney } from "../costing/format-money";
+import { decimal } from "../costing/decimal";
 
 export type IntakeDependencies = {
   prepare: (id: number, payload: IntakePayload, owner: string) => Promise<IntakeReceipt | { busy: true }>;
@@ -13,17 +15,31 @@ export type IntakeDependencies = {
   sendReply: (chatId: number, text: string, reviewLink?: string) => Promise<void>;
   finishReply: (id: number, owner: string, sent: boolean) => Promise<void>;
   reviewSubmission?: (payload: IntakePayload) => Promise<string | null>;
+  todaySummary?: (payload: IntakePayload) => Promise<{ text: string; path: string } | null>;
+  resumePending?: (payload: IntakePayload, owner: string) => Promise<IntakeReceipt | null>;
 };
 
 export const intakeDependencies: IntakeDependencies = {
-  prepare: (id, payload, owner) => intakeRpc("prepare_telegram_intake", { p_update_id: id, p_payload: payload, p_owner: owner }),
+  prepare: (id, payload, owner) => intakeRpc("account_prepare_telegram", { p_update_id: id, p_payload: payload, p_owner: owner }),
   download: downloadTelegramFile,
   upload: uploadEvidence,
-  finishMedia: (id, owner) => intakeRpc("finish_telegram_media", { p_update_id: id, p_owner: owner }),
+  finishMedia: (id, owner) => intakeRpc("account_finish_telegram_media", { p_update_id: id, p_owner: owner }),
   sendReply: async (chatId, text, reviewLink) => { await telegramCall("sendMessage", { chat_id: chatId, text,
-    ...(reviewLink ? { reply_markup: { inline_keyboard: [[{ text: "Review site note", web_app: { url: reviewLink } }]] } } : {}) }); },
+    ...(reviewLink ? { reply_markup: { inline_keyboard: [[{ text: reviewLink.includes("/confirm/")?"Review site note":"Open SiteLedger", web_app: { url: reviewLink } }]] } } : {}) }); },
   finishReply: (id, owner, sent) => intakeRpc("finish_telegram_reply", { p_update_id: id, p_owner: owner, p_sent: sent }),
-  reviewSubmission: payload => intakeRpc("latest_confirmation_submission", { p_telegram_id: payload.user_id }),
+  reviewSubmission: payload => intakeRpc("account_bot_latest", { p_telegram: payload.user_id }),
+  resumePending: (payload,owner) => intakeRpc("account_resume_telegram", {p_telegram:payload.user_id,p_owner:owner}),
+  todaySummary: async payload => {
+    const data = await intakeRpc<{project_name: string; currency: string; note_id: string | null; input: ReportInput | null} | null>("account_bot_today", {p_telegram: payload.user_id});
+    if (!data) return null;
+    if (!data.note_id || !data.input) return {text: `${data.project_name}: No site note today. Send a voice note to begin.`, path: "/today"};
+    const report = reportFromInput(data.input);
+    if (!report || report.stale) return {text: `${data.project_name}: Today's latest note is saved. Review and confirm the quantities before relying on its cost.`, path: `/confirm/${data.note_id}`};
+    const doc = report.document;
+    const top = doc.costing.items.reduce<typeof doc.costing.items[number] | null>((best,item) => !best || decimal(item.cost_today, "cost").gt(decimal(best.cost_today, "cost")) ? item : best, null);
+    const title = top ? doc.source.price_list.find(item=>item.id===top.boq_item_id)?.description : undefined;
+    return {text: `${data.project_name} — today's latest ${report.status === "locked" ? "locked report" : "draft"}\nValue of work: ${formatMoney(doc.costing.total_cost, doc.currency)} ${doc.currency}${top ? `\nTop item: ${(title ?? "Confirmed work").slice(0,180)}\nBoQ progress for this item: ${displayRatio(top.percentage_complete)}%` : ""}`, path: `/reports/${data.note_id}`};
+  },
 };
 
 export function validWebhookSecret(supplied: string | null, expected: string): boolean {
@@ -69,6 +85,23 @@ export async function handleTelegramWebhook(request: Request, dependencies: Inta
       if (receipt.submission_id) onSubmissionSaved?.(receipt.submission_id);
       return Response.json({ ok: true });
     }
+    let resumed = false;
+    if (["start","today","projects","reports"].includes(receipt.payload.kind) && receipt.status !== "blocked") {
+      const pending = await dependencies.resumePending?.(receipt.payload, owner);
+      if (pending?.storage_path && pending.payload.file_id && pending.payload.content_type) {
+        try {
+          const bytes = await dependencies.download(pending.payload.file_id, pending.payload.kind === "voice" ? MAX_VOICE_BYTES : MAX_PHOTO_BYTES);
+          await dependencies.upload(pending.storage_path, bytes, pending.payload.content_type);
+          await dependencies.finishMedia(pending.update_id, owner);
+          await dependencies.finishReply(pending.update_id, owner, true);
+          if (pending.submission_id) onSubmissionSaved?.(pending.submission_id);
+          resumed = true;
+        } catch {
+          await dependencies.finishReply(pending.update_id, owner, false).catch(()=>undefined);
+          throw new Error("Saved media retry interrupted");
+        }
+      }
+    }
     if (receipt.status === "pending") {
       if (!receipt.storage_path || !receipt.payload.file_id || !receipt.payload.content_type) throw new Error("Media missing.");
       const bytes = await dependencies.download(receipt.payload.file_id,
@@ -76,12 +109,15 @@ export async function handleTelegramWebhook(request: Request, dependencies: Inta
       await dependencies.upload(receipt.storage_path, bytes, receipt.payload.content_type);
       await dependencies.finishMedia(parsed.updateId, owner);
     }
-    const reviewId = receipt.submission_id ?? (receipt.payload.kind === "today" ? await dependencies.reviewSubmission?.(receipt.payload) : null);
-    const link = reviewId ? reviewUrl(reviewId, receipt.payload.user_id, secret) : null;
+    const summary = receipt.payload.kind === "today" && receipt.reply_path !== "/account" && receipt.status !== "blocked" ? await dependencies.todaySummary?.(receipt.payload) : null;
+    const reviewId = receipt.submission_id ?? (receipt.payload.kind === "today" && !receipt.reply_path ? await dependencies.reviewSubmission?.(receipt.payload) : null);
+    let link:string|undefined;
+    try {const origin=new URL(process.env.SITELEDGER_APP_URL??"");const path=summary?.path??receipt.reply_path??(reviewId?`/confirm/${reviewId}`:"/account");
+      if(origin.protocol==="https:" && path.startsWith("/") && !path.startsWith("//"))link=new URL(path,origin.origin).toString();}catch{ /* Saved receipt can be retried when the origin is configured. */ }
     await dependencies.sendReply(receipt.payload.chat_id,
-      receipt.payload.kind === "today" && link ? "Open your latest site note to check the quantities and photos." : receipt.reply_text,
+      (summary?.text ?? receipt.reply_text) + (resumed ? "\nA saved media file has resumed. Use /today again if more photos are still queued." : ""),
       link ?? undefined);
-    await dependencies.finishReply(parsed.updateId, owner, true);
+    if (receipt.status !== "blocked") await dependencies.finishReply(parsed.updateId, owner, true);
     if (receipt.submission_id) onSubmissionSaved?.(receipt.submission_id);
     return Response.json({ ok: true });
   } catch {

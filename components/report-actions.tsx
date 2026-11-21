@@ -1,7 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-export function ReportActions({ id, access, weather = null, exists = false }: { id: string; access: string; weather?: string | null; exists?: boolean }) {
+export function ReportActions({ id, weather = null, exists = false }: { id: string; weather?: string | null; exists?: boolean }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false), [error, setError] = useState("");
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -10,7 +10,7 @@ export function ReportActions({ id, access, weather = null, exists = false }: { 
     if (!navigator.onLine) { setError("You’re offline. Reconnect to create your report; your site note is saved."); return; }
     setSaving(true); setError("");
     try {
-      const response = await fetch(`/api/reports/${id}`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${access}` },
+      const response = await fetch(`/api/reports/${id}`, { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ weather: String(form.get("weather") ?? "").trim() || null }), signal: AbortSignal.timeout(20000) });
       const result = await response.json();
       if (!response.ok) { setError(result.error || "Your note is saved. Try again."); return; }

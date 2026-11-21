@@ -45,6 +45,34 @@ test("secret is required before any database or provider access", async () => {
   assert.deepEqual(events, []);
   assert.equal(validWebhookSecret(secret, secret), true);
 });
+test("professional commands never save supplied passwords as notes", () => {
+  for (const command of ["start","account","projects","today","reports","help","logout"]) {
+    const parsed=parseTelegramUpdate({update_id:2,message:{...update.message,voice:undefined,text:`/${command}`}});
+    assert.equal(parsed?.payload.kind,command);
+  }
+  for (const command of ["signin","signup","reset","unknown"]) {
+    const parsed=parseTelegramUpdate({update_id:2,message:{...update.message,voice:undefined,text:`/${command} secret-password`}});
+    assert.equal(parsed?.payload.text,undefined);
+  }
+});
+test("blocked media receipts never download, upload or finalize evidence", async () => {
+  const {dependencies,events}=fixture();
+  dependencies.prepare=async(id,payload)=>({update_id:id,payload,status:"blocked",storage_path:null,submission_id:null,reply_text:"Project access changed.",reply_sent_at:null,reply_path:"/projects"});
+  assert.equal((await handleTelegramWebhook(request(),dependencies,secret)).status,200);
+  assert.deepEqual(events,["reply"]);
+});
+test("a fresh command resumes media against its original receipt and submission", async () => {
+  const {dependencies,events}=fixture(),saved:string[]=[];
+  dependencies.prepare=async(id,payload)=>({update_id:id,payload,status:"saved",storage_path:null,submission_id:null,reply_text:"Open your latest note.",reply_sent_at:null});
+  dependencies.resumePending=async()=>({update_id:99,payload:{user_id:42,chat_id:42,display_name:"Metadata",sent_at:1794958200,kind:"voice",file_id:"original-file",content_type:"audio/ogg"},status:"pending",storage_path:"original-project/original-note/99.ogg",submission_id:"original-note",reply_text:"Saved",reply_sent_at:null});
+  dependencies.download=async(file)=>{assert.equal(file,"original-file");events.push("download");return new Uint8Array([1]);};
+  dependencies.upload=async(path)=>{assert.equal(path,"original-project/original-note/99.ogg");events.push("upload");};
+  dependencies.finishMedia=async(id)=>{assert.equal(id,99);events.push("save");};
+  const requestValue={...update,message:{...update.message,voice:undefined,text:"/today"}};
+  assert.equal((await handleTelegramWebhook(request(requestValue),dependencies,secret,id=>saved.push(id))).status,200);
+  assert.deepEqual(saved,["original-note"]);
+  assert.deepEqual(events,["download","upload","save","reply-saved","reply","reply-saved"]);
+});
 test("private original updates only; start parsing and compressed photo selection", () => {
   assert.equal(parseTelegramUpdate({ update_id: 1, edited_message: update.message }), null);
   assert.equal(parseTelegramUpdate({ ...update, message: { ...update.message, chat: { id: 42, type: "group" } } }), null);
