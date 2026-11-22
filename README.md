@@ -107,9 +107,36 @@ retry guidance without exposing private error details.
 
 The core voice/photo → confirmation → costing → PDF → locked log flow is implemented, along with private accounts, projects, teams, secure Telegram linking and recovery, six public pages and desktop layouts. Task 10B adds the private 24-hour trial and verified account handover.
 
-New projects start with an **empty BoQ**; saved trials receive their frozen demo BoQ. The supplied-rate editor and dashboards are next in task 11. Production deployment and the final demonstration/Kiro write-up remain later milestones. See [the ordered tasks](.kiro/specs/siteledger/tasks.md) and [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
+New projects start with an **empty BoQ**; saved trials receive their frozen demo BoQ. Task 11 adds the supplied-rate editor and private project ledger. Production deployment and the final demonstration/Kiro write-up remain later milestones. See [the ordered tasks](.kiro/specs/siteledger/tasks.md) and [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
 
 The public `/reports/demo`, `/log/demo` and demo summary expose only the original fictional seed, excluding genuine uploads, private amendments and live totals. Rates are **illustrative, not live market prices**; use QS-verified rates for real work.
+
+## Project ledger and BoQ
+
+Open **Your projects → Open project records** to see the contract sum, value
+earned from approved reports and variance flags. BoQ progress is grouped by
+section. Drafts are excluded; foremen see only their own locked work. Each
+project displays its own currency, with no combined foreign-currency total.
+
+A PM chooses **Manage BoQ and rates → Add BoQ item** to enter the supplied item
+code, description, section, unit, quantity and rate. Review the save dialog
+before confirming. Existing items have an Edit action. Rates remain exact
+decimal values; quantities accept up to four decimal places. A measurement
+unit becomes fixed once used in confirmed work.
+
+Rate edits apply to new and rebuilt drafts. Earlier approved amounts and PDFs
+keep their saved rates; the ledger's earned value retains those original costs.
+Current BoQ quantities determine progress, so quantity revisions can change
+completion and overrun flags. No dated plan is supplied; flags mark quantities
+exceeding the BoQ. Archived projects are read-only until their owner restores them.
+
+Demo and saved-trial BoQs remain labelled **Demo rates — verify before real use**.
+
+<img src="docs/images/project-ledger-desktop.png" width="760" alt="Desktop project ledger showing a 1,000,000-naira contract, 261,000-naira approved value and a red quantity-overrun flag in a ruled BoQ table">
+
+This disposable acceptance project deliberately reduces the BoQ target to
+exercise an overrun. Its approved ₦261,000 stays unchanged after the current
+rate is edited, demonstrating that earlier reports retain their recorded prices.
 
 ## Run locally
 
@@ -166,6 +193,8 @@ npm run lint
 npm run typecheck
 npm run test:costing
 npm run test:account
+npm run test:dashboard
+npm run db:check-dashboard
 node --conditions=react-server --import tsx --test tests/trial.test.ts
 node scripts/check-database.mjs tests/trial.sql
 npm run db:check-account-identity
@@ -183,7 +212,7 @@ npm run preview:account-emails
 
 Browser acceptance uses a disposable clone with separate native Auth, SMTP, REST and media fixtures. It checks signup/recovery codes, linking, invitations, confirmation, costing, locking/PDF, offline reload/retry and removal, plus private trial capture, replay denial, handover cancellation and verified approval. Trial Siteverify uses a fixture loaded only into the disposable process. It does not send Resend emails or write genuine evidence. Older report/log/photo/web browser command names now run this account-aware suite.
 
-Artifacts remain under ignored `supabase/.temp/task-10a/`. [Task 10A evidence](.kiro/specs/siteledger/task-10a-handoff.md) and [task 10B evidence](.kiro/specs/siteledger/task-10b-handoff.md) record actual checks. Offline emulation and scripted findings establish workflow behavior, not real-site speech or defect accuracy. [Language coverage](docs/voice-languages.md) separates provider support from tested recordings.
+Artifacts remain under ignored `supabase/.temp/task-10a/`. [Task 10A evidence](.kiro/specs/siteledger/task-10a-handoff.md), [task 10B evidence](.kiro/specs/siteledger/task-10b-handoff.md) and [task 11 evidence](.kiro/specs/siteledger/task-11-handoff.md) record actual checks. Offline emulation and scripted findings establish workflow behavior, not real-site speech or defect accuracy. [Language coverage](docs/voice-languages.md) separates provider support from tested recordings.
 
 Public page verification uses a running local preview on port 3011. Set
 `SITELEDGER_PUBLIC_QA_URL` to another localhost origin when needed. It checks

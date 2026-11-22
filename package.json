@@ -42,6 +42,8 @@
     "db:check-account-telegram": "node scripts/check-database.mjs tests/account-telegram.sql",
     "db:check-account-web": "node scripts/check-database.mjs tests/account-web.sql",
     "test:account-browser": "node scripts/verify-account-browser.mjs",
+    "test:dashboard": "node --conditions=react-server --import tsx --test tests/dashboard.test.ts",
+    "db:check-dashboard": "node scripts/check-database.mjs tests/dashboard.sql",
     "db:check-fresh": "node scripts/check-fresh-database.mjs && node scripts/check-fresh-database.mjs --legacy"
   },
   "dependencies": {

@@ -1,0 +1,58 @@
+-- Disposable owners, supplied rates and immutable approved evidence only.
+begin;
+create function pg_temp.check_true(value boolean,label text) returns void language plpgsql as $$ begin if value is distinct from true then raise exception 'FAIL: %',label; end if; end; $$;
+insert into auth.users(id,email,created_at,updated_at,aud,role,is_anonymous) select ('88000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'dashboard-fixture-'||n||'@example.test',now(),now(),'authenticated','authenticated',false from generate_series(1,3) n;
+insert into auth.sessions(id,user_id,created_at,updated_at) select ('88000000-0000-4000-8000-'||lpad((n+10)::text,12,'0'))::uuid,('88000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,now(),now() from generate_series(1,3) n;
+create function pg_temp.lock_fixture(p_hash text,p_project uuid,p_boq uuid,p_person uuid,p_quantity numeric) returns uuid language plpgsql as $$
+declare note uuid; src jsonb; doc jsonb; rate numeric; actor jsonb;
+begin
+ actor:=public.account_project_access(p_hash,p_project);
+ insert into public.submissions(project_id,submitted_by,source,status) values(p_project,actor->>'professional_name','web','extracted') returning id into note;
+ insert into public.account_submission_people(submission_id,profile_id,role,name,currency,timezone,site_date) values(note,p_person,actor->>'role',actor->>'professional_name',actor->>'currency',actor->>'timezone',(now() at time zone (actor->>'timezone'))::date);
+ perform public.account_confirm(p_hash,note,jsonb_build_object('work_items',jsonb_build_array(jsonb_build_object('description','Confirmed fixture','matched_boq_hint',null,'quantity',p_quantity,'unit','m2','crew',1,'confidence',1)),'materials','[]'::jsonb,'delays','[]'::jsonb,'issues','[]'::jsonb,'raw_language_notes',''),jsonb_build_array(p_boq),'[]'::jsonb);
+ src:=public.account_report_input(p_hash,note)->'source'; select b.rate into rate from public.boq_items b where id=p_boq;
+ doc:=jsonb_build_object('source',src,'firm_name','SiteLedger AI','currency',actor->>'currency','weather',null,'costing',jsonb_build_object('items',jsonb_build_array(jsonb_build_object('boq_item_id',p_boq,'unit','m2','quantity_done',p_quantity,'rate',rate,'cost_today',p_quantity*rate)),'total_cost',p_quantity*rate));
+ perform public.account_save_draft(p_hash,note,src,doc);
+ return note;
+end; $$;
+do $$ declare owner_id uuid; other_id uuid; foreman_id uuid; a uuid; b uuid; item jsonb; before_item jsonb; changed jsonb; result jsonb; note uuid; solo uuid; snapshot jsonb; count_events bigint; read jsonb;
+begin
+ owner_id:=(public.account_browser_session('88000000-0000-4000-8000-000000000001','88000000-0000-4000-8000-000000000011',repeat('a',64),'Dashboard Owner')->>'profile_id')::uuid;
+ other_id:=(public.account_browser_session('88000000-0000-4000-8000-000000000002','88000000-0000-4000-8000-000000000012',repeat('b',64),'Other Owner')->>'profile_id')::uuid;
+ foreman_id:=(public.account_browser_session('88000000-0000-4000-8000-000000000003','88000000-0000-4000-8000-000000000013',repeat('c',64),'Dashboard Foreman')->>'profile_id')::uuid;
+ a:=(public.account_create_project(repeat('a',64),'Dashboard A','Fixture','Lagos','1000000','NGN','Africa/Lagos')->>'id')::uuid;
+ b:=(public.account_create_project(repeat('b',64),'Dashboard B','Fixture','Kuwait','0.123','KWD','Asia/Kuwait')->>'id')::uuid;
+ insert into public.account_memberships(project_id,profile_id,role) values(a,foreman_id,'foreman'),(b,foreman_id,'pm');
+ item:=jsonb_build_object('id','88000000-0000-4000-8000-000000000021','revision',null,'item_code','BLK','section','Blockwork','description','Supplied blockwork','unit','m2','boq_quantity','420','rate','14500');
+ perform pg_temp.check_true(public.account_dashboard_input(repeat('b',64),a) is null,'Independent owners cannot read dashboard');
+ perform pg_temp.check_true(public.account_boq_save(repeat('b',64),a,item) is null and public.account_boq_save(repeat('c',64),a,item) is null,'Stranger and foreman cannot edit BoQ');
+ result:=public.account_boq_save(repeat('a',64),a,item); perform pg_temp.check_true(result->>'id'=item->>'id','Owner PM adds supplied rate');
+ select count(*) into count_events from public.account_project_events where project_id=a and action='boq_item_added'; perform public.account_boq_save(repeat('a',64),a,item);
+ perform pg_temp.check_true((select count(*)=count_events from public.account_project_events where project_id=a and action='boq_item_added'),'Lost reply retry creates one item and audit event');
+ before_item:=public.account_dashboard_input(repeat('a',64),a)->'boq'->0;
+ perform pg_temp.check_true(public.account_boq_save(repeat('a',64),a,item||jsonb_build_object('id',gen_random_uuid()))->>'error'='duplicate_code','Duplicate codes rejected');
+ note:=pg_temp.lock_fixture(repeat('c',64),a,(item->>'id')::uuid,foreman_id,18);
+ perform pg_temp.check_true(public.account_dashboard_input(repeat('a',64),a)->>'locked_count'='0','Unapproved work excluded from totals');
+ perform public.account_approve(repeat('a',64),note,public.account_report_input(repeat('a',64),note)->'report'->'document');
+ snapshot:=public.account_report_input(repeat('a',64),note)->'report'->'document';
+ solo:=pg_temp.lock_fixture(repeat('a',64),a,(item->>'id')::uuid,owner_id,2);
+ perform public.account_approve(repeat('a',64),solo,public.account_report_input(repeat('a',64),solo)->'report'->'document');
+ read:=public.account_dashboard_input(repeat('c',64),a); perform pg_temp.check_true(read->>'locked_count'='1' and jsonb_array_length(read->'locked_items')=1,'Foreman sees only own approved quantities');
+ perform pg_temp.check_true(public.account_dashboard_input(repeat('a',64),a)->>'locked_count'='2','PM sees both approved reports');
+ changed:=item||jsonb_build_object('revision',before_item->>'revision','rate','11800','boq_quantity','1'); perform public.account_boq_save(repeat('a',64),a,changed);
+ perform pg_temp.check_true(public.account_report_input(repeat('a',64),note)->'report'->'document'=snapshot,'Rate and BoQ changes preserve exact locked snapshot');
+ perform pg_temp.check_true((public.account_dashboard_input(repeat('a',64),a)->'locked_items'->0->>'rate')::numeric=14500,'Dashboard keeps original locked rates');
+ perform pg_temp.check_true(public.account_boq_save(repeat('a',64),a,changed||jsonb_build_object('rate','14500'))->>'error'='stale','Stale revision cannot overwrite another edit');
+ changed:=jsonb_set(changed,'{revision}',to_jsonb(public.account_dashboard_input(repeat('a',64),a)->'boq'->0->>'revision'));
+ perform pg_temp.check_true(public.account_boq_save(repeat('a',64),a,changed||jsonb_build_object('unit','m3'))->>'error'='unit_in_use','Unit used by confirmed work is fixed');
+ perform public.account_archive_project(repeat('a',64),a,true);
+ perform pg_temp.check_true(public.account_dashboard_input(repeat('a',64),a) is not null,'Archive preserves read access');
+ perform pg_temp.check_true(public.account_boq_save(repeat('a',64),a,changed)->>'error'='archived','Archive blocks BoQ writes');
+ perform public.account_manage_member(repeat('a',64),a,foreman_id,null,true);
+ perform pg_temp.check_true(public.account_dashboard_input(repeat('c',64),a) is null,'Removal immediately blocks dashboard');
+ item:=item||jsonb_build_object('id',gen_random_uuid(),'rate','0.123','boq_quantity','0.1234'); perform public.account_boq_save(repeat('c',64),b,item);
+ perform pg_temp.check_true((public.account_dashboard_input(repeat('b',64),b)->'boq'->0->>'rate')::numeric=0.123,'Same account with PM role elsewhere can supply exact foreign rate');
+ perform pg_temp.check_true(public.account_boq_save(repeat('b',64),b,changed) is null,'Item cannot be reassigned to another project');
+ perform pg_temp.check_true(not has_function_privilege('authenticated','public.account_boq_save(text,uuid,jsonb)','execute') and not has_function_privilege('anon','public.account_dashboard_input(text,uuid)','execute'),'Direct role RPC access denied');
+end $$;
+rollback;

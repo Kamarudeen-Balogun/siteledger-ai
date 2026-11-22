@@ -48,11 +48,12 @@ export function OwnershipAcceptance({ projectId, transfers, timezone }: { projec
       <label className="my-4 flex min-h-12 items-center gap-3"><input type="checkbox" required className="h-6 w-6 shrink-0" />I accept ownership of this project.</label><button className={primary} disabled={busy}>Accept ownership</button>
     </form>)}</section>;
 }
-export function ProjectSelection({projects,active}:{projects:PrivateProject[];active:string|null}) {
+export function ProjectSelection({projects,active}:{projects:(PrivateProject & {dashboard?: {earned:string;locked_count:number}|null})[];active:string|null}) {
   const router=useRouter(),[error,setError]=useState(""),[busy,setBusy]=useState("");
   async function select(project:string) {setBusy(project);setError("");try {await projectAction("select",{project_id:project});router.push("/today");}catch(error){setError(error instanceof Error?error.message:"Could not select this project.");}finally{setBusy("");}}
   return <section className="mt-7"><h2 className="font-serif text-2xl">Your authorized projects</h2>{projects.length===0?<p className="my-5 leading-7">No projects yet. Create your own project or accept an invitation addressed to your email.</p>:<ul className="mt-5 border-t border-rule">{projects.map(project=><li key={project.id} className="border-b border-rule py-6">
     <p className="font-mono text-sm">{project.currency} / {project.role==="pm"?"PM":"Foreman"}{project.owner?" / Owner":""}{active===project.id?" / Selected":""}{project.archived_at?" / Archived":""}</p><h3 className="mt-3 font-serif text-2xl">{project.name}</h3><p className="mt-2 leading-7">{project.client} · {project.location}</p><p className="mt-2">Contract sum {formatMoney(project.contract_sum,project.currency)} {project.currency}</p><p className="mt-2 font-mono text-sm">{project.timezone}</p>
+    {project.dashboard && <p className="mt-3">{project.role==="pm"?"Value earned in locked reports":"Value from your own locked reports"}: <strong>{formatMoney(project.dashboard.earned,project.currency)} {project.currency}</strong></p>}
     <div className="mt-4 flex flex-wrap gap-3"><Link href={`/projects/${project.id}`} className={button}>Open project records</Link>{!project.archived_at&&<button disabled={Boolean(busy)} onClick={()=>void select(project.id)} className={primary}>{busy===project.id?"Opening…":"Record on this project"}</button>}{project.owner&&<Link href={`/projects/${project.id}/team`} className={button}>Manage team</Link>}</div>
   </li>)}</ul>}<Feedback error={error}/></section>;
 }

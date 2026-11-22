@@ -132,6 +132,25 @@ body {
   .record-list li > p { margin-block: 0; }
 }
 .report-document { font-family: "Report Sans", Arial, sans-serif; font-size: 16px; line-height: 1.6; border: 1px solid var(--rule); padding: 24px; overflow-wrap: anywhere; }
+.ledger-totals { display: grid; gap: 24px; border-block: 1px solid var(--rule); margin-block: 28px; padding-block: 28px; }
+.ledger-totals dt { font-size: 14px; }
+.ledger-totals dd { font-size: clamp(26px, 3vw, 38px); font-weight: 700; margin-top: 12px; overflow-wrap: anywhere; letter-spacing: -.03em; }
+.ledger-totals p { font-size: 12px; line-height: 1.8; margin-top: 8px; }
+.ledger-scroll { overflow-x: auto; max-width: 100%; }
+.ledger-table { width: 100%; min-width: 820px; border-collapse: collapse; font-size: 14px; line-height: 1.7; }
+.ledger-table th, .ledger-table td { padding: 18px 12px; border-bottom: 1px solid var(--rule); text-align: right; vertical-align: top; }
+.ledger-table td { white-space: nowrap; }
+.ledger-table th:first-child { text-align: left; min-width: 240px; max-width: 340px; overflow-wrap: anywhere; }
+.ledger-table thead th { font-weight: 400; font-size: 12px; }
+.ledger-table .ledger-section { padding-top: 28px; font-family: var(--font-mono); text-transform: uppercase; font-size: 12px; letter-spacing: .1em; text-align: left; font-weight: 400; }
+.ledger-table progress { appearance: none; display: block; width: 88px; height: 4px; border: 0; background: var(--rule); margin-top: 12px; margin-left: auto; accent-color: #66705c; }
+.ledger-table progress::-webkit-progress-bar { background: var(--rule); }
+.ledger-table progress::-webkit-progress-value { background: #66705c; }
+.ledger-table progress::-moz-progress-bar { background: #66705c; }
+.ledger-table progress[data-overrun] { accent-color: #b91c1c; }
+.ledger-table progress[data-overrun]::-webkit-progress-value { background: #b91c1c; }
+.ledger-table progress[data-overrun]::-moz-progress-bar { background: #b91c1c; }
+@media (min-width: 768px) { .ledger-totals { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; } .ledger-totals > div + div { border-left: 1px solid var(--rule); padding-left: 24px; } }
 .report-header { position: relative; border-bottom: 1px solid var(--rule); padding-bottom: 24px; }
 .report-eyebrow { font-family: "Cascadia Code", Consolas, monospace; font-size: 12px; letter-spacing: .09em; text-transform: uppercase; color: #57534e; }
 .report-firm { font-family: "Report Serif", Georgia, serif; font-size: 27px; line-height: 1.3; margin: 10px 0 24px; padding-right: 85px; }
