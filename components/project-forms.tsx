@@ -7,14 +7,14 @@ import { projectTimezones, type PrivateProject } from "@/lib/projects/types";
 import type { ProjectTeam } from "@/lib/projects/data";
 import { displayTimestamp } from "@/lib/reports/model";
 import { useActionConfirmation } from "./action-confirmation";
-const field = "mt-2 min-h-12 w-full border border-rule bg-white px-3 py-3 text-base";
+const field = "mt-2 min-h-12 w-full border border-rule bg-[#fffdf9] px-3 py-3 text-base";
 const button = "min-h-12 border border-ink px-5 py-3 text-base disabled:opacity-50";
 const primary = `${button} border-accent bg-accent text-white`;
 export async function projectAction(action: string,input: Record<string,unknown>) {
   const response=await fetch(`/api/projects/actions/${action}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(input),cache:"no-store"});
   const data=await response.json();if (!response.ok) throw new Error(data.error??"Could not save this project action.");return data;
 }
-function Feedback({error,message}:{error:string;message?:string}) { return error||message?<p role={error?"alert":"status"} className={`my-5 border-l-4 p-4 leading-7 ${error?"border-[#B91C1C] text-[#B91C1C]":"border-accent"}`}>{error||message}</p>:null; }
+function Feedback({error,message}:{error:string;message?:string}) { return error||message?<p role={error?"alert":"status"} className={`my-5 border-l-4 p-4 leading-7 ${error?"border-amber-700 bg-amber-50 text-amber-900":"border-[#657055] bg-[#eef0e7]"}`}>{error||message}</p>:null; }
 const subscribeInvite = (change: () => void) => { window.addEventListener("hashchange", change); return () => window.removeEventListener("hashchange", change); };
 export function InvitationAcceptance({ verified, nameConfirmed }: { verified: boolean; nameConfirmed: boolean }) {
   const { confirm, confirmation } = useActionConfirmation();

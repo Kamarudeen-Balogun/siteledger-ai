@@ -8,9 +8,11 @@ import type { WorkItem, SiteExtraction } from "@/lib/ai/extraction-schema";
 import { validateConfirmation, type Confirmation } from "@/lib/confirm/validation";
 import { TelegramFrame } from "@/components/telegram-frame";
 import { PhotoObservations } from "@/components/photo-observations";
+import { WorkspaceHeader } from "./workspace-header";
+import { DiaryNotice } from "./diary-notice";
 
 const empty: SiteExtraction = { work_items: [], materials: [], delays: [], issues: [], raw_language_notes: "" };
-const inputClass = "min-h-12 w-full rounded-none border border-rule bg-white/50 px-3 py-2 text-base outline-offset-2 focus:outline-accent";
+const inputClass = "min-h-12 w-full rounded-none border border-rule bg-[#fffdf9] px-3 py-2 text-base outline-offset-2 focus:outline-accent";
 const unit = (value: string | null) => value === "m²" ? "m2" : value === "m³" ? "m3" : value;
 const unitLabel = (value: string) => ({ m2: "m²", m3: "m³" }[unit(value)!] ?? value);
 const unitMeaning = (value: string) => ({ m2: "Square metres — area", m3: "Cubic metres — volume", tonne: "Tonnes — weight", point: "Points — individual fixtures", day: "Days of work" }[unit(value)!] ?? value);
@@ -18,7 +20,7 @@ function Field({ label, name, value, number, required = false, low = false }: {
   label: string; name: string; value: string | number | null; number?: boolean; required?: boolean; low?: boolean;
 }) {
   return <label className="block text-base"><span className="mb-2 block">{label}{required ? " *" : ""}</span>
-    <input className={inputClass + (low ? " border-amber-700 bg-amber-50" : "")} name={name}
+    <input className={low ? inputClass.replace("border-rule bg-[#fffdf9]", "border-amber-700 bg-amber-50") : inputClass} name={name}
       type={number ? "number" : "text"} inputMode={number ? "decimal" : undefined} step={number ? "any" : undefined}
       min={number ? 0 : undefined} maxLength={number ? undefined : 20000} required={required}
       defaultValue={low ? "" : value ?? ""} aria-describedby={low ? name + "-check" : undefined} />
@@ -28,12 +30,12 @@ function Field({ label, name, value, number, required = false, low = false }: {
 function Score({ name, value }: { name: string; value: number }) {
   return <label className="block">AI confidence (0–1)<input className={inputClass + " mt-2"} aria-label="Confidence (0–1)"
     name={name} type="number" min="0" max="1" step="0.001" defaultValue={value} required />
-    <span className="mt-1 block text-sm leading-5">1 means very certain. You still check the value.</span></label>;
+    <span className="mt-2 block text-base leading-6">1 means very certain. You still check the value.</span></label>;
 }
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return <section className="border-t border-rule py-7"><h2 className="mb-5 font-serif text-2xl">{title}</h2>{children}</section>;
 }
-export function ConfirmForm({ record, trial = false }: { record: ReviewRecord; trial?: boolean }) {
+export function ConfirmForm({ record, trial = false, banner, children }: { record: ReviewRecord; trial?: boolean; banner?: ReactNode; children?: ReactNode }) {
   const router = useRouter();
   const source = record.confirmed_extraction ?? record.trial_values ?? record.extraction ?? empty;
   const previouslyChecked = Boolean(record.confirmed_extraction || record.trial_values);
@@ -58,7 +60,7 @@ export function ConfirmForm({ record, trial = false }: { record: ReviewRecord; t
   }, [listening, record.pending_media, record.pending_photo_analysis, router]);
   useEffect(() => {
     if (!focusFeedback.current || saving || (!saved && !error)) return;
-    feedback.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    feedback.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
     feedback.current?.focus({ preventScroll: true });
     focusFeedback.current = false;
   }, [saved, error, saving]);
@@ -101,9 +103,10 @@ export function ConfirmForm({ record, trial = false }: { record: ReviewRecord; t
     finally { setSaving(false); setCosting(false); }
   }
   const date = new Intl.DateTimeFormat("en-NG", { dateStyle: "long", timeStyle: "short", timeZone: record.timezone ?? "Africa/Lagos" }).format(new Date(record.created_at));
-  return <main className="mx-auto max-w-5xl px-4 pb-12 sm:px-8">
+  return <main className="mx-auto max-w-7xl px-5 pb-12 pt-7 sm:px-10">
     <TelegramFrame />
-    <header className="border-b border-rule py-7"><p className="font-mono text-sm tracking-wide">SITELEDGER / SITE DIARY</p>
+    <WorkspaceHeader current="reports" />{banner}
+    <header className="border-b border-rule pb-7"><p className="font-mono text-sm tracking-wide">SITE RECORD / HUMAN CHECK</p>
       <h1 className="mt-4 font-serif text-3xl">Review your site note</h1><p className="mt-3 leading-7">{record.project_name}</p>
       <Link href={trial ? "/trial" : "/today"} className="mt-4 inline-flex min-h-12 items-center underline">{trial ? "Your private trial" : "Record a new site note"}</Link>
       <p className="mt-2 font-mono text-sm">{date} · {record.timezone ?? "Africa/Lagos"}</p><p className="mt-2">Sent by {record.submitted_by}</p>
@@ -111,7 +114,7 @@ export function ConfirmForm({ record, trial = false }: { record: ReviewRecord; t
       {record.guest_origin && <Link className="inline-flex min-h-12 items-center underline" href={`/trial/original/${record.id}`}>View the preserved guest trial</Link>}
       {trial && <p className="mt-4 border-l-4 border-accent pl-4 leading-7">Private trial. Demo rates are illustrative. Confirmation creates a draft; save to a verified account before approval.</p>}</header>
     <div ref={feedback} tabIndex={-1} className="outline-none">
-      {error ? <div role="alert" className="mt-5 border-l-4 border-[#B91C1C] bg-red-50 p-5 text-[#B91C1C]"><p className="font-semibold">Your changes need another check</p><p className="mt-2">{error}</p></div>
+      {error ? <DiaryNotice tone="error" title="Your changes need another check">{error}</DiaryNotice>
         : saved && <div role="status" className={"mt-5 border-l-4 p-5 " + (dirty ? "border-amber-700 bg-amber-50" : "border-[#657055] bg-[#EEF0E7]")}>
           <h2 className="font-serif text-2xl">{dirty ? "Changes not yet confirmed" : "Site note confirmed"}</h2>
           <p className="mt-2">{dirty ? "Check your changes and tap Confirm changes to save them." : "Your quantities and observations have been saved."}</p>
@@ -130,18 +133,18 @@ export function ConfirmForm({ record, trial = false }: { record: ReviewRecord; t
     {record.audio_url && <Section title="Your voice note"><audio aria-label="Original site voice note" className="w-full" controls preload="none" src={mediaUrl("audio")} />
       <details className="mt-4"><summary className="min-h-12 cursor-pointer py-3">Read the original transcript</summary>
         <p className="whitespace-pre-wrap border-l-2 border-rule pl-4 leading-7">{record.transcript ?? "The original audio is saved. A transcript isn’t available."}</p></details></Section>}
-    {listening ? <Section title="Listening to your note…"><p role="status">Your audio and photos are saved. This page will update when your note is ready to check.</p></Section>
+    {listening ? <DiaryNotice busy title="Listening to your note…">Your audio and photos are saved. This page will update when your note is ready to check.</DiaryNotice>
       : <form onSubmit={submit} onChange={() => setDirty(true)}>
-      {record.job_status === "manual_entry" && <p role="status" className="mb-5 border-l-4 border-amber-700 bg-amber-50 p-4">We couldn’t read this note reliably. Your audio and photos are saved. Enter what happened below.</p>}
+      {record.job_status === "manual_entry" && <DiaryNotice tone="warning" title="Enter the site details">We couldn’t read this note reliably. Your audio and photos are saved. Enter what happened below.</DiaryNotice>}
       <fieldset disabled={locked || archived || saving}>
       <Section title="Work done">
         <p className="mb-5 leading-7">The BoQ is your project’s agreed list of work. Choose the matching item; its unit tells you how the quantity is measured.</p>
         {!work.length && <p className="mb-5">No work items were picked up. Add an item if work was done.</p>}
         <table className="w-full table-fixed border-collapse text-left"><caption className="sr-only">Editable work quantities and BoQ choices</caption>
           <thead><tr className="border-b border-rule"><th scope="col" className="w-2/3 py-3 pr-3 font-normal">Work item</th><th scope="col" className="py-3 font-normal">Quantity</th></tr></thead>
-          <tbody>{work.map(({ key, value, boqId, unitValue }, i) => <tr key={key} className="border-b border-rule"><td colSpan={2} className="py-5">
+          <tbody>{work.map(({ key, value, boqId, unitValue }, i) => <tr key={key} className="review-row border-b border-rule" data-confidence={low(value.confidence) ? "low" : undefined}><td colSpan={2} className="py-5">
             {low(value.confidence) && <p className="mb-3 text-amber-900">Check this one — this item needs your input.</p>}
-            <div className="grid grid-cols-3 gap-3"><div className="col-span-2"><Field label="Description" name={`w${i}.description`} value={value.description} required low={low(value.confidence)} /></div>
+            <div className="review-work-fields"><div><Field label="Description" name={`w${i}.description`} value={value.description} required low={low(value.confidence)} /></div>
               <Field label={unitValue ? `Quantity (${unitLabel(unitValue)})` : "Quantity"} name={`w${i}.quantity`} value={value.quantity} number required low={low(value.confidence) || value.quantity === null} /></div>
             <label className="mt-4 block">BoQ item *<select className={inputClass + " mt-2"} name={`w${i}.boq`} value={boqId} onChange={event => {
               const selected = event.target.value; const chosen = record.boq.find(item => item.id === selected);
@@ -149,7 +152,7 @@ export function ConfirmForm({ record, trial = false }: { record: ReviewRecord; t
             }} required>
               <option value="">Choose the item this work belongs to</option>{record.boq.map(item => <option key={item.id} value={item.id}>{item.section} — {item.description} ({unitLabel(item.unit)})</option>)}</select></label>
             <p className="mt-3 border-l-2 border-rule pl-3 font-semibold">{unitValue ? `Measure in ${unitLabel(unitValue)}: ${unitMeaning(unitValue)}` : "Choose a BoQ item to see its measurement unit."}</p>
-            <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4"><label className="block">Measurement unit *
+            <div className="review-helper-fields mt-4"><label className="block">Measurement unit *
               <input className={inputClass + " mt-2"} name={`w${i}.unit`} value={unitValue} required onChange={event => {
                 const next = event.target.value; setWork(rows => rows.map(row => row.key === key ? { ...row, unitValue: next } : row));
               }} /><span className="mt-1 block text-sm">m2 = m² · m3 = m³</span></label>
@@ -196,11 +199,11 @@ export function ConfirmForm({ record, trial = false }: { record: ReviewRecord; t
       </Section>
       </fieldset>
       {record.pending_media && <p role="status" className="mb-4 border-l-4 border-amber-700 p-4">A photo is still saving. You can review the fields now; wait before confirming.</p>}
-      {record.pending_photo_analysis && <p role="status" className="mb-4 border-l-4 border-amber-700 p-4">Checking your photos… Review the fields now; findings will appear here before you confirm.</p>}
+      {record.pending_photo_analysis && <DiaryNotice busy title="Checking your photos…">Review the fields now; findings will appear here before you confirm.</DiaryNotice>}
       {saved && !dirty && !error && <p className="mb-4 border-l-4 border-[#657055] bg-[#EEF0E7] p-4 font-semibold">Site note confirmed. Your changes are saved.</p>}
       <p className="mb-4">By confirming, you confirm that these are the quantities and observations from your site.</p>
       <button type="submit" disabled={saving || locked || archived || record.pending_media || record.pending_photo_analysis || (!!saved && !dirty)} className="min-h-14 w-full bg-accent px-6 py-4 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
         {saving ? costing ? "Costing against the BoQ…" : "Saving your confirmation…" : saved ? dirty ? "Confirm changes and rebuild report" : "Confirmed — saved" : "Confirm and cost it"}</button>
-      </form>}
+      </form>}{children}
   </main>;
 }

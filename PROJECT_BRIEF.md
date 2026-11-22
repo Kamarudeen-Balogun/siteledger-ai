@@ -485,6 +485,8 @@ Use one accent colour. If everything is orange, nothing is. Currency is always f
 
 ### Core work screens
 
+**Builder clarification — 22 November 2026 (task 12 imagery):** Keep the three existing builder-supplied synthetic demo images for this milestone, with their visible synthetic disclosures and provenance. The builder has no real site photos available yet and will find suitable replacements later. Do not claim these are genuine site evidence, replace historical media, or silently alter locked records.
+
 1. **Today (foreman, mobile):** big record button, today's submission status, link to send via Telegram instead.
 2. **Confirm:** extracted items as an editable BoQ-style table, photo findings below, one "Confirm and cost it" button.
 3. **Report (web + PDF share the same design):** the daily report, stamped when locked.
@@ -618,6 +620,8 @@ Work in this order. Do not start a task until the previous task's acceptance cri
 ---
 
 ## 17. Testing and QA checklist
+
+**Builder clarification — 22 November 2026 (README coverage and demo video):** After the app and deployment checks are complete, task 14 must give readers the full product flow through useful desktop/mobile screenshots, Telegram bot conversation and voice-note intake captures, human confirmation, BoQ costing, PDF and dispute-log views. Use actual product captures or clearly labelled illustrations; do not present staged conversations as real usage. Prepare a narrated demo video targeting 2:50, within the existing under-three-minute submission rule.
 
 Run this full list on 1 December and again on the morning of 3 December, on the deployed app, on a real Android phone, over mobile data.
 

@@ -10,6 +10,7 @@ import { TelegramAccountEntry } from "@/components/account-forms";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { privateDashboard } from "@/lib/projects/boq-data";
 import { ProjectDashboard } from "@/components/project-dashboard";
+import { DiaryNotice } from "@/components/diary-notice";
 export const metadata = { title: "Project records — SiteLedger", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
 async function History({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -37,5 +38,5 @@ async function History({ params }: { params: Promise<{ id: string }> }) {
     </section></>;
 }
 export default function ProjectPage(props: { params: Promise<{ id: string }> }) {
-  return <main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><WorkspaceHeader current="projects"/><Suspense fallback={<p role="status">Opening authorized project records…</p>}><History {...props} /></Suspense></main>;
+  return <main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><WorkspaceHeader current="projects"/><Suspense fallback={<DiaryNotice busy title="Opening project records…">Checking your access and the project ledger.</DiaryNotice>}><History {...props} /></Suspense></main>;
 }

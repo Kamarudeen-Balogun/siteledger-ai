@@ -8,7 +8,7 @@ import { useActionConfirmation } from "./action-confirmation";
 import type { Account } from "@/lib/auth/types";
 import { clearCachedContext } from "@/lib/web/queue";
 
-const field = "mt-2 min-h-12 w-full border border-rule bg-white px-3 py-3 text-base";
+const field = "mt-2 min-h-12 w-full border border-rule bg-[#fffdf9] px-3 py-3 text-base";
 const button = "min-h-12 border border-ink px-5 py-3 text-base disabled:opacity-50";
 const primary = `${button} bg-accent text-white border-accent`;
 export async function accountAction(action: string, input: Record<string, unknown> = {}) {
@@ -17,7 +17,7 @@ export async function accountAction(action: string, input: Record<string, unknow
   if (!response.ok) throw new Error(data.error ?? "Could not complete this account action.");
   return data;
 }
-function Feedback({ error, message }: { error: string; message?: string }) { return error || message ? <p role={error ? "alert" : "status"} className={`my-5 border-l-4 p-4 leading-7 ${error ? "border-[#B91C1C] text-[#B91C1C]" : "border-accent"}`}>{error || message}</p> : null; }
+function Feedback({ error, message }: { error: string; message?: string }) { return error || message ? <p role={error ? "alert" : "status"} className={`my-5 border-l-4 p-4 leading-7 ${error ? "border-amber-700 bg-amber-50 text-amber-900" : "border-[#657055] bg-[#eef0e7]"}`}>{error || message}</p> : null; }
 function Label({ children, title }: { children: ReactNode; title: string }) { return <label className="my-4 block">{title}{children}</label>; }
 export function AccountLogin({ siteKey, telegramAccount, nextPath }: { siteKey: string; telegramAccount?: Account; nextPath?: string }) {
   const router = useRouter(), [signup, setSignup] = useState(false), [error, setError] = useState(""), [busy, setBusy] = useState(false);

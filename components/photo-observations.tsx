@@ -44,7 +44,7 @@ export function PhotoObservations({ photo, number, onEdit }: { photo: Photo; num
       </li>)}</ul>
     </>}
     <label className="mt-3 block">Photo {number} observations
-      <textarea className="mt-2 min-h-24 w-full rounded-none border border-rule bg-white/50 px-3 py-2 text-base outline-offset-2 focus:outline-accent"
+      <textarea className="mt-2 min-h-24 w-full rounded-none border border-rule bg-[#fffdf9] px-3 py-2 text-base outline-offset-2 focus:outline-accent"
         name={`photo.${photo.id}`} maxLength={5000} value={note} onChange={event => { edit(); setError(""); setNote(event.target.value); }}
         placeholder="Add a note or clear any suggestion you disagree with." />
     </label>

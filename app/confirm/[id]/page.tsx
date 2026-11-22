@@ -8,20 +8,22 @@ import { processSubmissionPhotos } from "@/lib/ai/process-photos";
 import { processSubmission } from "@/lib/ai/process-submission";
 import Link from "next/link";
 import { TelegramAccountEntry } from "@/components/account-forms";
+import { WorkspaceHeader } from "@/components/workspace-header";
+import { DiaryNotice } from "@/components/diary-notice";
 
 export const maxDuration = 120;
 
 export const metadata: Metadata = { title: "Review site note — SiteLedger", referrer: "no-referrer", robots: { index: false, follow: false } };
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ access?: string }> };
 function Message({ title, children }: { title: string; children: React.ReactNode }) {
-  return <main className="mx-auto max-w-3xl px-5 py-10"><p className="font-mono text-sm">SITELEDGER / SITE DIARY</p>
+  return <main className="mx-auto max-w-5xl px-5 py-7 sm:px-10"><WorkspaceHeader current="reports"/>
     <h1 className="mt-6 font-serif text-3xl">{title}</h1><div className="mt-5 text-base leading-7">{children}</div></main>;
 }
 async function Review(props: Props) {
   await connection();
   const { id } = await props.params;
   const record = await getReview(id).catch(() => undefined);
-  if (record === undefined) return <Message title="Your site note is saved">We couldn’t load it just now. Reopen your review button to try again.</Message>;
+  if (record === undefined) return <Message title="Could not open this site note">We couldn’t load it just now. Reopen your review button to try again.</Message>;
   if (!record) return <Message title="Sign in to review your site note"><TelegramAccountEntry /><Link href="/account" className="inline-flex min-h-12 items-center underline">Open your account</Link><p>Project membership is required to open this record.</p></Message>;
   const voicePending=["queued","processing"].includes(record.job_status??"");
   if (record.pending_photo_analysis||voicePending) after(async()=>{await Promise.all([
@@ -33,5 +35,5 @@ async function Review(props: Props) {
   return <ConfirmForm key={`${record.id}:${record.job_status}`} record={record} />;
 }
 export default function Page(props: Props) {
-  return <Suspense fallback={<Message title="Opening your site note…">Loading your voice note and photos.</Message>}><Review {...props} /></Suspense>;
+  return <Suspense fallback={<main className="mx-auto max-w-5xl px-5 py-7 sm:px-10"><WorkspaceHeader current="reports"/><DiaryNotice busy title="Opening your site note…">Loading your voice note and photos.</DiaryNotice></main>}><Review {...props} /></Suspense>;
 }

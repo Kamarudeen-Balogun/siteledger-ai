@@ -6,6 +6,7 @@ import { TelegramConnect, TelegramAccountEntry } from "@/components/account-form
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { TrialReturnLink } from "@/components/trial-return-link";
 import { privateDashboard } from "@/lib/projects/boq-data";
+import { DiaryNotice } from "@/components/diary-notice";
 export const metadata={title:"Your projects — SiteLedger AI",robots:{index:false,follow:false}};
 async function ProjectsContent() {
   const data = await privateProjects();
@@ -17,4 +18,4 @@ async function ProjectsContent() {
   }));
   return <><TelegramConnect account={data.account} siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""} /><div className="project-columns"><ProjectSelection projects={projects} active={data.active_project_id} /><CreateProject /></div></>;
 }
-export default function ProjectsPage(){return <main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><WorkspaceHeader current="projects" title="Your projects"/><Suspense fallback={null}><TrialReturnLink/></Suspense><Suspense fallback={<p role="status" className="my-7">Opening your authorized projects…</p>}><ProjectsContent/></Suspense></main>;}
+export default function ProjectsPage(){return <main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><WorkspaceHeader current="projects" title="Your projects"/><Suspense fallback={null}><TrialReturnLink/></Suspense><Suspense fallback={<DiaryNotice busy title="Opening your projects…">Checking membership and recorded project values.</DiaryNotice>}><ProjectsContent/></Suspense></main>;}

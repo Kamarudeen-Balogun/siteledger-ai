@@ -11,6 +11,7 @@ import { AmendmentForm } from "@/components/amendment-form";
 import { getReviewer, reportVersion } from "@/lib/log/data";
 import { TelegramAccountEntry } from "@/components/account-forms";
 import { WorkspaceHeader } from "@/components/workspace-header";
+import { DiaryNotice } from "@/components/diary-notice";
 export const metadata: Metadata = { title: "Daily site report — SiteLedger", referrer: "no-referrer", robots: { index: false, follow: false } };
 type Props = { params: Promise<{ id: string }> };
 async function Report(props: Props) {
@@ -46,5 +47,5 @@ async function Report(props: Props) {
     </>;
 }
 export default function Page(props: Props) {
-  return <main className="mx-auto max-w-6xl px-5 py-7 sm:px-10"><WorkspaceHeader current="reports"/><Suspense fallback={<p role="status">Opening your report…</p>}><Report {...props} /></Suspense></main>;
+  return <main className="mx-auto max-w-6xl px-5 py-7 sm:px-10"><WorkspaceHeader current="reports"/><Suspense fallback={<DiaryNotice busy title="Opening your report…">Loading the costed record and checking access.</DiaryNotice>}><Report {...props} /></Suspense></main>;
 }

@@ -6,6 +6,8 @@ import { intakeRpc } from "@/lib/telegram/storage";
 import { ReportDocument } from "@/components/report-document";
 import type { ReportDocument as Document } from "@/lib/reports/model";
 import { UUID } from "@/lib/confirm/access";
+import { WorkspaceHeader } from "@/components/workspace-header";
+import { DiaryNotice } from "@/components/diary-notice";
 export const metadata={title:"Original guest trial — SiteLedger AI",robots:{index:false,follow:false},referrer:"no-referrer" as const};
 async function Original({params}:{params:Promise<{id:string}>}) {
   const {id}=await params;if(!UUID.test(id))notFound();
@@ -15,4 +17,4 @@ async function Original({params}:{params:Promise<{id:string}>}) {
     {original.draft ? <ReportDocument guestOriginal report={{id,status:"draft",approved_by:null,locked_at:null,stale:false,document:original.draft}}/> : <p className="whitespace-pre-wrap leading-7">{original.transcript??"No transcript was generated. Original media is available on the account site note."}</p>}
   </>;
 }
-export default function OriginalPage(props:{params:Promise<{id:string}>}){return <main className="mx-auto max-w-6xl px-5 py-7 sm:px-10"><Suspense fallback={<p role="status">Opening preserved trial work…</p>}><Original {...props}/></Suspense></main>;}
+export default function OriginalPage(props:{params:Promise<{id:string}>}){return <main className="mx-auto max-w-6xl px-5 py-7 sm:px-10"><WorkspaceHeader current="reports"/><Suspense fallback={<DiaryNotice busy title="Opening preserved trial work…">Checking access to the original guest record.</DiaryNotice>}><Original {...props}/></Suspense></main>;}

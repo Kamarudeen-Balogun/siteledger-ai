@@ -16,6 +16,12 @@ The public landing page explains the workflow and opens the fictional sample or
 private account access. About, Help/FAQ, Contact, Privacy and Terms share its navigation.
 Account, project, team and report screens also adapt to desktop widths.
 
+<img src="docs/images/site-diary-desktop.png" width="760" alt="Desktop site diary with a large voice-recording button, a visible keyboard focus ring on the voice-file picker and a separate queue column">
+
+The work diary shares the account/project navigation. Phone layouts stack the
+capture controls and queue; desktop gives them separate columns. Loading,
+unclear extraction, failed requests and offline work have visible guidance.
+
 <img src="docs/images/costed-report.png" width="360" alt="Mobile locked report showing 18 square metres of blockwork and a cost of 261,000 naira">
 <img src="docs/images/account-confirmation.png" width="360" alt="Mobile signup confirmation with a six-digit email code and professional-name confirmation">
 
@@ -71,6 +77,12 @@ Create an email/password account, enter its signup email code, and confirm the p
 
 First-time Telegram users tap **Open SiteLedger** to use the same secure signup/sign-in form. Keep passwords in that HTTPS form. Website and Telegram access connect through explicit consent and proof of both identities, with expiring, single-use challenges. Existing profiles can be combined deliberately while retaining historical records and permissions.
 
+For an existing Telegram user, send `/account`, open the Mini App and create
+email/password access or sign in. Confirm any signup email code, then use
+**Connect this Telegram account → Connect Telegram** with explicit consent.
+To keep two test users separate, use two different emails. One website account
+supports one active Telegram link. The [Help page](https://chip-chaplain-tapeless.ngrok-free.dev/help) explains these steps.
+
 | Command | What it does |
 |---|---|
 | `/start` | Get started or see your active project |
@@ -107,7 +119,7 @@ retry guidance without exposing private error details.
 
 The core voice/photo → confirmation → costing → PDF → locked log flow is implemented, along with private accounts, projects, teams, secure Telegram linking and recovery, six public pages and desktop layouts. Task 10B adds the private 24-hour trial and verified account handover.
 
-New projects start with an **empty BoQ**; saved trials receive their frozen demo BoQ. Task 11 adds the supplied-rate editor and private project ledger. Production deployment and the final demonstration/Kiro write-up remain later milestones. See [the ordered tasks](.kiro/specs/siteledger/tasks.md) and [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
+New projects start with an **empty BoQ**; saved trials receive their frozen demo BoQ. The supplied-rate editor, private project ledger and task 12 polish are implemented. Production deployment comes next. The final README gallery, Telegram conversation/voice captures, Kiro write-up and narrated video targeting **2:50** follow deployment checks in task 14. See [the ordered tasks](.kiro/specs/siteledger/tasks.md) and [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
 
 The public `/reports/demo`, `/log/demo` and demo summary expose only the original fictional seed, excluding genuine uploads, private amendments and live totals. Rates are **illustrative, not live market prices**; use QS-verified rates for real work.
 

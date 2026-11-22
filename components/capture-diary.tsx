@@ -5,6 +5,8 @@ import Link from "next/link";
 import { listQueue,loadContext,saveContext,enqueue,drainQueue,belongsToActor } from "@/lib/web/queue";
 import { audioType,describeFiles,photoForUpload } from "@/lib/web/files";
 import { validManifest,type CaptureContext,type QueueEntry } from "@/lib/web/types";
+import { WorkspaceHeader } from "./workspace-header";
+import { DiaryNotice } from "./diary-notice";
 
 const button="min-h-12 border border-rule px-4 py-3 text-base disabled:opacity-50";
 function Preview({blob,audio=false}:{blob:Blob;audio?:boolean}) {
@@ -125,20 +127,21 @@ export function CaptureDiary() {
   const visible=rows.filter(row=>row.context.actor_id===context?.actor_id).sort((a,b)=>b.manifest.captured_at.localeCompare(a.manifest.captured_at));
   const pending=visible.filter(row=>row.status!=="sent"),sent=visible.filter(row=>row.status==="sent").slice(0,3);
   const busy=opening||saving||preparing||starting||!context||context.expires<=now/1000;
-  return <main className="mx-auto min-h-svh max-w-3xl px-5 py-8 text-base" style={{fontFamily:'"Report Sans", Arial, sans-serif'}}>
+  return <main className="mx-auto min-h-svh max-w-7xl px-5 py-7 text-base sm:px-10">
     <Script src="https://telegram.org/js/telegram-web-app.js" onReady={()=>{void connect();}} onError={()=>{setOpening(false);if(!active.current)setError("Sign in and select an authorized project to use the web diary.");else{readyToSend.current=true;void send();}}}/>
-    <p className="border-b border-rule pb-5 font-mono text-xs tracking-widest">SITELEDGER / SITE DIARY</p>
+    <WorkspaceHeader current="today" />
     <h1 className="mt-7 font-serif text-4xl" style={{fontFamily:'"Report Serif", Georgia, serif'}}>Today on site</h1>
     {context ? <div className="mt-5 border-b border-rule pb-6"><p className="font-semibold">{(captureProject??context).project_name}</p>
       <p className="mt-2">{(captureProject??context).actor_name} · {(captureProject??context).role === "pm" ? "PM" : "Foreman"} · {(captureProject??context).timezone}</p><p className="mt-2 font-mono text-sm">{new Intl.DateTimeFormat("en-GB",{dateStyle:"long",timeZone:context.timezone}).format(new Date(now))}</p></div>:
       <p className="mt-5 leading-7">{opening ? "Opening your authorized project…":"Sign in and choose one of your authorized projects to open this diary."}</p>}
-    <Link href="/projects" className="mt-4 inline-flex min-h-12 items-center underline">Choose an authorized project</Link>
-    {!online&&<p role="status" className="mt-5 border-l-4 border-amber-700 bg-amber-50 p-4">Offline. Saved notes stay on this device and will send when data returns.</p>}
+    <Link href="/projects" className="mt-4 inline-flex min-h-12 items-center underline">{context ? "Switch project" : "Choose a project"}</Link>
+    {opening && <DiaryNotice busy title="Opening your project…">Checking your account and the selected project.</DiaryNotice>}
+    {!online&&<DiaryNotice tone="warning" title="You’re offline">Saved notes stay on this device and will send when data returns.</DiaryNotice>}
     {context&&context.expires<=now/1000&&<p role="alert" className="mt-5 border-l-4 border-amber-700 p-4">Your session expired. Sign in and select the original project. Queued files are kept.</p>}
-    {error&&<p role="alert" className="mt-5 border-l-4 border-amber-700 p-4">{error}</p>}
-    {context&&<section aria-label="New site note" className="border-b border-rule py-7">
+    {error&&<DiaryNotice tone="error" title="Could not finish this step">{error}</DiaryNotice>}
+    <div className="diary-capture-layout">{context&&<section aria-label="New site note" className="border-b border-rule py-7">
       <p className="mb-5 leading-7">Say what was done, the quantities and crew, deliveries, delays and issues. Aim for 30–90 seconds.</p>
-      <button type="button" disabled={busy&&!recording} onClick={()=>void startRecording()} className={"min-h-20 w-full px-6 py-5 text-xl font-semibold disabled:opacity-50 "+(audio&&!recording?"border border-accent text-accent":"bg-accent text-white")}>{recording?`Stop recording · ${seconds}s`:"Record voice note"}</button>
+      <button type="button" disabled={busy&&!recording} onClick={()=>void startRecording()} className={"record-control w-full px-6 py-5 font-semibold disabled:opacity-50 "+(audio&&!recording?"border border-accent text-accent":"bg-accent text-white")}>{recording?`Stop recording · ${seconds}s`:"Record voice note"}</button>
       <label className={button+" mt-4 block cursor-pointer text-center"}>Choose a saved voice file<input className="sr-only" type="file" accept="audio/ogg,audio/mpeg,audio/mp4,audio/webm,audio/wav,.m4a,.mp3,.ogg,.webm,.wav" disabled={busy||recording} onChange={event=>void chooseAudio(event)}/></label>
       <p className="mt-3 text-sm leading-6">Ogg, MP3, M4A, WAV or WebM · up to 3 MB</p>
       {audio&&<><p className="mt-5 font-semibold">Voice note ready</p><Preview blob={audio} audio/></>}
@@ -150,14 +153,14 @@ export function CaptureDiary() {
     </section>}
     <section className="py-7" aria-label="Saved site notes"><h2 className="font-serif text-2xl">On this device</h2>
       {!visible.length&&<p className="mt-4 leading-7">No site note saved here yet. Record a voice note and add photos to start.</p>}
-      {[...pending,...sent].map(row=><article key={row.manifest.id} className="border-b border-rule py-5">
+      {[...pending,...sent].map(row=><article key={row.manifest.id} className="diary-queue-entry" data-status={row.status}>
         <p className="font-semibold">{row.context.project_name}</p><p className="mt-2 font-mono text-sm">{new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeStyle:"short",timeZone:row.manifest.timezone}).format(new Date(row.manifest.captured_at))} · {row.manifest.assets.length-1} {row.manifest.assets.length===2?"photo":"photos"}</p>
         <p className="mt-3 leading-7" role="status">{row.manifest.project_id!==context?.project_id?"Queued for its original project. Reopen that authorized project to send it.":row.message}</p>
         {row.status==="sent"&&row.review_url&&<Link className={button+" mt-3 inline-block"} href={row.review_url}>Review site note</Link>}
       </article>)}
       {pending.length>0&&online&&<button className={button+" mt-4"} onClick={()=>void send()}>Retry queued notes</button>}
     </section>
-    <footer className="border-t border-rule py-5"><a className="inline-flex min-h-12 items-center underline" href="https://t.me/SiteLedgerNGbot">Send through Telegram instead</a>
+    </div><footer className="border-t border-rule py-5"><a className="inline-flex min-h-12 items-center underline" href="https://t.me/SiteLedgerNGbot">Send through Telegram instead</a>
       {!opening&&<button className={button+" mt-3 block w-full"} onClick={()=>void connect()}>Reconnect authorized project</button>}</footer>
   </main>;
 }

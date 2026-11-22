@@ -5,7 +5,7 @@ import { formatMoney } from "@/lib/costing/format-money";
 import { displayUnit } from "@/lib/reports/model";
 import { boqUnits, type BoqEdit, type BoqRow } from "@/lib/projects/boq-types";
 import { useActionConfirmation } from "./action-confirmation";
-const field = "mt-2 min-h-12 w-full border border-rule bg-white px-3 py-3 text-base";
+const field = "mt-2 min-h-12 w-full border border-rule bg-[#fffdf9] px-3 py-3 text-base";
 const button = "inline-flex min-h-12 items-center justify-center border border-ink px-5 py-3 disabled:opacity-50";
 export function BoqEditor({ projectId, currency, rows, editable }: { projectId: string; currency: string; rows: BoqRow[]; editable: boolean }) {
   const router = useRouter(), { confirm, confirmation } = useActionConfirmation();

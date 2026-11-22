@@ -15,7 +15,7 @@ const restName = `${database}_rest`, authName = `${database}_auth`;
 const base = "http://127.0.0.1:3016", restUrl = "http://127.0.0.1:55531", authUrl = "http://127.0.0.1:55533", gateway = "http://127.0.0.1:55534";
 const smtpPort = 55532, captchaToken = "XXXX.DUMMY.TOKEN.XXXX", dummyBot = "account-acceptance-dummy-bot";
 const out = join(root,"supabase/.temp/task-10a/browser"), mail = [], media = new Map();
-let created = false, restStarted = false, authStarted = false, preview, proxy, smtp, browser, forceAccountError = false;
+let created = false, restStarted = false, authStarted = false, preview, proxy, smtp, browser, forceAccountError = false, slowReview = false;
 const keepAlive = setInterval(()=>{},1000);
 function command(name,args,input) {
   const result=spawnSync(name,args,{cwd:root,input,encoding:"utf8",windowsHide:true,maxBuffer:30*1024*1024});
@@ -77,6 +77,7 @@ try {
       const chunks=[];let length=0;for await(const chunk of request){length+=chunk.length;if(length>4*1024*1024){response.writeHead(413);response.end();return;}chunks.push(chunk);}
       const body=Buffer.concat(chunks),path=request.url??"/";
       if (forceAccountError && path === "/rest/v1/rpc/account_session") { response.writeHead(503,{"Content-Type":"application/json"});response.end('{"error":"private-fixture-details-must-not-appear"}');return; }
+      if (slowReview && path === "/rest/v1/rpc/account_review") await new Promise(resolve=>setTimeout(resolve,1500));
       if(path.startsWith("/storage/v1/object/")){
         const object=path.slice("/storage/v1/object/".length).replace(/^authenticated\//,"");
         if(request.headers.apikey!==settings.SERVICE_ROLE_KEY){response.writeHead(404);response.end();return;}
@@ -173,8 +174,16 @@ try {
   const scripted={likely_work_item:"Blockwork",confidence:0.8,defects:[{description:"Surface voids — scripted QA fixture",confidence:0.8}],safety_concerns:[]};
   const photoLease=randomUUID();sql(`update public.photo_analysis_jobs set status='queued' where photo_id='${mediaId}'; select public.claim_photo_analysis('${mediaId}','${photoLease}'); select public.finish_photo_analysis('${mediaId}','${photoLease}','${JSON.stringify(scripted)}'::jsonb,null);`);
   const values={work_items:[{description:"Blockwork QA",matched_boq_hint:null,quantity:18,unit:"m2",crew:6,confidence:1}],materials:[],delays:[],issues:[],raw_language_notes:""};
+  // Task 12: genuine loading UI, blank low-confidence values and intact retries.
+  const uncertain={...values,work_items:[{...values.work_items[0],confidence:0.4}]};sql(`update public.submissions set extraction='${JSON.stringify(uncertain)}'::jsonb where id='${noteId}';`);
+  const statePage=await foreman.newPage();await statePage.emulateMedia({reducedMotion:"reduce"});slowReview=true;await statePage.goto(`${base}/confirm/${noteId}`,{waitUntil:"commit"});
+  await statePage.getByRole("heading",{name:"Opening your site note…",exact:true}).waitFor();assert.equal(await statePage.locator('.diary-loading-line').evaluate(node=>getComputedStyle(node,'::after').animationName),"none");await statePage.screenshot({path:join(out,"loading-review-mobile.png"),fullPage:true});slowReview=false;
+  await statePage.locator('[data-confidence="low"]').waitFor();assert.equal(await statePage.locator('[name="w0.quantity"]').inputValue(),"");const warningColor=await statePage.locator('[name="w0.quantity"]').evaluate(node=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=1;const context=canvas.getContext('2d');context.fillStyle=getComputedStyle(node).backgroundColor;context.fillRect(0,0,1,1);return [...context.getImageData(0,0,1,1).data].slice(0,3);});assert.deepEqual(warningColor,[255,251,235]);
+  for(const width of [390,768,1440]){await statePage.setViewportSize({width,height:900});assert.ok(await statePage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));const small=await statePage.locator('main button:visible, main input:not([type="checkbox"]):not([type="hidden"]):visible, main select:visible, main textarea:visible').evaluateAll(nodes=>nodes.filter(node=>node.getBoundingClientRect().height<48||parseFloat(getComputedStyle(node).fontSize)<16).map(node=>node.getAttribute('name')??node.textContent));assert.deepEqual(small,[],"Review controls need readable type and 48px targets");await statePage.screenshot({path:join(out,`review-low-${width}.png`),fullPage:true});}await statePage.close();
   await action(foreman,"confirm",noteId,{human_confirmed:true,values,boq_ids:[boq],photo_notes:[{id:mediaId,note:"Human QA observation"}]});
   const confirmPage=await foreman.newPage();await confirmPage.goto(`${base}/confirm/${noteId}`);await confirmPage.getByText("Possible findings — check against the photo",{exact:true}).waitFor();
+  await confirmPage.locator('[name="w0.quantity"]').fill("19");await foreman.route(`${base}/api/confirm/${noteId}`,route=>route.request().method()==="POST"?route.fulfill({status:503,contentType:"application/json",body:'{"error":"Connection interrupted for QA"}'}):route.continue());
+  await confirmPage.getByRole("button",{name:"Confirm changes and rebuild report",exact:true}).click();await confirmPage.getByRole("alert").filter({hasText:"Connection interrupted for QA"}).waitFor();assert.equal(await confirmPage.locator('[name="w0.quantity"]').inputValue(),"19");await confirmPage.screenshot({path:join(out,"review-retry-mobile.png"),fullPage:true});await foreman.unroute(`${base}/api/confirm/${noteId}`);await confirmPage.locator('[name="w0.quantity"]').fill("18");
   await confirmPage.getByRole("button",{name:/Dismiss.*Surface voids/}).click();assert.equal(await confirmPage.locator(`[name="photo.${mediaId}"]`).inputValue(),"Human QA observation");
   await confirmPage.getByRole("button",{name:"Confirm changes and rebuild report",exact:true}).click();await confirmPage.waitForURL(`${base}/reports/${noteId}`);
   assert.equal((await confirmPage.locator(".report-document").innerText()).includes("scripted QA fixture"),false);
@@ -218,6 +227,8 @@ try {
   // Browser offline emulation tests the real IndexedDB queue and service worker.
   await foreman.route("https://telegram.org/js/telegram-web-app.js",route=>route.fulfill({contentType:"application/javascript",body:"window.Telegram={WebApp:{initData:'',ready(){},expand(){}}};"}));
   const diary=await foreman.newPage();await diary.goto(base+"/today");await diary.getByRole("button",{name:"Record voice note",exact:true}).waitFor();
+  await eventually(()=>diary.getByRole("button",{name:"Record voice note",exact:true}).isEnabled(),"Diary did not finish opening");assert.ok(await diary.getByRole("button",{name:"Record voice note",exact:true}).evaluate(node=>node.getBoundingClientRect().height>=88));await diary.getByRole("button",{name:"Record voice note",exact:true}).focus();await diary.keyboard.press("Tab");assert.equal(await diary.locator('input[type="file"][accept^="audio/"]').evaluate(node=>getComputedStyle(node.closest('label')).outlineWidth),"2px");
+  for(const width of [390,768,1440]){await diary.setViewportSize({width,height:900});assert.ok(await diary.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await diary.screenshot({path:join(out,`today-empty-${width}.png`),fullPage:true});}await diary.setViewportSize({width:390,height:844});
   await diary.evaluate(()=>navigator.serviceWorker.ready);
   await eventually(()=>diary.evaluate(async()=>Boolean(await (await caches.open("siteledger-today-v1")).match("/today"))),"Offline public shell was not cached.");
   await foreman.setOffline(true);await diary.locator('input[type="file"][accept^="audio/"]').setInputFiles({name:"qa.wav",mimeType:"audio/wav",buffer:audio});await diary.locator('input[type="file"][accept^="image/"]').setInputFiles({name:"synthetic.jpg",mimeType:"image/jpeg",buffer:photo});await diary.getByRole("button",{name:"Queue this site note",exact:true}).click();
