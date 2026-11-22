@@ -12,7 +12,8 @@ const source = process.argv[2] === "tests/telegram.sql" ? "telegram.sql"
   : process.argv[2] === "tests/account-projects.sql" ? "account-projects.sql"
   : process.argv[2] === "tests/account-records.sql" ? "account-records.sql"
   : process.argv[2] === "tests/account-telegram.sql" ? "account-telegram.sql"
-  : process.argv[2] === "tests/account-web.sql" ? "account-web.sql" : "database.sql";
+  : process.argv[2] === "tests/account-web.sql" ? "account-web.sql"
+  : process.argv[2] === "tests/trial.sql" ? "trial.sql" : "database.sql";
 const sql = await readFile(new URL(`../tests/${source}`, import.meta.url), "utf8");
 // An explicit container prevents checks from reaching another project or a hosted database.
 const result = spawnSync(

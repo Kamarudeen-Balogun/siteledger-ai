@@ -33,12 +33,13 @@ function Score({ name, value }: { name: string; value: number }) {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return <section className="border-t border-rule py-7"><h2 className="mb-5 font-serif text-2xl">{title}</h2>{children}</section>;
 }
-export function ConfirmForm({ record }: { record: ReviewRecord }) {
+export function ConfirmForm({ record, trial = false }: { record: ReviewRecord; trial?: boolean }) {
   const router = useRouter();
-  const source = record.confirmed_extraction ?? record.extraction ?? empty;
+  const source = record.confirmed_extraction ?? record.trial_values ?? record.extraction ?? empty;
+  const previouslyChecked = Boolean(record.confirmed_extraction || record.trial_values);
   const [work, setWork] = useState(() => source.work_items.map((value, i) => ({ key: "work-" + i, value,
-    unitValue: !record.confirmed_extraction && value.confidence < 0.6 ? "" : unit(value.unit) ?? "",
-    boqId: !record.confirmed_extraction && value.confidence < 0.6 ? "" : record.confirmed_boq_ids?.[i] ?? record.boq.find(item => item.description.toLowerCase() === value.matched_boq_hint?.toLowerCase())?.id ?? "" })));
+    unitValue: !previouslyChecked && value.confidence < 0.6 ? "" : unit(value.unit) ?? "",
+    boqId: !previouslyChecked && value.confidence < 0.6 ? "" : (record.confirmed_boq_ids ?? record.trial_boq_ids)?.[i] ?? record.boq.find(item => item.description.toLowerCase() === value.matched_boq_hint?.toLowerCase())?.id ?? "" })));
   const [materials, setMaterials] = useState(() => source.materials.map((value, i) => ({ key: "material-" + i, value })));
   const [delays, setDelays] = useState(() => source.delays.map((value, i) => ({ key: "delay-" + i, value })));
   const [saving, setSaving] = useState(false), [error, setError] = useState("");
@@ -49,7 +50,7 @@ export function ConfirmForm({ record }: { record: ReviewRecord }) {
   const listening = ["queued", "processing"].includes(record.job_status ?? "");
   const locked = record.status === "locked";
   const archived = Boolean(record.archived_at);
-  const low = (confidence: number) => !record.confirmed_extraction && confidence < 0.6;
+  const low = (confidence: number) => !previouslyChecked && confidence < 0.6;
   useEffect(() => {
     if (!listening && !record.pending_media && !record.pending_photo_analysis) return;
     const timer = setInterval(() => { if (navigator.onLine) router.refresh(); }, 3000);
@@ -61,7 +62,7 @@ export function ConfirmForm({ record }: { record: ReviewRecord }) {
     feedback.current?.focus({ preventScroll: true });
     focusFeedback.current = false;
   }, [saved, error, saving]);
-  const mediaUrl = (id: string) => `/api/confirm/${record.id}/media/${id}`;
+  const mediaUrl = (id: string) => trial ? `/api/trial/media/${id}` : `/api/confirm/${record.id}/media/${id}`;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     focusFeedback.current = true;
@@ -84,12 +85,13 @@ export function ConfirmForm({ record }: { record: ReviewRecord }) {
     if (!navigator.onLine) { setError("You’re offline. Your edits are still here. Reconnect before confirming."); return; }
     setSaving(true); setError("");
     try {
-      const response = await fetch(`/api/confirm/${record.id}`, { method: "POST", headers: {
+      const response = await fetch(trial ? "/api/trial/confirm" : `/api/confirm/${record.id}`, { method: "POST", headers: {
         "Content-Type": "application/json",
       }, body: JSON.stringify(confirmation), cache: "no-store", signal: AbortSignal.timeout(20000) });
       const result = await response.json();
       if (!response.ok) { setError(result.error ?? "Your edits are still here. Try confirming again."); return; }
       setSaved({ by: result.confirmed_by, at: result.confirmed_at }); setDirty(false);
+      if (trial) { router.push("/trial/report"); router.refresh(); return; }
       setCosting(true);
       const costResponse = await fetch(`/api/reports/${record.id}`, { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}), cache: "no-store", signal: AbortSignal.timeout(20000) });
@@ -103,8 +105,11 @@ export function ConfirmForm({ record }: { record: ReviewRecord }) {
     <TelegramFrame />
     <header className="border-b border-rule py-7"><p className="font-mono text-sm tracking-wide">SITELEDGER / SITE DIARY</p>
       <h1 className="mt-4 font-serif text-3xl">Review your site note</h1><p className="mt-3 leading-7">{record.project_name}</p>
-      <Link href={`/today`} className="mt-4 inline-flex min-h-12 items-center underline">Record a new site note</Link>
-      <p className="mt-2 font-mono text-sm">{date} · {record.timezone ?? "Africa/Lagos"}</p><p className="mt-2">Sent by {record.submitted_by}</p></header>
+      <Link href={trial ? "/trial" : "/today"} className="mt-4 inline-flex min-h-12 items-center underline">{trial ? "Your private trial" : "Record a new site note"}</Link>
+      <p className="mt-2 font-mono text-sm">{date} · {record.timezone ?? "Africa/Lagos"}</p><p className="mt-2">Sent by {record.submitted_by}</p>
+      {record.guest_origin && <p className="mt-4 border-l-4 border-accent pl-4 leading-7">Originally captured by {record.guest_origin.recorded_by}. Your guest edits are carried forward. Confirm this work under your verified professional name before approval.</p>}
+      {record.guest_origin && <Link className="inline-flex min-h-12 items-center underline" href={`/trial/original/${record.id}`}>View the preserved guest trial</Link>}
+      {trial && <p className="mt-4 border-l-4 border-accent pl-4 leading-7">Private trial. Demo rates are illustrative. Confirmation creates a draft; save to a verified account before approval.</p>}</header>
     <div ref={feedback} tabIndex={-1} className="outline-none">
       {error ? <div role="alert" className="mt-5 border-l-4 border-[#B91C1C] bg-red-50 p-5 text-[#B91C1C]"><p className="font-semibold">Your changes need another check</p><p className="mt-2">{error}</p></div>
         : saved && <div role="status" className={"mt-5 border-l-4 p-5 " + (dirty ? "border-amber-700 bg-amber-50" : "border-[#657055] bg-[#EEF0E7]")}>
@@ -114,7 +119,7 @@ export function ConfirmForm({ record }: { record: ReviewRecord }) {
           <p className="mt-2">Your original voice note is kept. You can correct this note until its report is locked.</p>
         </div>}
     </div>
-    {saved && !dirty && <a className="mt-4 block min-h-12 py-3 font-semibold underline" href={`/reports/${record.id}`}>Open costed report</a>}
+    {saved && !dirty && <a className="mt-4 block min-h-12 py-3 font-semibold underline" href={trial ? "/trial/report" : `/reports/${record.id}`}>Open costed report</a>}
     <div className="py-6 text-base leading-7"><p className="font-semibold">Three steps to check your site note</p>
       <ol className="mt-2 list-decimal space-y-1 pl-5"><li>Listen to your voice note or read the original transcript.</li>
         <li>Choose each BoQ item. Check its quantity, measurement unit and crew, then review materials, delays and photos.</li>
@@ -179,7 +184,7 @@ export function ConfirmForm({ record }: { record: ReviewRecord }) {
         <button type="button" className="mt-4 min-h-12 border border-rule px-4" onClick={() => { setDirty(true); setDelays(rows => [...rows, { key: crypto.randomUUID(), value: { reason: "", hours: null, confidence: 1 } }]); }}>Add delay</button>
       </Section>
       <Section title="Photos">
-        {!record.photos.length && <p>No photos are attached to this note. You can send them in the same Telegram chat.</p>}
+        {!record.photos.length && <p>{trial ? "No photos are attached to this trial note." : "No photos are attached to this note. You can send them in the same Telegram chat."}</p>}
         <div className="grid gap-7 sm:grid-cols-2">{record.photos.map((photo, i) => <div key={photo.id}>
           <Image src={mediaUrl(photo.id)} alt={`Site evidence photo ${i + 1}`} width={800} height={600} unoptimized className="h-auto w-full border border-rule" />
           <PhotoObservations photo={photo} number={i + 1} onEdit={() => setDirty(true)} />

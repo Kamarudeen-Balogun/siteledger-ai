@@ -30,7 +30,7 @@ function checkMessage(code: string) {
   if (code === "110600") return "The bot check timed out. Retry when your connection is stable.";
   return "The bot check could not finish. Check your connection and retry.";
 }
-export function Turnstile({ siteKey, onToken, reset }: { siteKey: string; onToken: (token: string) => void; reset: number }) {
+export function Turnstile({ siteKey, onToken, reset, action }: { siteKey: string; onToken: (token: string) => void; reset: number; action?: string }) {
   const element = useRef<HTMLDivElement>(null), callback = useRef(onToken);
   const [attempt, setAttempt] = useState(0), [error, setError] = useState(""), [code, setCode] = useState("");
   const [verified, setVerified] = useState(false);
@@ -45,7 +45,7 @@ export function Turnstile({ siteKey, onToken, reset }: { siteKey: string; onToke
       widget = api;
       setVerified(false); setError(""); setCode("");
       try {
-        id = api.render(element.current, { sitekey: siteKey.trim(), theme: "light", size: "flexible", retry: "never",
+        id = api.render(element.current, { sitekey: siteKey.trim(), theme: "light", size: "flexible", retry: "never", ...(action?{action}:{}),
           callback: (token: string) => { if (!active) return; callback.current(token); setVerified(true); setError(""); setCode(""); },
           "expired-callback": () => { if (!active) return; callback.current(""); setVerified(false); setError("The bot check expired. Complete a new check before continuing."); },
           "error-callback": (value: string) => { fail(value); return true; },
@@ -53,7 +53,7 @@ export function Turnstile({ siteKey, onToken, reset }: { siteKey: string; onToke
       } catch { fail(); }
     }).catch(() => fail());
     return () => { active = false; if (id && widget) { try { widget.remove(id); } catch { /* Already removed. */ } } callback.current(""); };
-  }, [siteKey, reset, attempt]);
+  }, [siteKey, reset, attempt, action]);
   if (!siteKey) return <p role="status" className="my-4 border-l-4 border-accent pl-4 leading-7">Account signup is waiting for the Turnstile site key. Existing records are preserved.</p>;
   return <div className="my-5" data-bot-check data-check-error={code || undefined}><div ref={element} />
     {!error && !verified && <p role="status" className="mt-3 text-sm leading-6">Completing the bot check…</p>}

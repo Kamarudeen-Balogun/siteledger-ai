@@ -43,6 +43,28 @@ flowchart LR
 
 For example, the brief's illustrative blockwork rate is ₦14,500/m². A confirmed 18 m² produces **₦261,000**. Changing an AI suggestion cannot set that rate. The costing engine only ever runs on confirmed values.
 
+## Try it before creating an account
+
+Open `/trial` from **Try a private site record** on the landing page. Complete
+the bot check and accept the visible **24-hour expiry**. Upload one voice note
+with zero to three photos, review the extracted quantities and cost a draft
+against the labelled, illustrative NGN demo BoQ. Audio is limited to 3 MiB;
+each compressed JPEG is limited to 1 MiB. Trial starts, storage and processing
+are limited to keep the free services bounded. AI failure allows manual entry.
+
+<img src="docs/images/private-trial.png" width="360" alt="Mobile private trial showing its 24-hour expiry, unverified guest notice and 261,000-naira draft value using illustrative demo rates">
+
+This cropped screenshot comes from the disposable browser test. Guest work is
+private to its original browser session. Approval, locking, client PDF export
+and team access require a verified account.
+
+To retain the work, sign up or sign in from that same browser and choose
+**Save this work** before expiry. Confirm the handover dialog. The app creates
+a separate private demo project, preserves the original media, guest edits and
+attribution, and consumes the handover once. Confirm the quantities under your
+professional name before ordinary approval. An account cannot recover an
+unsaved trial after its required session is lost or expires.
+
 ## Accounts, projects and Telegram
 
 Create an email/password account, enter its signup email code, and confirm the professional name to appear on records. Recovery uses a separate email code. Names and roles are snapshotted at confirmation, approval and amendment; profile edits preserve old attribution.
@@ -83,9 +105,9 @@ retry guidance without exposing private error details.
 
 ## Current build status
 
-The core voice/photo → confirmation → costing → PDF → locked log flow is implemented, along with private accounts, projects, teams, secure Telegram linking and recovery. The six public pages and desktop presentation are task 10A2.
+The core voice/photo → confirmation → costing → PDF → locked log flow is implemented, along with private accounts, projects, teams, secure Telegram linking and recovery, six public pages and desktop layouts. Task 10B adds the private 24-hour trial and verified account handover.
 
-New projects start with an **empty BoQ**. The supplied-rate editor and dashboards are task 11. The approved private guest trial is task 10B, following the completed account resilience milestone 10A1. Production deployment and the final demonstration/Kiro write-up remain later milestones. See [the ordered tasks](.kiro/specs/siteledger/tasks.md) and [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
+New projects start with an **empty BoQ**; saved trials receive their frozen demo BoQ. The supplied-rate editor and dashboards are next in task 11. Production deployment and the final demonstration/Kiro write-up remain later milestones. See [the ordered tasks](.kiro/specs/siteledger/tasks.md) and [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
 
 The public `/reports/demo`, `/log/demo` and demo summary expose only the original fictional seed, excluding genuine uploads, private amendments and live totals. Rates are **illustrative, not live market prices**; use QS-verified rates for real work.
 
@@ -109,13 +131,17 @@ Use `.env.example` for variable names. Fill the three Supabase values from this 
 | Service | Setup |
 |---|---|
 | Supabase Auth | Enable email/password and Confirm email; configure custom SMTP, three code templates and the Before User Created hook |
-| Turnstile | Public site key in the app; secret in Supabase's native CAPTCHA settings |
+| Turnstile | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` in the app; matching secret in Supabase's native CAPTCHA settings and `TURNSTILE_SECRET_KEY` for trial Siteverify |
 | Groq | `GROQ_API_KEY` for primary transcription/extraction |
 | Gemini | `GEMINI_API_KEY` for photo analysis and optional transcription fallback |
 | GonkaRouter | Optional extraction fallback; starter tokens are finite |
 | Telegram | Bot token, webhook secret and HTTPS `SITELEDGER_APP_URL` |
 
 Follow [the email and CAPTCHA setup guide](docs/account-email-setup.md). Custom Resend SMTP avoids relying on Supabase's development sender. SiteLedger's sender is separate from the builder's LeadFlowX sender; allowances are shared across that Resend account. No paid upgrade or automatic top-up is configured.
+
+The [Turnstile integration notes](docs/turnstile-siteverify.md) explain the
+existing widget, exact hostname/action checks and verified replay rejection.
+Account tokens are redeemed by Supabase; trial tokens are redeemed by the app.
 
 For a development bot, keep the HTTPS tunnel and app running, then:
 
@@ -140,6 +166,8 @@ npm run lint
 npm run typecheck
 npm run test:costing
 npm run test:account
+node --conditions=react-server --import tsx --test tests/trial.test.ts
+node scripts/check-database.mjs tests/trial.sql
 npm run db:check-account-identity
 npm run db:check-account-projects
 npm run db:check-account-records
@@ -153,9 +181,9 @@ node scripts/verify-public-pages.mjs
 npm run preview:account-emails
 ```
 
-Browser acceptance uses a disposable clone with separate native Auth, SMTP, REST and media fixtures. It checks signup/recovery codes, linking, invitations, confirmation, costing, locking/PDF, offline reload/retry and removal. It does not send Resend emails or write genuine evidence. Older report/log/photo/web browser command names now run this account-aware suite.
+Browser acceptance uses a disposable clone with separate native Auth, SMTP, REST and media fixtures. It checks signup/recovery codes, linking, invitations, confirmation, costing, locking/PDF, offline reload/retry and removal, plus private trial capture, replay denial, handover cancellation and verified approval. Trial Siteverify uses a fixture loaded only into the disposable process. It does not send Resend emails or write genuine evidence. Older report/log/photo/web browser command names now run this account-aware suite.
 
-Artifacts remain under ignored `supabase/.temp/task-10a/`. [Task 10A evidence](.kiro/specs/siteledger/task-10a-handoff.md) records actual checks. Offline emulation and scripted findings establish workflow behavior, not real-site speech or defect accuracy. [Language coverage](docs/voice-languages.md) separates provider support from tested recordings.
+Artifacts remain under ignored `supabase/.temp/task-10a/`. [Task 10A evidence](.kiro/specs/siteledger/task-10a-handoff.md) and [task 10B evidence](.kiro/specs/siteledger/task-10b-handoff.md) record actual checks. Offline emulation and scripted findings establish workflow behavior, not real-site speech or defect accuracy. [Language coverage](docs/voice-languages.md) separates provider support from tested recordings.
 
 Public page verification uses a running local preview on port 3011. Set
 `SITELEDGER_PUBLIC_QA_URL` to another localhost origin when needed. It checks

@@ -2,7 +2,7 @@ import Image from "next/image";
 import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, lockDate, moneyDisplayNote, type ReportView } from "@/lib/reports/model";
 import { formatMoney } from "@/lib/costing/format-money";
 
-export function ReportDocument({ report }: { report: ReportView }) {
+export function ReportDocument({ report, trial = false, guestOriginal = false }: { report: ReportView; trial?: boolean; guestOriginal?: boolean }) {
   const { document: doc } = report, source = doc.source;
   const money = (amount: string) => formatMoney(amount, doc.currency);
   const prices = new Map(source.price_list.map(price => [price.id, price]));
@@ -46,12 +46,13 @@ export function ReportDocument({ report }: { report: ReportView }) {
     <section><h2>Photographic evidence</h2>
       {!source.photos.length && <p className="report-note">No photos were attached to this record.</p>}
       <div className="report-photos">{source.photos.map((photo, i) => <figure key={photo.id}>
-        <Image src={`/api/confirm/${source.submission_id}/media/${photo.id}`} width={800} height={600}
+        <Image src={trial ? `/api/trial/media/${photo.id}` : `/api/confirm/${source.submission_id}/media/${photo.id}`} width={800} height={600}
           alt={`Site evidence photo ${i + 1}`} unoptimized className="h-auto w-full" />
         <figcaption>Photo {i + 1} · {photo.note || "No observation recorded."}</figcaption>
       </figure>)}</div>
     </section>
-    <section className="report-signatures"><div><h2>{source.submitted_role === "pm" ? "Site record / PM" : "Site foreman / site engineer"}</h2><p>Recorded by {source.submitted_by}</p><p className="report-signature-line">Signature / date</p></div>
+    {source.guest_origin && <section><h2>Original guest capture</h2><p>{source.guest_origin.recorded_by} · {displayTimestamp(source.guest_origin.created_at,source.project.timezone)}</p><p>Saved to this account {displayTimestamp(source.guest_origin.handover_at,source.project.timezone)}. Original guest edits and attribution are preserved.</p></section>}
+    <section className="report-signatures"><div><h2>{trial || guestOriginal ? "Guest trial / unverified" : source.submitted_role === "pm" ? "Site record / PM" : "Site foreman / site engineer"}</h2><p>Recorded by {source.submitted_by}</p><p className="report-signature-line">Signature / date</p></div>
       <div><h2>Project manager / QS</h2><p>{report.approved_by || "Awaiting approval"}</p><p className="report-signature-line">Signature / date</p></div></section>
     <footer>{source.confirmed_by && <p>Quantities confirmed by {source.confirmed_by}{source.confirmed_role ? ` / ${source.confirmed_role === "pm" ? "PM" : "Foreman"}` : ""}{source.confirmed_at ? ` · ${displayTimestamp(source.confirmed_at, source.project.timezone)}` : ""}</p>}
       {report.locked_at && <p>Locked {displayTimestamp(report.locked_at, source.project.timezone)}</p>}

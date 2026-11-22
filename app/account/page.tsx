@@ -3,6 +3,7 @@ import Link from "next/link";
 import { currentAccount } from "@/lib/auth/session";
 import { AccountLogin, EmailProof, ProfessionalProfile, TelegramAccountEntry, TelegramLink, TelegramConnect } from "@/components/account-forms";
 import { WorkspaceHeader } from "@/components/workspace-header";
+import { TrialReturnLink } from "@/components/trial-return-link";
 export const metadata={title:"Your account — SiteLedger AI",robots:{index:false,follow:false}};
 async function AccountContent() {
   const account = await currentAccount(), siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
@@ -13,5 +14,5 @@ async function AccountContent() {
   </>;
 }
 export default function AccountPage() {
-  return <main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><WorkspaceHeader current="account" title="Your account"/><Suspense fallback={<p className="my-7" role="status">Opening your account…</p>}><AccountContent /></Suspense></main>;
+  return <main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><WorkspaceHeader current="account" title="Your account"/><Suspense fallback={null}><TrialReturnLink/></Suspense><Suspense fallback={<p className="my-7" role="status">Opening your account…</p>}><AccountContent /></Suspense></main>;
 }

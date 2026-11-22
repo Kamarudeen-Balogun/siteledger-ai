@@ -20,6 +20,13 @@ Use the Free plans; no billing upgrade or automatic top-up is needed.
 5. Enable the Postgres Before User Created hook public.account_signup_hook after
    its migration is tested and applied. It caps native signup attempts as well.
 
+For the private upload trial, also store the same widget's secret as
+`TURNSTILE_SECRET_KEY` in the ignored `.env.local` and deployment secret settings.
+Its `/api/trial/start` handler validates Siteverify on the server with the
+`siteledger-trial` action and exact application hostname. Native account Auth
+continues to verify its own tokens through Supabase; tokens are not redeemed twice.
+See [the integration notes](turnstile-siteverify.md).
+
 The public site key and the secret saved in Supabase must belong to the same
 widget. Error `110200` means the current hostname is not authorized; errors
 `110100` and `110110` mean the site key needs correcting. The app offers **Retry

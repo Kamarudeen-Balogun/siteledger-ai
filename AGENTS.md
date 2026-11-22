@@ -285,6 +285,8 @@ Enforce append-only behaviour in code and, where Supabase allows, with row-level
 
 **Builder amendment — 21 November 2026 (limited private trial, task 10B):** After task 10A account and access acceptance passes, add a website-only private guest trial: one voice note, up to three photos and a draft costed report using the labelled section 10 demo BoQ. Guest access must be expiring, server-scoped, CAPTCHA-protected and rate-limited; it must grant no access to anyone else's project. Show the expiry before upload. Approval, locking, project invitations and team access require a verified account. Provide an explicit Save this work to your account action after signup or sign-in. Atomically prove ownership of the still-active guest session and the verified account, preserve media and original attribution, and consume the handover once. Never claim guest records by name, email equality, a supplied ID or an expired session. Do not promise recovery after the required session is lost. Build this as task 10B before task 11, not during unfinished task 10A.
 
+**Builder clarification — 22 November 2026 (trial duration and handover):** Use a 24-hour guest session. Handover creates its own private, demo-labelled NGN project rather than mixing sample rates into an existing real project. Keep original guest capture, edits, media and attribution preserved; the verified person confirms under their professional name before ordinary approval. Use the existing Cloudflare widget with server-side Siteverify and the matching secret in the ignored application environment, in addition to Supabase-native account CAPTCHA. Do not replace the widget or disable native CAPTCHA.
+
 ## 9. The AI pipeline — extract structure, never invent money
 
 ### Step 1 — Transcribe

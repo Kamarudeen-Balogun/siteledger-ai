@@ -31,6 +31,7 @@ async function Report(props: Props) {
         {!report.stale && <a download href={`/api/reports/${id}/pdf`} className="min-h-12 bg-accent px-5 py-3 font-semibold text-white">Download PDF</a>}
         <a href={`/confirm/${id}`} className="min-h-12 px-3 py-3 underline">{report.status === "locked" ? "View original site note" : "Correct site note"}</a>
         <a href={`/log/${id}`} className="min-h-12 px-3 py-3 underline">Dispute log</a>
+        {report.document.source.guest_origin && <a href={`/trial/original/${id}`} className="min-h-12 px-3 py-3 underline">Original guest trial</a>}
         {report.status === "locked" && !reviewer?.archived && <a href="#amendment" className="min-h-12 px-3 py-3 underline">Add an amendment</a>}
       </nav>
       {report.stale && <p role="status" className="mb-4 border-l-4 border-amber-700 bg-amber-50 p-4">The confirmation or BoQ changed. Rebuild this draft before downloading it.</p>}

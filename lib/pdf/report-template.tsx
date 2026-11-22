@@ -82,6 +82,7 @@ export async function renderReportPdf(report: ReportView, photos: string[] = [])
       {source.photos.map((photo, i) => <View key={photo.id} style={styles.photoBox}>
         <View wrap={false}><PdfImage src={photos[i]} style={styles.photo} /><Text>Photo {i + 1}</Text></View><Text>{photo.note || "No observation recorded."}</Text>
       </View>)}
+      {source.guest_origin && <View><Text style={styles.section}>Original guest capture</Text><Text>{source.guest_origin.recorded_by} · {displayTimestamp(source.guest_origin.created_at,source.project.timezone)}</Text><Text style={styles.small}>Saved to this account {displayTimestamp(source.guest_origin.handover_at,source.project.timezone)}. Original guest edits and attribution are preserved.</Text></View>}
       <View style={styles.signatures} wrap={false}>
         <View style={styles.signature}><Text>{source.submitted_role === "pm" ? "Site record / PM" : "Site foreman / site engineer"}</Text><Text style={styles.small}>Recorded by {source.submitted_by}</Text><Text style={[styles.small, { marginTop: 14 }]}>Signature / date __________________</Text></View>
         <View style={styles.signature}><Text>Project manager / QS</Text><Text style={styles.small}>{report.approved_by || "Awaiting approval"}</Text><Text style={[styles.small, { marginTop: 14 }]}>Signature / date __________________</Text></View>

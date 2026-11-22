@@ -104,8 +104,8 @@ try {
   const denied=await fetch(gateway+"/auth/v1/signup",{method:"POST",headers:{apikey:settings.ANON_KEY,"Content-Type":"application/json"},body:JSON.stringify({email:`denied-${suffix}@example.test`,password:"native-qa-password"})});
   assert.equal(denied.status,400,"Direct native signup must require CAPTCHA");
   assert.equal(sql(`select count(*) from auth.users where email='denied-${suffix}@example.test';`),"0");
-  const env={...process.env,NEXT_PUBLIC_SUPABASE_URL:gateway,NEXT_PUBLIC_SUPABASE_ANON_KEY:settings.ANON_KEY,SUPABASE_SERVICE_ROLE_KEY:settings.SERVICE_ROLE_KEY,SITELEDGER_APP_URL:base,NEXT_PUBLIC_TURNSTILE_SITE_KEY:"1x00000000000000000000AA",TELEGRAM_BOT_TOKEN:dummyBot,TELEGRAM_WEBHOOK_SECRET:"disposable-account-webhook",GROQ_API_KEY:"",GEMINI_API_KEY:"",GONKAROUTER_API_KEY:""};
-  preview=spawn(process.execPath,[join(root,"node_modules/next/dist/bin/next"),"start","--hostname","127.0.0.1","--port","3016"],{cwd:root,env,windowsHide:true,stdio:"ignore"});
+  const env={...process.env,NEXT_PUBLIC_SUPABASE_URL:gateway,NEXT_PUBLIC_SUPABASE_ANON_KEY:settings.ANON_KEY,SUPABASE_SERVICE_ROLE_KEY:settings.SERVICE_ROLE_KEY,SITELEDGER_APP_URL:base,NEXT_PUBLIC_TURNSTILE_SITE_KEY:"1x00000000000000000000AA",TURNSTILE_SECRET_KEY:"trial-qa-secret",TELEGRAM_BOT_TOKEN:dummyBot,TELEGRAM_WEBHOOK_SECRET:"disposable-account-webhook",GROQ_API_KEY:"",GEMINI_API_KEY:"",GONKAROUTER_API_KEY:""};
+  preview=spawn(process.execPath,["--require",join(root,"scripts/fixtures/trial-siteverify.cjs"),join(root,"node_modules/next/dist/bin/next"),"start","--hostname","127.0.0.1","--port","3016"],{cwd:root,env,windowsHide:true,stdio:"ignore"});
   await ready(base+"/account");browser=await chromium.launch({headless:true});
   const [owner,other,foreman,pm]=await Promise.all(Array.from({length:4},()=>browser.newContext({viewport:{width:390,height:844}})));
   const errors=[];
@@ -256,6 +256,56 @@ try {
     if(name==="report")await desktop.locator(".report-stamp").waitFor();
     await desktop.screenshot({path:join(out,`${name}-desktop.png`),fullPage:true});await desktop.close();
   }
+  // Task 10B uses the real local account service and server routes. Only the
+  // browser widget + exact server Siteverify transport are disposable fixtures.
+  const guest=await browser.newContext({viewport:{width:390,height:844}}),trialPage=await guest.newPage();
+  await guest.route("https://challenges.cloudflare.com/turnstile/**",route=>route.fulfill({contentType:"application/javascript",body:`window.turnstile={render:(node,options)=>{const token=options.action==='siteledger-trial'?'trial-qa-'+crypto.randomUUID():${JSON.stringify(captchaToken)};window.__trialQaToken=token;setTimeout(()=>options.callback(token),10);return crypto.randomUUID();},remove:()=>{}};`}));
+  await trialPage.goto(base+"/trial");await trialPage.getByRole("checkbox").check();
+  await eventually(()=>trialPage.getByRole("button",{name:"Start private trial",exact:true}).isEnabled(),"Trial widget did not finish");
+  const trialProof=await trialPage.evaluate(()=>window.__trialQaToken);
+  await trialPage.getByRole("button",{name:"Start private trial",exact:true}).click();await trialPage.getByRole("heading",{name:"Your trial voice note and photos"}).waitFor();
+  await action(guest,"trial","start",{captcha_token:trialProof,accept_trial:true},422);
+  const guestCookie=(await guest.cookies()).find(cookie=>cookie.name==="siteledger_trial");assert.ok(guestCookie?.httpOnly);
+  const guestHash=createHash("sha256").update(guestCookie.value).digest("hex"),trialState=JSON.parse(sql(`select public.trial_read('${guestHash}');`));
+  await trialPage.locator('[name="audio"]').setInputFiles({name:"trial-voice.ogg",mimeType:"audio/ogg",buffer:Buffer.from("OggS-native-trial-voice-qa")});
+  await trialPage.locator('[name="photos"]').setInputFiles(join(root,"public/demo/photos/synthetic-column-voids.jpg"));
+  await trialPage.getByRole("button",{name:"Upload and review",exact:true}).click();await trialPage.getByRole("heading",{name:"Review your site note"}).waitFor();
+  await trialPage.getByRole("button",{name:"Add work item",exact:true}).waitFor();
+  const trialNote=trialState.note_id,trialBid=sql("select id from public.trial_prices where item_code='BLK-01';");
+  assert.equal((await owner.request.get(`${base}/api/trial/media/audio`)).status(),404,"Forwarded trial media needs its guest cookie");
+  assert.equal((await guest.request.get(`${base}/api/reports/${trialNote}/pdf`)).status(),404,"Guest cannot export a client PDF");
+  await action(guest,"reports",`${trialNote}/approve`,{document_version:"a".repeat(64)},401);
+  await trialPage.getByRole("button",{name:"Add work item",exact:true}).click();
+  for(const [field,value] of [["description","Guest checked blockwork"],["quantity","18"],["crew","6"],["confidence","1"]])await trialPage.locator(`[name="w0.${field}"]`).fill(value);
+  await trialPage.locator('[name="w0.unit"]').fill("m2");await trialPage.locator('[name="w0.boq"]').selectOption(trialBid);
+  await trialPage.locator('textarea[name^="photo."]').fill("Human guest observation, retained after handover.");
+  await trialPage.getByRole("button",{name:"Confirm and cost it",exact:true}).click();await trialPage.waitForURL(base+"/trial/report");
+  await trialPage.getByRole("heading",{name:"Daily site report",exact:true}).waitFor();assert.ok((await trialPage.locator(".report-total").innerText()).includes("₦261,000"));
+  assert.equal(await trialPage.getByRole("button",{name:"Approve and lock report",exact:true}).count(),0);
+  await trialPage.screenshot({path:join(out,"trial-draft-mobile.png"),fullPage:true});
+  const originalTrial=sql(`select jsonb_build_object('manifest',manifest,'transcript',transcript,'extraction',extraction,'confirmed_values',confirmed_values,'draft',draft,'confirmed_at',confirmed_at)::text from public.trial_sessions where note_id='${trialNote}';`);
+  const trialEmail=`trial-owner-${suffix}@example.test`;await trialPage.getByRole("button",{name:"Create account",exact:true}).first().click();
+  await trialPage.locator('[name="email"]:visible').fill(trialEmail);await trialPage.locator('[name="password"]:visible').fill(password);await trialPage.locator('[name="name"]:visible').fill("Verified Trial Person");await trialPage.locator('[name="confirm_name"]:visible').check();const trialMailStart=mail.length;
+  await trialPage.getByRole("button",{name:"Create account",exact:true}).last().click();await trialPage.getByRole("heading",{name:"Confirm your email",exact:true}).waitFor();
+  assert.equal((await guest.cookies()).some(cookie=>cookie.name==="siteledger_session"),false);
+  await trialPage.locator('[name="token"]:visible').fill(await codeFor(trialEmail,trialMailStart));await trialPage.locator('[name="confirm_name"]:visible').check();await trialPage.getByRole("button",{name:"Confirm email and continue",exact:true}).click();
+  await trialPage.getByRole("button",{name:"Save this work",exact:true}).waitFor();
+  await trialPage.getByRole("button",{name:"Save this work",exact:true}).click();await trialPage.getByRole("dialog").getByRole("button",{name:"Cancel",exact:true}).click();
+  assert.equal(sql(`select claimed_at is null from public.trial_sessions where note_id='${trialNote}';`),"t","Cancel does not hand over trial work");
+  await trialPage.getByRole("button",{name:"Save this work",exact:true}).click();await trialPage.getByRole("dialog").getByRole("button",{name:"Save this work",exact:true}).click();await trialPage.waitForURL(base+`/confirm/${trialNote}`);
+  assert.equal((await guest.cookies()).some(cookie=>cookie.name==="siteledger_trial"),false);
+  assert.equal(await trialPage.locator('[name="w0.quantity"]:visible').inputValue(),"18","Guest edit is carried into verified confirmation");
+  assert.equal(sql(`select confirmed_at is null from public.submissions where id='${trialNote}';`),"t");
+  assert.equal(sql(`select jsonb_build_object('manifest',manifest,'transcript',transcript,'extraction',extraction,'confirmed_values',confirmed_values,'draft',draft,'confirmed_at',confirmed_at)::text from public.trial_sessions where note_id='${trialNote}';`),originalTrial);
+  assert.equal((await guest.request.get(base+`/trial/original/${trialNote}`)).status(),200);
+  const deniedOriginal=await other.request.get(base+`/trial/original/${trialNote}`),deniedBody=await deniedOriginal.text();
+  // Next's streamed notFound may retain HTTP 200 after its public shell flushes.
+  // Require the safe unavailable page and absence of the private record itself.
+  assert.ok(deniedBody.includes("This page isn’t available"));assert.equal(deniedBody.includes("Guest checked blockwork"),false);
+  await trialPage.getByRole("button",{name:"Confirm and cost it",exact:true}).click();await trialPage.waitForURL(base+`/reports/${trialNote}`);
+  await trialPage.locator('form input[type="checkbox"]:visible').check();await trialPage.getByRole("button",{name:"Approve and lock report",exact:true}).click();await trialPage.getByRole("dialog").getByRole("button",{name:"Approve and lock report",exact:true}).click();await trialPage.locator(".report-stamp").waitFor();
+  assert.equal((await guest.request.get(base+`/api/reports/${trialNote}/pdf`)).status(),200);
+  console.log("Private trial CAPTCHA replay denial, upload/draft, native signup, explicit handover, preserved edits and verified approval/PDF pass.");
   assert.deepEqual(errors,[]);
   console.log("Telegram same-profile linking/unlinking, accepted ownership, second-browser history and native email recovery pass.");
   console.log("Task 10A disposable native/browser acceptance passed. Artifacts: supabase/.temp/task-10a/browser.");

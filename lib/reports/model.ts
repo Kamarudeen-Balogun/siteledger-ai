@@ -5,6 +5,7 @@ import type { SiteExtraction } from "../ai/extraction-schema";
 
 export const REPORT_FIRM_NAME = "Perkins Limited";
 export type ReportSource = {
+  guest_origin?: {id:string;created_at:string;confirmed_at:string|null;handover_at:string;recorded_by:string};
   submission_id: string; date: string; status: string;
   project: { id: string; name: string; client: string; location: string; is_demo: boolean; currency?: string; timezone?: string };
   submitted_by: string; confirmed_by: string | null; confirmed_at: string | null;

@@ -8,13 +8,13 @@ export type WebManifest = { id: string; project_id: string; captured_at: string;
 export type QueueEntry = { manifest: WebManifest; context: CaptureContext; files?: Blob[]; status: "queued" | "sending" | "blocked" | "sent";
   message: string; owner?: string; lease_until?: number; review_url?: string };
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
-export function validManifest(value: unknown): value is WebManifest {
+export function validManifest(value: unknown, allowAudioOnly = false): value is WebManifest {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as WebManifest;
   if (Object.keys(v).length !== 5 || !["id","project_id","captured_at","timezone","assets"].every(key=>key in v)
     || !uuid.test(v.id) || !uuid.test(v.project_id) || typeof v.timezone !== "string" || v.timezone.length > 64
     || typeof v.captured_at !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(v.captured_at)
-    || !Number.isFinite(Date.parse(v.captured_at)) || !Array.isArray(v.assets) || v.assets.length < 2 || v.assets.length > 6) return false;
+    || !Number.isFinite(Date.parse(v.captured_at)) || !Array.isArray(v.assets) || v.assets.length < (allowAudioOnly ? 1 : 2) || v.assets.length > 6) return false;
   return v.assets.every((a,i)=>a && Object.keys(a).length === 4 && a.index === i
     && typeof a.sha256 === "string" && /^[a-f0-9]{64}$/.test(a.sha256) && Number.isSafeInteger(a.bytes) && a.bytes > 0
     && (i === 0 ? Object.hasOwn(WEB_AUDIO_TYPES,a.content_type) && a.bytes <= MAX_WEB_AUDIO : a.content_type === "image/jpeg" && a.bytes <= MAX_WEB_PHOTO));

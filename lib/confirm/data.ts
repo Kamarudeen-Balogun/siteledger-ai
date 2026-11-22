@@ -5,6 +5,8 @@ import { currentSessionHash } from "../auth/session";
 import type { SiteExtraction } from "../ai/extraction-schema";
 import type { BoqChoice } from "./validation";
 export type ReviewRecord = {
+  guest_origin?: {id:string;created_at:string;confirmed_at:string|null;handover_at:string;recorded_by:string};
+  trial_values?: SiteExtraction|null; trial_boq_ids?: string[];
   id: string; project_name: string; submitted_by: string; actor: string; created_at: string;
   project_id?: string; actor_role?: "foreman"|"pm"; currency?: string; timezone?: string; archived_at?: string|null;
   status: "received" | "extracted" | "confirmed" | "locked";
