@@ -46,7 +46,7 @@ async function action(context,group,name,input,expected=200) {
 }
 async function codeFor(email,start=0) {
   const end=Date.now()+10000;
-  while(Date.now()<end){const message=mail.slice(start).find(value=>value.includes(email));if(message){let body=message.split("\r\n\r\n").slice(1).join("\r\n\r\n").replace(/=\r\n/g,"").replace(/=([0-9A-F]{2})/g,(_,hex)=>String.fromCharCode(parseInt(hex,16)));const code=body.match(/\b\d{6}\b/);if(code)return code[0];}await new Promise(resolve=>setTimeout(resolve,100));}throw new Error("Disposable signup/recovery email code was not delivered.");
+  while(Date.now()<end){const message=mail.slice(start).find(value=>value.includes(email));if(message){let body=message.split("\r\n\r\n").slice(1).join("\r\n\r\n").replace(/=\r\n/g,"").replace(/=([0-9A-F]{2})/g,(_,hex)=>String.fromCharCode(parseInt(hex,16)));const code=body.match(/\b\d{6,10}\b/);if(code){assert.equal(code[0].length,8,"Native QA Auth must issue eight-digit email codes");return code[0];}}await new Promise(resolve=>setTimeout(resolve,100));}throw new Error("Disposable signup/recovery email code was not delivered.");
 }
 async function queuedNotes(page) {
   return page.evaluate(()=>new Promise((resolve,reject)=>{const open=indexedDB.open("siteledger-web-queue",1);open.onerror=()=>reject(open.error);open.onsuccess=()=>{const read=open.result.transaction("notes").objectStore("notes").getAll();read.onsuccess=()=>{resolve(read.result.map(row=>({id:row.manifest.id,status:row.status,project:row.manifest.project_id,captured:row.manifest.captured_at,actor:row.context.actor_id,name:row.context.actor_name,bytes:row.files?.map(file=>file.size)??[]})));open.result.close();};};}));
@@ -96,7 +96,7 @@ try {
   const templateHost="http://host.docker.internal:55534/templates/";
   command("docker",["run","--detach","--name",authName,"--network",network,"--publish","127.0.0.1:55533:9999",...dockerEnv({...authEnv,
     GOTRUE_DB_DATABASE_URL:dbUri(authEnv.GOTRUE_DB_DATABASE_URL),GOTRUE_SITE_URL:base,GOTRUE_URI_ALLOW_LIST:base,API_EXTERNAL_URL:gateway,
-    GOTRUE_DISABLE_SIGNUP:"false",GOTRUE_MAILER_AUTOCONFIRM:"false",GOTRUE_MAILER_OTP_LENGTH:"6",GOTRUE_SMTP_HOST:"host.docker.internal",GOTRUE_SMTP_PORT:String(smtpPort),GOTRUE_SMTP_USER:"",GOTRUE_SMTP_PASS:"",GOTRUE_SMTP_ADMIN_EMAIL:"noreply@siteledger.example.test",GOTRUE_SMTP_SENDER_NAME:"SiteLedger QA",GOTRUE_SMTP_MAX_FREQUENCY:"1s",
+    GOTRUE_DISABLE_SIGNUP:"false",GOTRUE_MAILER_AUTOCONFIRM:"false",GOTRUE_MAILER_OTP_LENGTH:"8",GOTRUE_SMTP_HOST:"host.docker.internal",GOTRUE_SMTP_PORT:String(smtpPort),GOTRUE_SMTP_USER:"",GOTRUE_SMTP_PASS:"",GOTRUE_SMTP_ADMIN_EMAIL:"noreply@siteledger.example.test",GOTRUE_SMTP_SENDER_NAME:"SiteLedger QA",GOTRUE_SMTP_MAX_FREQUENCY:"1s",
     GOTRUE_MAILER_TEMPLATES_CONFIRMATION:templateHost+"signup.html",GOTRUE_MAILER_TEMPLATES_MAGIC_LINK:templateHost+"magic-link.html",GOTRUE_MAILER_TEMPLATES_RECOVERY:templateHost+"recovery.html",
     GOTRUE_SECURITY_CAPTCHA_ENABLED:"true",GOTRUE_SECURITY_CAPTCHA_PROVIDER:"turnstile",GOTRUE_SECURITY_CAPTCHA_SECRET:"1x0000000000000000000000000000000AA",
     GOTRUE_HOOK_BEFORE_USER_CREATED_ENABLED:"true",GOTRUE_HOOK_BEFORE_USER_CREATED_URI:"pg-functions://postgres/public/account_signup_hook",

@@ -1,4 +1,5 @@
 import { displayDate, displayTimestamp } from "@/lib/reports/model";
+import Link from "next/link";
 import { formatMoney } from "@/lib/costing/format-money";
 import type { DisputeLog } from "@/lib/log/data";
 export function DisputeLogDocument({ log }: { log: DisputeLog }) {
@@ -13,7 +14,7 @@ export function DisputeLogDocument({ log }: { log: DisputeLog }) {
         {entry.kind === "report" ? <p className="mt-2">{displayDate(entry.date)} · {formatMoney(entry.total_cost!, entry.currency ?? "NGN")} <span className="text-sm">{entry.currency}</span></p>
           : <p className="mt-3 whitespace-pre-wrap break-words">{entry.note}</p>}
         <p className="mt-3 break-all font-mono text-xs">{entry.kind === "amendment" ? `Amendment ${entry.id} · Original report ` : "Report "}{entry.report_id}</p>
-        {entry.href && <a href={entry.href} className="mt-2 inline-block min-h-12 py-3 underline">{entry.kind === "amendment" ? "Open original report" : "Open locked report"}</a>}
+        {entry.href && <Link prefetch={false} href={entry.href} className="mt-2 inline-block min-h-12 py-3 underline">{entry.kind === "amendment" ? "Open original report" : "Open locked report"}</Link>}
       </li>)}</ol>}
   </section>;
 }

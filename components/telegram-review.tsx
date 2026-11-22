@@ -2,6 +2,7 @@
 import Script from "next/script";
 import Link from "next/link";
 import { useState } from "react";
+import { WorkspaceHeader } from "./workspace-header";
 
 type TelegramWindow = Window & { Telegram?: { WebApp?: { initData: string; ready: () => void; expand: () => void } } };
 export function TelegramReview() {
@@ -21,6 +22,7 @@ export function TelegramReview() {
     finally { setOpening(false); }
   }
   return <main className="mx-auto max-w-3xl px-5 py-10">
+    <WorkspaceHeader current="today"/>
     <Script src="https://telegram.org/js/telegram-web-app.js" onReady={() => { void openNote(); }} onError={() => { setError("Telegram could not load. Close and reopen SiteLedger, or use /today in the bot chat."); setOpening(false); }} />
     <p className="font-mono text-sm">SITELEDGER / SITE DIARY</p>
     <h1 className="mt-6 font-serif text-3xl">{opening ? "Opening your site note…" : "Your site diary"}</h1>

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { readReportInput } from "@/lib/reports/data";
@@ -21,18 +22,18 @@ async function Report(props: Props) {
     .then(([input, reviewer]) => ({ input, reviewer, report: input ? reportFromInput(input) : null })).catch(() => undefined);
   if (result === undefined) return <p>Your site note is saved. We couldn’t load the report just now; reopen the link to try again.</p>;
     const { input, report, reviewer } = result;
-    if (!input) return <><TelegramAccountEntry /><p>Sign in and open an authorized project to read this report.</p><a className="inline-flex min-h-12 items-center underline" href="/account">Open your account</a></>;
+    if (!input) return <><TelegramAccountEntry /><p>Sign in and open an authorized project to read this report.</p><Link prefetch={false} className="inline-flex min-h-12 items-center underline" href="/account">Open your account</Link></>;
     if (!report) return <><h1 className="font-serif text-3xl">Your site note is saved</h1>
       {reviewer?.archived ? <p className="mt-3">This project is archived. Its site note is preserved; the owner must restore the project before creating a report.</p> : input.source.status === "confirmed" ? <><p className="mt-3">Create a costed report from the quantities you confirmed.</p><ReportActions id={id} /></>
         : <p className="mt-3">Confirm the quantities before creating a report.</p>}
-      <a className="block min-h-12 py-3 underline" href={`/confirm/${id}`}>Review site note</a></>;
+      <Link prefetch={false} className="block min-h-12 py-3 underline" href={`/confirm/${id}`}>Review site note</Link></>;
     return <>
       {reviewer?.archived && <p role="status" className="mb-5 border-l-4 border-accent p-4">Archived project. Existing records are preserved. The owner must restore it before new work can be saved.</p>}
       <nav aria-label="Report actions" className="report-toolbar mb-5 flex flex-wrap items-center gap-3">
         {!report.stale && <a download href={`/api/reports/${id}/pdf`} className="min-h-12 bg-accent px-5 py-3 font-semibold text-white">Download PDF</a>}
-        <a href={`/confirm/${id}`} className="min-h-12 px-3 py-3 underline">{report.status === "locked" ? "View original site note" : "Correct site note"}</a>
-        <a href={`/log/${id}`} className="min-h-12 px-3 py-3 underline">Dispute log</a>
-        {report.document.source.guest_origin && <a href={`/trial/original/${id}`} className="min-h-12 px-3 py-3 underline">Original guest trial</a>}
+        <Link prefetch={false} href={`/confirm/${id}`} className="min-h-12 px-3 py-3 underline">{report.status === "locked" ? "View original site note" : "Correct site note"}</Link>
+        <Link prefetch={false} href={`/log/${id}`} className="min-h-12 px-3 py-3 underline">Dispute log</Link>
+        {report.document.source.guest_origin && <Link prefetch={false} href={`/trial/original/${id}`} className="min-h-12 px-3 py-3 underline">Original guest trial</Link>}
         {report.status === "locked" && !reviewer?.archived && <a href="#amendment" className="min-h-12 px-3 py-3 underline">Add an amendment</a>}
       </nav>
       {report.stale && <p role="status" className="mb-4 border-l-4 border-amber-700 bg-amber-50 p-4">The confirmation or BoQ changed. Rebuild this draft before downloading it.</p>}

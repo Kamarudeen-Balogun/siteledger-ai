@@ -11,7 +11,7 @@ import { TelegramAccountEntry } from "@/components/account-forms";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { DiaryNotice } from "@/components/diary-notice";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export const metadata: Metadata = { title: "Review site note — SiteLedger", referrer: "no-referrer", robots: { index: false, follow: false } };
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ access?: string }> };

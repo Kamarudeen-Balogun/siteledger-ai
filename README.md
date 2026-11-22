@@ -4,6 +4,8 @@
 
 Built by [CodeFlowX](https://codeflowx.dev) — **Kamarudeen Balogun**, civil engineer and AI & automation builder. [GitHub profile](https://github.com/Kamarudeen-Balogun).
 
+[Open SiteLedger](https://siteledger-ai.vercel.app) · [View the fictional demo](https://siteledger-ai.vercel.app/reports/demo) · [Telegram bot](https://t.me/SiteLedgerNGbot)
+
 On a building site, yesterday's work can become tomorrow's payment argument. SiteLedger records what was done, checks the quantities with a person, costs them against the project's Bill of Quantities (BoQ), and preserves the approved record with its photos.
 
 The Nigerian demonstration uses naira, Nigerian English and Pidgin. Private projects select their own currency and timezone. Rates come from the supplied BoQ; the AI never invents a price or converts currencies.
@@ -81,7 +83,7 @@ For an existing Telegram user, send `/account`, open the Mini App and create
 email/password access or sign in. Confirm any signup email code, then use
 **Connect this Telegram account → Connect Telegram** with explicit consent.
 To keep two test users separate, use two different emails. One website account
-supports one active Telegram link. The [Help page](https://chip-chaplain-tapeless.ngrok-free.dev/help) explains these steps.
+supports one active Telegram link. The [Help page](https://siteledger-ai.vercel.app/help) explains these steps.
 
 | Command | What it does |
 |---|---|
@@ -119,7 +121,7 @@ retry guidance without exposing private error details.
 
 The core voice/photo → confirmation → costing → PDF → locked log flow is implemented, along with private accounts, projects, teams, secure Telegram linking and recovery, six public pages and desktop layouts. Task 10B adds the private 24-hour trial and verified account handover.
 
-New projects start with an **empty BoQ**; saved trials receive their frozen demo BoQ. The supplied-rate editor, private project ledger and task 12 polish are implemented. Production deployment comes next. The final README gallery, Telegram conversation/voice captures, Kiro write-up and narrated video targeting **2:50** follow deployment checks in task 14. See [the ordered tasks](.kiro/specs/siteledger/tasks.md) and [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
+New projects start with an **empty BoQ**; saved trials receive their frozen demo BoQ. The supplied-rate editor, private project ledger and task 12 polish are implemented. Production is deployed on Vercel Hobby and Telegram uses the production URL. Email verification accepts the full Supabase code, including eight digits. Work screens include Back, a compact phone menu and Telegram's native Back button. Public-page, static-PDF, navigation and unauthenticated access checks pass; task 13 awaits the builder's full phone flow over mobile data. [Deployment and phone-check steps](docs/production-deployment.md). The final README gallery, Telegram conversation/voice captures, Kiro write-up and narrated video targeting **2:50** follow deployment checks in task 14. See [the ordered tasks](.kiro/specs/siteledger/tasks.md) and [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
 
 The public `/reports/demo`, `/log/demo` and demo summary expose only the original fictional seed, excluding genuine uploads, private amendments and live totals. Rates are **illustrative, not live market prices**; use QS-verified rates for real work.
 

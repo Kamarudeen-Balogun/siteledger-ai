@@ -131,6 +131,13 @@ button[aria-pressed="true"] { background: var(--foreground); color: var(--backgr
 .workspace-header nav { display: flex; flex-wrap: wrap; gap: 8px 24px; }
 .workspace-header nav a { display: inline-flex; align-items: center; min-height: 48px; font-size: 16px; }
 .workspace-header nav a[aria-current="page"] { color: var(--accent); text-decoration: underline; text-underline-offset: 6px; }
+.workspace-navigation { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 20px; width: 100%; }
+.workspace-back, .workspace-menu-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 10px 16px; border: 1px solid var(--rule); font-size: 16px; }
+.workspace-back:hover, .workspace-menu-button[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+.workspace-header .workspace-desktop-nav { display: none; }
+.workspace-mobile-menu nav { position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; width: min(280px, 100%); padding: 8px; border: 1px solid var(--rule); background: var(--background); box-shadow: 0 10px 20px rgb(28 25 23 / 8%); }
+.workspace-mobile-menu nav a { width: 100%; padding: 8px 12px; }
+@media (min-width: 1024px) { .workspace-navigation { width: auto; } .workspace-header .workspace-desktop-nav { display: flex; } .workspace-mobile-menu { display: none; } }
 .account-columns, .project-columns { display: grid; gap: 40px; }
 .account-aside { border-top: 1px solid var(--rule); padding-top: 24px; margin-top: 8px; }
 .account-aside h2 { font-family: "Report Serif", Georgia, serif; font-size: 28px; }

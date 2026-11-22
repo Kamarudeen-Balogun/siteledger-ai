@@ -122,7 +122,7 @@ export function ConfirmForm({ record, trial = false, banner, children }: { recor
           <p className="mt-2">Your original voice note is kept. You can correct this note until its report is locked.</p>
         </div>}
     </div>
-    {saved && !dirty && <a className="mt-4 block min-h-12 py-3 font-semibold underline" href={trial ? "/trial/report" : `/reports/${record.id}`}>Open costed report</a>}
+    {saved && !dirty && <Link prefetch={false} className="mt-4 block min-h-12 py-3 font-semibold underline" href={trial ? "/trial/report" : `/reports/${record.id}`}>Open costed report</Link>}
     <div className="py-6 text-base leading-7"><p className="font-semibold">Three steps to check your site note</p>
       <ol className="mt-2 list-decimal space-y-1 pl-5"><li>Listen to your voice note or read the original transcript.</li>
         <li>Choose each BoQ item. Check its quantity, measurement unit and crew, then review materials, delays and photos.</li>
