@@ -68,3 +68,8 @@ Artifacts stay in ignored `supabase/.temp/task-13`. The builder's full mobile-da
 flow is still pending. Keep task 13 open; task 14's README gallery and narrated
 video have not begun. The unrelated session-start probe remains untouched and
 unstaged.
+
+Builder update, 22 November: signup now works after the deployed fix, and the
+builder is starting project creation. Project setup, voice/photo intake,
+confirmation, costing, PDF, approval/amendment and the complete mobile-data
+flow still need the builder's result.
