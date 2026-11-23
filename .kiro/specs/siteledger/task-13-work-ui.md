@@ -66,8 +66,9 @@ costing, PDF, PM approval and a dated amendment on a real phone over mobile data
 Keep task 13 unchecked until the builder reports this result. Preserve the
 existing separate production test project and locked records.
 
-GitHub publication is an interim checkpoint on `task-13-production`, not a task
-13 completion or a merge to main. At the builder’s request, Vercel is connected to the public GitHub repository;
+GitHub checkpoint `3a39cfc` was published on `task-13-production`. On 23 November
+the builder explicitly authorizes merging the tested update into main now,
+before the remaining physical-phone acceptance. This does not close task 13. At the builder’s request, Vercel is connected to the public GitHub repository;
 its verified production branch is `main`. Review-branch pushes create previews.
 The existing CLI checkpoint is already live; merging accepted changes into main
 triggers the Git production deployment.
@@ -77,3 +78,16 @@ UI review. No new Kiro review, hook execution or Crew run is claimed. The
 unrelated `.kiro/hooks/sessionstart-probe.json` remains untouched and unstaged.
 The agreed private-feedback task 13A follows task 13 acceptance. Task 14's full README gallery, Kiro write-up and 2:50 video remain scheduled
 after deployment acceptance.
+
+## Git previews
+
+Git push of `3a39cfc` triggered preview deployment
+`dpl_FnPTTAwU5PJ4hG7LvSzuGoAiu3WU`, READY with a successful Vercel commit check.
+The review-branch alias is
+https://siteledger-ai-git-task-13-production-kamarudeens-projects.vercel.app.
+Its eleven environment variables are configured for this branch, including its
+own app origin. The builder confirms its Cloudflare hostname saved. Vercel
+protects previews, so browser testing may require the builder's Vercel login.
+Use the stable alias for requests; random deployment URLs have a different
+origin. The bot stays on production. Telegram is optional for the complete
+email/password website flow.

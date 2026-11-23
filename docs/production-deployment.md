@@ -49,7 +49,8 @@ Fluid Active CPU time. A CLI deployment can still publish a tested checkpoint.
 
 The GitHub repository is `Kamarudeen-Balogun/siteledger-ai`, with `main` verified
 as the production branch on 23 November 2026. Push a review branch to test its
-preview; merge into `main` after acceptance to trigger production. The current
+preview; merge a tested update into `main` to trigger production. The builder authorizes
+merging the current UI checkpoint now; the remaining phone acceptance stays open. The current
 public URL already runs the task 13 CLI checkpoint before that merge.
 
 For a deliberate CLI deployment, finish local validation first. Authenticate using
@@ -169,3 +170,13 @@ The landing design stays intact. Its account links share one lightweight,
 private session lookup per visit and show **Open your projects** for an active
 session. Anonymous visitors retain sign-in and trial choices. The page body is
 still prerendered; the session lookup uses a server function, without polling.
+
+## Browser preview
+
+The trusted review branch has its own preview variables and stable origin:
+https://siteledger-ai-git-task-13-production-kamarudeens-projects.vercel.app.
+The builder added that hostname to the existing Turnstile widget. Vercel may
+require its own account login before opening this protected preview. New review
+branches need their own environment/hostname setup, or reuse the configured
+review branch. The bot's main button remains on production. A Telegram connection
+is optional for website account, project, capture and report use.
