@@ -10,6 +10,7 @@ import { TelegramFrame } from "@/components/telegram-frame";
 import { PhotoObservations } from "@/components/photo-observations";
 import { WorkspaceHeader } from "./workspace-header";
 import { DiaryNotice } from "./diary-notice";
+import { WorkFlow, WorkDisclosure } from "./work-flow";
 
 const empty: SiteExtraction = { work_items: [], materials: [], delays: [], issues: [], raw_language_notes: "" };
 const inputClass = "min-h-12 w-full rounded-none border border-rule bg-[#fffdf9] px-3 py-2 text-base outline-offset-2 focus:outline-accent";
@@ -24,7 +25,7 @@ function Field({ label, name, value, number, required = false, low = false }: {
       type={number ? "number" : "text"} inputMode={number ? "decimal" : undefined} step={number ? "any" : undefined}
       min={number ? 0 : undefined} maxLength={number ? undefined : 20000} required={required}
       defaultValue={low ? "" : value ?? ""} aria-describedby={low ? name + "-check" : undefined} />
-    {low && <span id={name + "-check"} className="mt-1 block text-amber-900">Check this one — enter the value.</span>}
+    {low && <span id={name + "-check"} className="sr-only">Check this one — enter the value.</span>}
   </label>;
 }
 function Score({ name, value }: { name: string; value: number }) {
@@ -106,10 +107,9 @@ export function ConfirmForm({ record, trial = false, banner, children }: { recor
   return <main className="mx-auto max-w-7xl px-5 pb-12 pt-7 sm:px-10">
     <TelegramFrame />
     <WorkspaceHeader current="reports" />{banner}
-    <header className="border-b border-rule pb-7"><p className="font-mono text-sm tracking-wide">SITE RECORD / HUMAN CHECK</p>
+    <header className="border-b border-rule pb-5"><p className="eyebrow">Human review</p>
       <h1 className="mt-4 font-serif text-3xl">Review your site note</h1><p className="mt-3 leading-7">{record.project_name}</p>
-      <Link href={trial ? "/trial" : "/today"} className="mt-4 inline-flex min-h-12 items-center underline">{trial ? "Your private trial" : "Record a new site note"}</Link>
-      <p className="mt-2 font-mono text-sm">{date} · {record.timezone ?? "Africa/Lagos"}</p><p className="mt-2">Sent by {record.submitted_by}</p>
+      <p className="mt-2 text-sm">Recorded by {record.submitted_by}</p><details className="log-reference"><summary>Capture details</summary><p className="mt-2 font-mono text-sm">{date} · {record.timezone ?? "Africa/Lagos"}</p></details>
       {record.guest_origin && <p className="mt-4 border-l-4 border-accent pl-4 leading-7">Originally captured by {record.guest_origin.recorded_by}. Your guest edits are carried forward. Confirm this work under your verified professional name before approval.</p>}
       {record.guest_origin && <Link className="inline-flex min-h-12 items-center underline" href={`/trial/original/${record.id}`}>View the preserved guest trial</Link>}
       {trial && <p className="mt-4 border-l-4 border-accent pl-4 leading-7">Private trial. Demo rates are illustrative. Confirmation creates a draft; save to a verified account before approval.</p>}</header>
@@ -122,26 +122,23 @@ export function ConfirmForm({ record, trial = false, banner, children }: { recor
           <p className="mt-2">Your original voice note is kept. You can correct this note until its report is locked.</p>
         </div>}
     </div>
-    {saved && !dirty && <a className="mt-4 block min-h-12 py-3 font-semibold underline" href={trial ? "/trial/report" : `/reports/${record.id}`}>Open costed report</a>}
-    <div className="py-6 text-base leading-7"><p className="font-semibold">Three steps to check your site note</p>
-      <ol className="mt-2 list-decimal space-y-1 pl-5"><li>Listen to your voice note or read the original transcript.</li>
-        <li>Choose each BoQ item. Check its quantity, measurement unit and crew, then review materials, delays and photos.</li>
-        <li>Tap Confirm and cost it. Your confirmed quantities become a costed report.</li></ol>
-      <p className="mt-3">An asterisk (*) marks a required field. Unclear values are blank and marked “Check this one”. Nothing is costed or locked before you confirm.</p></div>
+    {saved && !dirty && <Link prefetch={false} className="mt-4 block min-h-12 py-3 font-semibold underline" href={trial ? "/trial/report" : `/reports/${record.id}`}>Open costed report</Link>}
+    <WorkFlow step="review"/><p className="my-5 leading-7">Check each quantity and BoQ item. Confirm only the work and observations you know are correct.</p>
+    {!record.audio_url&&record.photos.length>0&&<DiaryNotice title="Photo-only site note">Add the work and quantities you want costed. Photo findings are suggestions; they do not supply a quantity or price.</DiaryNotice>}
     {archived && <p role="status" className="my-4 border-l-4 border-accent p-4">Archived project. This site note is available for reading; the owner must restore the project before changes.</p>}
     {locked && <p className="my-4 border-2 border-accent p-4 font-mono text-accent">LOCKED — this record cannot be changed.</p>}
-    {record.audio_url && <Section title="Your voice note"><audio aria-label="Original site voice note" className="w-full" controls preload="none" src={mediaUrl("audio")} />
+    {record.audio_url && <WorkDisclosure title="Original voice note & transcript"><audio aria-label="Original site voice note" className="w-full mt-5" controls preload="none" src={mediaUrl("audio")} />
       <details className="mt-4"><summary className="min-h-12 cursor-pointer py-3">Read the original transcript</summary>
-        <p className="whitespace-pre-wrap border-l-2 border-rule pl-4 leading-7">{record.transcript ?? "The original audio is saved. A transcript isn’t available."}</p></details></Section>}
+        <p className="whitespace-pre-wrap border-l-2 border-rule pl-4 leading-7">{record.transcript ?? "The original audio is saved. A transcript isn’t available."}</p></details></WorkDisclosure>}
     {listening ? <DiaryNotice busy title="Listening to your note…">Your audio and photos are saved. This page will update when your note is ready to check.</DiaryNotice>
-      : <form onSubmit={submit} onChange={() => setDirty(true)}>
+      : <form onSubmit={submit} onChange={() => setDirty(true)} data-unsaved={dirty&&!locked&&!archived&&!saving}>
       {record.job_status === "manual_entry" && <DiaryNotice tone="warning" title="Enter the site details">We couldn’t read this note reliably. Your audio and photos are saved. Enter what happened below.</DiaryNotice>}
       <fieldset disabled={locked || archived || saving}>
       <Section title="Work done">
-        <p className="mb-5 leading-7">The BoQ is your project’s agreed list of work. Choose the matching item; its unit tells you how the quantity is measured.</p>
+        <p className="mb-5 leading-7">Choose the agreed BoQ item and check the work quantity.</p>
         {!work.length && <p className="mb-5">No work items were picked up. Add an item if work was done.</p>}
         <table className="w-full table-fixed border-collapse text-left"><caption className="sr-only">Editable work quantities and BoQ choices</caption>
-          <thead><tr className="border-b border-rule"><th scope="col" className="w-2/3 py-3 pr-3 font-normal">Work item</th><th scope="col" className="py-3 font-normal">Quantity</th></tr></thead>
+          <thead className="sr-only"><tr><th scope="col">Work item</th><th scope="col">Quantity</th></tr></thead>
           <tbody>{work.map(({ key, value, boqId, unitValue }, i) => <tr key={key} className="review-row border-b border-rule" data-confidence={low(value.confidence) ? "low" : undefined}><td colSpan={2} className="py-5">
             {low(value.confidence) && <p className="mb-3 text-amber-900">Check this one — this item needs your input.</p>}
             <div className="review-work-fields"><div><Field label="Description" name={`w${i}.description`} value={value.description} required low={low(value.confidence)} /></div>
@@ -157,14 +154,15 @@ export function ConfirmForm({ record, trial = false, banner, children }: { recor
                 const next = event.target.value; setWork(rows => rows.map(row => row.key === key ? { ...row, unitValue: next } : row));
               }} /><span className="mt-1 block text-sm">m2 = m² · m3 = m³</span></label>
               <Field label="Crew count" name={`w${i}.crew`} value={value.crew} number required={low(value.confidence) && value.crew !== null} low={low(value.confidence)} />
-              <Score name={`w${i}.confidence`} value={value.confidence} /><Field label="BoQ suggestion" name={`w${i}.hint`} value={value.matched_boq_hint} low={low(value.confidence)} /></div>
+              </div><WorkDisclosure title="AI extraction details"><div className="grid gap-5 sm:grid-cols-2 pt-5"><Score name={`w${i}.confidence`} value={value.confidence} /><Field label="BoQ suggestion" name={`w${i}.hint`} value={value.matched_boq_hint} low={low(value.confidence)} /></div></WorkDisclosure>
             <button type="button" className="mt-3 min-h-12 underline underline-offset-4" onClick={() => { setDirty(true); setWork(rows => rows.filter(row => row.key !== key)); }}>Remove work item {i + 1}</button>
           </td></tr>)}</tbody></table>
         <button type="button" className="mt-4 min-h-12 border border-rule px-4" onClick={() => { setDirty(true); setWork(rows => [...rows, { key: crypto.randomUUID(), boqId: "", unitValue: "", value: {
           description: "", matched_boq_hint: null, quantity: null, unit: null, crew: null, confidence: 1,
         } as WorkItem }]); }}>Add work item</button>
       </Section>
-      <Section title="Materials">
+      <WorkDisclosure title="Materials & delays" description={materials.length||delays.length?`${materials.length} materials · ${delays.length} delays to review`:"Optional deliveries, materials used and delays"} open={materials.length>0||delays.length>0}>
+      <WorkDisclosure title="Materials" description={materials.length?`${materials.length} mentioned in this note`:"Add deliveries or materials used, if needed"} open={materials.length>0}>
         {!materials.length && <p>No materials were mentioned.</p>}
         {materials.map(({ key, value }, i) => <div key={key} className="border-b border-rule py-5">
           <div className="grid grid-cols-2 gap-4"><Field label="Material" name={`m${i}.name`} value={value.name} required low={low(value.confidence)} />
@@ -175,8 +173,8 @@ export function ConfirmForm({ record, trial = false, banner, children }: { recor
           <button type="button" className="mt-3 min-h-12 underline" onClick={() => { setDirty(true); setMaterials(rows => rows.filter(row => row.key !== key)); }}>Remove material {i + 1}</button>
         </div>)}
         <button type="button" className="mt-4 min-h-12 border border-rule px-4" onClick={() => { setDirty(true); setMaterials(rows => [...rows, { key: crypto.randomUUID(), value: { name: "", quantity: null, unit: null, action: null, confidence: 1 } }]); }}>Add material</button>
-      </Section>
-      <Section title="Delays">
+      </WorkDisclosure>
+      <WorkDisclosure title="Delays" description={delays.length?`${delays.length} mentioned in this note`:"Add a delay, if needed"} open={delays.length>0}>
         {!delays.length && <p>No delays were mentioned.</p>}
         {delays.map(({ key, value }, i) => <div key={key} className="border-b border-rule py-5">
           <div className="grid grid-cols-2 gap-4"><Field label="Reason" name={`d${i}.reason`} value={value.reason} required low={low(value.confidence)} />
@@ -185,7 +183,8 @@ export function ConfirmForm({ record, trial = false, banner, children }: { recor
           <button type="button" className="mt-3 min-h-12 underline" onClick={() => { setDirty(true); setDelays(rows => rows.filter(row => row.key !== key)); }}>Remove delay {i + 1}</button>
         </div>)}
         <button type="button" className="mt-4 min-h-12 border border-rule px-4" onClick={() => { setDirty(true); setDelays(rows => [...rows, { key: crypto.randomUUID(), value: { reason: "", hours: null, confidence: 1 } }]); }}>Add delay</button>
-      </Section>
+      </WorkDisclosure>
+      </WorkDisclosure>
       <Section title="Photos">
         {!record.photos.length && <p>{trial ? "No photos are attached to this trial note." : "No photos are attached to this note. You can send them in the same Telegram chat."}</p>}
         <div className="grid gap-7 sm:grid-cols-2">{record.photos.map((photo, i) => <div key={photo.id}>
@@ -193,16 +192,17 @@ export function ConfirmForm({ record, trial = false, banner, children }: { recor
           <PhotoObservations photo={photo} number={i + 1} onEdit={() => setDirty(true)} />
         </div>)}</div>
       </Section>
-      <Section title="Issues and language notes">
+      <WorkDisclosure title="Issues and language notes" description="Optional details and the original language notes" open={source.issues.length>0}>
         <label className="block">Issues — one per line<textarea className={inputClass + " mt-2 min-h-28"} name="issues" defaultValue={source.issues.join("\n")} maxLength={20000} /></label>
         <label className="mt-5 block">Language notes<textarea className={inputClass + " mt-2 min-h-24"} name="language_notes" defaultValue={source.raw_language_notes} maxLength={20000} /></label>
-      </Section>
+      </WorkDisclosure>
       </fieldset>
       {record.pending_media && <p role="status" className="mb-4 border-l-4 border-amber-700 p-4">A photo is still saving. You can review the fields now; wait before confirming.</p>}
       {record.pending_photo_analysis && <DiaryNotice busy title="Checking your photos…">Review the fields now; findings will appear here before you confirm.</DiaryNotice>}
       {saved && !dirty && !error && <p className="mb-4 border-l-4 border-[#657055] bg-[#EEF0E7] p-4 font-semibold">Site note confirmed. Your changes are saved.</p>}
       <p className="mb-4">By confirming, you confirm that these are the quantities and observations from your site.</p>
-      <button type="submit" disabled={saving || locked || archived || record.pending_media || record.pending_photo_analysis || (!!saved && !dirty)} className="min-h-14 w-full bg-accent px-6 py-4 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
+      {!record.audio_url&&!record.photos.length&&!locked&&<p role="status" className="my-4">Add a voice note or photo in the same Telegram chat before confirming.</p>}
+      <button type="submit" disabled={saving || locked || archived || record.pending_media || record.pending_photo_analysis || (!record.audio_url&&!record.photos.length) || (!!saved && !dirty)} className="min-h-14 w-full bg-accent px-6 py-4 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
         {saving ? costing ? "Costing against the BoQ…" : "Saving your confirmation…" : saved ? dirty ? "Confirm changes and rebuild report" : "Confirmed — saved" : "Confirm and cost it"}</button>
       </form>}{children}
   </main>;

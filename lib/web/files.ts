@@ -24,7 +24,7 @@ export async function describeFiles(files:Blob[]):Promise<Asset[]> {
   const assets:Asset[]=[];
   for(const [index,file] of files.entries()) {
     const bytes=await file.arrayBuffer();const digest=await crypto.subtle.digest("SHA-256",bytes);
-    assets.push({index,content_type:index===0 ? audioType(file):"image/jpeg",bytes:file.size,sha256:[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,"0")).join("")});
+    assets.push({index,content_type:index===0 && file.type!=="image/jpeg" ? audioType(file):"image/jpeg",bytes:file.size,sha256:[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,"0")).join("")});
   }
   return assets;
 }

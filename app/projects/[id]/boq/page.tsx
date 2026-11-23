@@ -10,7 +10,7 @@ export const metadata = { title: "Project BoQ and rates — SiteLedger AI", robo
 async function Content({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params; if (!UUID.test(id)) notFound(); const data = await privateDashboard(id); if (!data) notFound();
   return <><Link href={`/projects/${id}`} className="inline-flex min-h-12 items-center underline">Return to project ledger</Link><p className="eyebrow mt-5">{data.access.currency} / {data.access.role === "pm" ? "PM" : "Foreman"}</p><h1 className="mt-3 font-serif text-3xl">{data.project.name} — BoQ and rates</h1>
-    <p className="mt-5 max-w-3xl leading-7">Quantities and rates come from your supplied Bill of Quantities. New and rebuilt drafts use current rates; locked reports retain their original evidence and money.</p>
+    <p className="mt-5 max-w-3xl leading-7">Add the work items, quantities and rates supplied by your QS. These are the prices used to cost new reports.</p>
     {data.project.is_demo && <p className="mt-5 border-l-4 border-accent pl-4 leading-7">Demo rates — verify before real use. Illustrative quantities and prices are not live market rates.</p>}
     {(data.access.archived_at || data.access.role !== "pm") && <p role="status" className="mt-5 border-l-4 border-rule pl-4 leading-7">{data.access.archived_at ? "Archived project. Its BoQ remains available to read." : "Read-only BoQ. A project PM can change supplied quantities and rates."}</p>}
     <BoqEditor projectId={id} currency={data.access.currency} rows={data.boq} editable={data.access.role === "pm" && !data.access.archived_at} /></>;

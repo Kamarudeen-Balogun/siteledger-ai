@@ -6,6 +6,7 @@ import { accountCookie, accountForHash, requestSessionHash, secretHash, sessionT
 import { AccountError, authRequest, nativeSession } from "./provider";
 import { emailAddress, professionalName, validPassword, type Account } from "./types";
 import { smallJson } from "./request";
+import { validEmailCode } from "./email-code";
 
 export const privateHeaders = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" };
 const shapes: Record<string, string[]> = {
@@ -70,7 +71,7 @@ async function browserLogin(request: Request, input: Record<string, unknown>, ha
   const data = await authRequest(signup ? "signup" : "token?grant_type=password", { email, password: input.password, gotrue_meta_security: meta });
   if (signup) {
     if (typeof data.access_token === "string") throw new AccountError("Signup confirmation settings changed. Enable Confirm email and try again.", 503);
-    return Response.json({ pending_confirmation: true, email, message: "Check your inbox for a six-digit signup code. If you already have an account, sign in instead." }, { headers: privateHeaders });
+    return Response.json({ pending_confirmation: true, email, message: "Check your inbox for a signup code. Enter the full code from your email. If you already have an account, sign in instead." }, { headers: privateHeaders });
   }
   const native = await nativeSession(data), token = sessionToken();
   if (existing?.source === "telegram") checked(await intakeRpc<Account | null>("account_attach_browser", { p_hash: hash, p_user: native.user.id, p_auth_session: native.auth_session_id, p_new_hash: secretHash(token), p_combine: input.combine_profiles === true }));
@@ -80,7 +81,7 @@ async function browserLogin(request: Request, input: Record<string, unknown>, ha
 }
 async function confirmSignup(request: Request, input: Record<string, unknown>, hash: string) {
   const email = emailAddress(input.email), name = professionalName(input.name);
-  if (!email || !name || input.confirm_name !== true || typeof input.token !== "string" || !/^\d{6}$/.test(input.token)) throw new AccountError("Enter your signup email, six-digit code and confirmed professional name.", 422);
+  if (!email || !name || input.confirm_name !== true || !validEmailCode(input.token)) throw new AccountError("Enter your signup email, the full 6–10 digit code and confirmed professional name.", 422);
   const existing = await accountForHash(hash);
   if (existing?.source === "browser") throw new AccountError("Sign out before confirming another website account.", 409);
   if (existing?.source === "telegram" && input.link_existing !== true) throw new AccountError("Confirm that this website login should connect to your Telegram profile.", 422);
@@ -140,7 +141,7 @@ export async function accountApi(request: Request, action: string): Promise<Resp
     }
     if (action === "reset_password") {
       const email = emailAddress(input.email);
-      if (!email || !validPassword(input.password) || typeof input.token !== "string" || !/^\d{6}$/.test(input.token)) throw new AccountError("Enter the recovery email, six-digit code and a new password of 12–128 characters.", 422);
+      if (!email || !validPassword(input.password) || !validEmailCode(input.token)) throw new AccountError("Enter the recovery email, the full 6–10 digit code and a new password of 12–128 characters.", 422);
       await limited(request, action, email);
       const native = await nativeSession(await authRequest("verify", { email, token: input.token, type: "recovery" }));
       await authRequest("user", { password: input.password }, native.access_token, "PUT");
@@ -163,10 +164,10 @@ export async function accountApi(request: Request, action: string): Promise<Resp
     if (action === "request_email_proof") {
       if (current.source !== "browser" || !current.email) throw new AccountError("Connect website email/password access before accepting an email invitation.", 403);
       await authRequest("otp", { email: current.email, create_user: false, gotrue_meta_security: captcha(input) });
-      return Response.json({ message: "Check your inbox for a six-digit code to prove ownership of this account's email." }, { headers: privateHeaders });
+      return Response.json({ message: "Check your inbox for a code to prove ownership of this account's email. Enter the full code." }, { headers: privateHeaders });
     }
     if (action === "verify_email") {
-      if (current.source !== "browser" || !current.email || typeof input.token !== "string" || !/^\d{6}$/.test(input.token)) throw new AccountError("Enter the six-digit email code.", 422);
+      if (current.source !== "browser" || !current.email || !validEmailCode(input.token)) throw new AccountError("Enter the full 6–10 digit email code.", 422);
       const native = await nativeSession(await authRequest("verify", { email: current.email, token: input.token, type: "email" }));
       return Response.json({ account: checked(await intakeRpc("account_verified_email", { p_hash: hash, p_user: native.user.id, p_auth_session: native.auth_session_id })) }, { headers: privateHeaders });
     }

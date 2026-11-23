@@ -4,6 +4,7 @@ import { accountApi } from "../lib/auth/api";
 import { emailAddress, professionalName } from "../lib/auth/types";
 import { accountCookie, secretHash } from "../lib/auth/session";
 import { nativeSession } from "../lib/auth/provider";
+import { validEmailCode } from "../lib/auth/email-code";
 
 process.env.SITELEDGER_APP_URL = "https://siteledger.example.test";
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://auth.example.test";
@@ -57,7 +58,7 @@ test("signup enforces native CAPTCHA and keeps access pending until email confir
   assert.equal((await result.json()).pending_confirmation, true);
   assert.equal(result.headers.get("set-cookie"), null);
 });
-test("successful signup code proves email ownership and creates only an opaque app session", async context => {
+for (const code of ["123456", "01234567", "0123456789"]) test(`successful ${code.length}-digit signup code proves ownership without truncation or native-token exposure`, async context => {
   const user = "81000000-0000-4000-8000-000000000001", nativeId = "81000000-0000-4000-8000-000000000011";
   const nativeToken = "test." + Buffer.from(JSON.stringify({ sub: user, session_id: nativeId })).toString("base64url") + ".test";
   const account = { profile_id: user, source: "browser", professional_name: "Amina", email_verified: true };
@@ -65,16 +66,72 @@ test("successful signup code proves email ownership and creates only an opaque a
   context.mock.method(globalThis, "fetch", async (url: URL | RequestInfo, init?: RequestInit) => {
     const path = new URL(String(url)).pathname, body = init?.body ? JSON.parse(String(init.body)) : null;
     if (path.endsWith("account_limit")) return Response.json(true);
-    if (path === "/auth/v1/verify") { assert.deepEqual(body, {email:"foreman@example.test",token:"123456",type:"signup"}); return Response.json({ access_token: nativeToken, user: { id: user }, refresh_token: "native-refresh" }); }
+    if (path === "/auth/v1/verify") { assert.deepEqual(body, {email:"foreman@example.test",token:code,type:"signup"}); return Response.json({ access_token: nativeToken, user: { id: user }, refresh_token: "native-refresh" }); }
     if (path === "/auth/v1/user") return Response.json({ id: user });
     if (path.endsWith("account_browser_session")) { assert.equal(body.p_user,user);assert.equal(body.p_auth_session,nativeId);assert.match(body.p_hash,/^[a-f0-9]{64}$/);return Response.json(account); }
     if (path.endsWith("account_verified_email")) { proved = true; assert.equal(body.p_user,user); return Response.json(account); }
     assert.ok(path.endsWith("account_session")); return Response.json(account);
   });
-  const result=await accountApi(request({email:"foreman@example.test",token:"123456",name:"Amina",confirm_name:true}),"verify_signup");
+  const result=await accountApi(request({email:"foreman@example.test",token:code,name:"Amina",confirm_name:true}),"verify_signup");
   assert.equal(result.status,200);assert.ok(proved);
   const output=JSON.stringify(await result.json());assert.equal(output.includes(nativeToken),false);assert.equal(output.includes("native-refresh"),false);
   assert.match(result.headers.get("set-cookie")!,/HttpOnly; SameSite=Lax.*Secure/);
+});
+
+test("email code validation rejects shortened, overlong, non-numeric and converted codes before native verification", async context => {
+  context.mock.method(globalThis, "fetch", async () => { throw new Error("Malformed code must not reach Auth"); });
+  for (const token of ["12345", "12345678901", "1234ABCD", "１２３４５６７８", "123456\n", " 12345678", 12345678, null]) {
+    assert.equal(validEmailCode(token), false);
+    for (const action of ["verify_signup", "reset_password"]) {
+      const result = await accountApi(request({ email: "foreman@example.test", token,
+        ...(action === "verify_signup" ? { name: "Amina", confirm_name: true } : { password: "long-test-password" }) }), action);
+      assert.equal(result.status, 422, `${action}: malformed code`);
+      assert.equal(result.headers.get("set-cookie"), null);
+    }
+  }
+});
+
+test("eight-digit recovery and invitation email codes reach native verification intact", async context => {
+  const user = "81000000-0000-4000-8000-000000000001", nativeId = "81000000-0000-4000-8000-000000000011";
+  const nativeToken = "test." + Buffer.from(JSON.stringify({ sub: user, session_id: nativeId })).toString("base64url") + ".test";
+  const account = { profile_id: user, source: "browser", email: "foreman@example.test" };
+  const verified: string[] = [];
+  let revoked = false, emailProved = false;
+  context.mock.method(globalThis, "fetch", async (url: URL | RequestInfo, init?: RequestInit) => {
+    const path = new URL(String(url)).pathname, body = init?.body ? JSON.parse(String(init.body)) : null;
+    if (path.endsWith("account_limit")) return Response.json(true);
+    if (path.endsWith("account_session")) return Response.json(account);
+    if (path === "/auth/v1/verify") {
+      assert.deepEqual(body, { email: account.email, token: "01234567", type: body.type });
+      verified.push(body.type);
+      return Response.json({ access_token: nativeToken, user: { id: user } });
+    }
+    if (path === "/auth/v1/user") {
+      if (init?.method === "PUT") assert.deepEqual(body, { password: "long-test-password" });
+      return Response.json({ id: user });
+    }
+    if (path.endsWith("account_revoke_user")) { revoked = true; return Response.json(null); }
+    if (path.endsWith("account_verified_email")) { emailProved = true; return Response.json(account); }
+    assert.equal(path, "/auth/v1/logout"); return Response.json({});
+  });
+  const recovered = await accountApi(request({ email: account.email, token: "01234567", password: "long-test-password" }), "reset_password");
+  assert.equal(recovered.status, 200); assert.ok(revoked);
+  assert.match(recovered.headers.get("set-cookie")!, /Max-Age=0/);
+  const invitation = request({ token: "01234567" });
+  invitation.headers.set("cookie", accountCookie("a".repeat(43)));
+  assert.equal((await accountApi(invitation, "verify_email")).status, 200);
+  assert.ok(emailProved); assert.deepEqual(verified, ["recovery", "email"]);
+});
+
+test("a correctly shaped but invalid native code cannot create account access", async context => {
+  context.mock.method(globalThis, "fetch", async (url: URL | RequestInfo) => {
+    const path = new URL(String(url)).pathname;
+    if (path.endsWith("account_limit")) return Response.json(true);
+    assert.equal(path, "/auth/v1/verify");
+    return Response.json({ error_code: "otp_expired" }, { status: 403 });
+  });
+  const result = await accountApi(request({ email: "foreman@example.test", token: "01234567", name: "Amina", confirm_name: true }), "verify_signup");
+  assert.equal(result.status, 400); assert.equal(result.headers.get("set-cookie"), null);
 });
 test("signup detects hosted confirmation settings before creating a native account", async context => {
   process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = "test-public-site-key";

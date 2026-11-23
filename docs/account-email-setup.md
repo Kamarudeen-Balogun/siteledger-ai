@@ -65,7 +65,9 @@ domain. Its existing send.codeflowx.dev sender for LeadFlowX remains separate.
    "Confirm your SiteLedger account". Copy supabase/templates/magic-link.html into Magic Link, with subject
    "Confirm your SiteLedger email". Copy supabase/templates/recovery.html into
    Reset Password, with subject "Reset your SiteLedger password". They use the
-   native one-use six-digit code. Keep the Token, Email and SiteURL placeholders
+   native one-use code with the length configured in Supabase (6–10 digits).
+   SiteLedger accepts the full code, including eight-digit emails; do not shorten it.
+   Keep the Token, Email and SiteURL placeholders
    intact. A successful signup code also proves invitation email ownership;
    older automatically confirmed accounts must complete a separate proof.
    The warm-paper design uses inline styles, table layouts and system-font
@@ -90,6 +92,7 @@ Sources:
 - https://supabase.com/docs/guides/auth/auth-captcha
 - https://supabase.com/docs/guides/auth/testing-auth-flows
 - https://supabase.com/docs/guides/auth/auth-smtp
+- https://github.com/supabase/auth/blob/master/internal/conf/configuration.go
 - https://resend.com/docs/send-with-supabase-smtp
 - https://resend.com/pricing
 

@@ -83,7 +83,7 @@ test("API denies unsigned/foreign-origin reviews, blocks unfinished evidence, an
   const calls: { url: string; body: Record<string, unknown> }[] = [];
   globalThis.fetch = async (url, options) => {
     const body = JSON.parse(options?.body as string); calls.push({ url: String(url), body });
-    if (String(url).endsWith("account_review")) return Response.json({ status: state, pending_media: pending, pending_photo_analysis: pendingPhotos, job_status: "extracted", boq, photos: [] });
+    if (String(url).endsWith("account_review")) return Response.json({ status: state, pending_media: pending, pending_photo_analysis: pendingPhotos, job_status: "extracted", audio_url:"site-evidence/fixture/voice.wav", boq, photos: [] });
     assert.ok(String(url).endsWith("account_confirm"));
     assert.equal(body.p_hash, secretHash(token)); assert.deepEqual(body.p_values, input.values);
     assert.equal(body.p_transcript, undefined); assert.equal(body.p_price, undefined); assert.equal(body.p_confirmed_by, undefined);

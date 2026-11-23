@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import Script from "next/script";
 import "./globals.css";
 import { CreatorCredit } from "@/components/creator-credit";
+import { AppNavigation } from "@/components/app-navigation";
 
 export const metadata: Metadata = {
   title: "SiteLedger AI",
@@ -15,7 +17,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en-NG" className="h-full antialiased">
-      <body className="min-h-full">{children}<CreatorCredit /></body>
+      <body className="min-h-full"><Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive"/><AppNavigation>{children}<CreatorCredit /></AppNavigation></body>
     </html>
   );
 }

@@ -46,7 +46,7 @@ async function action(context,group,name,input,expected=200) {
 }
 async function codeFor(email,start=0) {
   const end=Date.now()+10000;
-  while(Date.now()<end){const message=mail.slice(start).find(value=>value.includes(email));if(message){let body=message.split("\r\n\r\n").slice(1).join("\r\n\r\n").replace(/=\r\n/g,"").replace(/=([0-9A-F]{2})/g,(_,hex)=>String.fromCharCode(parseInt(hex,16)));const code=body.match(/\b\d{6}\b/);if(code)return code[0];}await new Promise(resolve=>setTimeout(resolve,100));}throw new Error("Disposable signup/recovery email code was not delivered.");
+  while(Date.now()<end){const message=mail.slice(start).find(value=>value.includes(email));if(message){let body=message.split("\r\n\r\n").slice(1).join("\r\n\r\n").replace(/=\r\n/g,"").replace(/=([0-9A-F]{2})/g,(_,hex)=>String.fromCharCode(parseInt(hex,16)));const code=body.match(/\b\d{6,10}\b/);if(code){assert.equal(code[0].length,8,"Native QA Auth must issue eight-digit email codes");return code[0];}}await new Promise(resolve=>setTimeout(resolve,100));}throw new Error("Disposable signup/recovery email code was not delivered.");
 }
 async function queuedNotes(page) {
   return page.evaluate(()=>new Promise((resolve,reject)=>{const open=indexedDB.open("siteledger-web-queue",1);open.onerror=()=>reject(open.error);open.onsuccess=()=>{const read=open.result.transaction("notes").objectStore("notes").getAll();read.onsuccess=()=>{resolve(read.result.map(row=>({id:row.manifest.id,status:row.status,project:row.manifest.project_id,captured:row.manifest.captured_at,actor:row.context.actor_id,name:row.context.actor_name,bytes:row.files?.map(file=>file.size)??[]})));open.result.close();};};}));
@@ -96,7 +96,7 @@ try {
   const templateHost="http://host.docker.internal:55534/templates/";
   command("docker",["run","--detach","--name",authName,"--network",network,"--publish","127.0.0.1:55533:9999",...dockerEnv({...authEnv,
     GOTRUE_DB_DATABASE_URL:dbUri(authEnv.GOTRUE_DB_DATABASE_URL),GOTRUE_SITE_URL:base,GOTRUE_URI_ALLOW_LIST:base,API_EXTERNAL_URL:gateway,
-    GOTRUE_DISABLE_SIGNUP:"false",GOTRUE_MAILER_AUTOCONFIRM:"false",GOTRUE_MAILER_OTP_LENGTH:"6",GOTRUE_SMTP_HOST:"host.docker.internal",GOTRUE_SMTP_PORT:String(smtpPort),GOTRUE_SMTP_USER:"",GOTRUE_SMTP_PASS:"",GOTRUE_SMTP_ADMIN_EMAIL:"noreply@siteledger.example.test",GOTRUE_SMTP_SENDER_NAME:"SiteLedger QA",GOTRUE_SMTP_MAX_FREQUENCY:"1s",
+    GOTRUE_DISABLE_SIGNUP:"false",GOTRUE_MAILER_AUTOCONFIRM:"false",GOTRUE_MAILER_OTP_LENGTH:"8",GOTRUE_SMTP_HOST:"host.docker.internal",GOTRUE_SMTP_PORT:String(smtpPort),GOTRUE_SMTP_USER:"",GOTRUE_SMTP_PASS:"",GOTRUE_SMTP_ADMIN_EMAIL:"noreply@siteledger.example.test",GOTRUE_SMTP_SENDER_NAME:"SiteLedger QA",GOTRUE_SMTP_MAX_FREQUENCY:"1s",
     GOTRUE_MAILER_TEMPLATES_CONFIRMATION:templateHost+"signup.html",GOTRUE_MAILER_TEMPLATES_MAGIC_LINK:templateHost+"magic-link.html",GOTRUE_MAILER_TEMPLATES_RECOVERY:templateHost+"recovery.html",
     GOTRUE_SECURITY_CAPTCHA_ENABLED:"true",GOTRUE_SECURITY_CAPTCHA_PROVIDER:"turnstile",GOTRUE_SECURITY_CAPTCHA_SECRET:"1x0000000000000000000000000000000AA",
     GOTRUE_HOOK_BEFORE_USER_CREATED_ENABLED:"true",GOTRUE_HOOK_BEFORE_USER_CREATED_URI:"pg-functions://postgres/public/account_signup_hook",
@@ -129,7 +129,7 @@ try {
   console.log("Native verified signup, private cookie and direct CAPTCHA denial pass.");
   const project=await action(owner,"projects/actions","create",{name:"Disposable Site A",client:"Fictional client",location:"Lagos",contract_sum:"1000000",currency:"NGN",timezone:"Africa/Lagos"});
   const projectB=await action(other,"projects/actions","create",{name:"Disposable Site B",client:"Fictional client",location:"Kuwait",contract_sum:"1.123",currency:"KWD",timezone:"Asia/Kuwait"});
-  await page.goto(`${base}/projects/${project.id}`);await page.getByRole("heading",{name:"Site records",exact:true}).waitFor();
+  await page.goto(`${base}/projects/${project.id}`);await page.getByRole("heading",{name:"Disposable Site A",exact:true}).waitFor();
   const invitations=[];
   for(const [i,role,context] of [[2,"foreman",foreman],[3,"pm",pm]]){const invitation=await action(owner,"projects/actions","invite",{project_id:project.id,email:emails[i],role});invitations.push(invitation);const secret=new URL(invitation.url).hash.slice(8);
     await action(other,"projects/actions","accept_invite",{secret},404);
@@ -144,6 +144,7 @@ try {
   const cancelled=await action(owner,"projects/actions","invite",{project_id:project.id,email:emails[1],role:"foreman"});
   await action(owner,"projects/actions","cancel_invite",{project_id:project.id,invitation_id:cancelled.id});await action(other,"projects/actions","accept_invite",{secret:new URL(cancelled.url).hash.slice(8)},404);
   await page.goto(`${base}/projects/${project.id}/team`);await page.getByRole("heading",{name:"Active team",exact:true}).waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));await page.screenshot({path:join(out,"project-team-mobile.png"),fullPage:true});
+  await page.getByRole("navigation",{name:"Team sections"}).getByRole("link",{name:"Settings",exact:true}).click();await page.waitForURL(`${base}/projects/${project.id}/team?section=settings`);
   await page.getByRole("button",{name:"Archive project",exact:true}).click();
   const modal=page.getByRole("dialog");await modal.waitFor();assert.equal(await page.evaluate(()=>document.activeElement?.textContent),"Cancel");
   await page.keyboard.press("Tab");assert.ok(await page.evaluate(()=>Boolean(document.activeElement?.closest("dialog"))),"Focus stays in the modal");
@@ -210,7 +211,7 @@ try {
   await page.goto(`${base}/projects/${project.id}/boq`);await page.getByRole("button",{name:"Edit BLK-QA",exact:true}).click();assert.equal(await page.locator('select[name="unit"]').isDisabled(),true);
   await page.locator('[name="rate"]').fill("11800");await page.locator('[name="boq_quantity"]').fill("2");await page.getByRole("button",{name:"Review and save",exact:true}).click();await page.getByRole("dialog").getByRole("button",{name:"Save BoQ item",exact:true}).click();await page.getByRole("status").filter({hasText:"BoQ item saved"}).waitFor();
   assert.equal(sql(`select content_snapshot::text from public.reports where submission_id='${noteId}';`),original);assert.deepEqual(await (await pm.request.get(`${base}/api/reports/${noteId}/pdf`)).body(),await pdf.body(),"Locked PDF keeps original prices after BoQ edits");
-  for(const width of [390,768,1440]){await page.setViewportSize({width,height:900});await page.goto(`${base}/projects/${project.id}`);await page.locator('[data-earned]').waitFor();assert.ok((await page.locator('[data-earned]').innerText()).includes("₦261,000"));assert.equal(await page.locator('[data-variance]').innerText(),"1");assert.ok((await page.locator(`[data-boq-row="${boq}"]`).innerText()).includes("900%"));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:join(out,`dashboard-${width}.png`),fullPage:true});}
+  for(const width of [390,768,1440]){await page.setViewportSize({width,height:900});await page.goto(`${base}/projects/${project.id}?view=progress`);await page.locator('[data-earned]').waitFor();assert.ok((await page.locator('[data-earned]').innerText()).includes("₦261,000"));assert.equal(await page.locator('[data-variance]').innerText(),"1");assert.ok((await page.locator(`[data-boq-row="${boq}"]`).innerText()).includes("900%"));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:join(out,`dashboard-${width}.png`),fullPage:true});}
   await page.setViewportSize({width:390,height:844});
   const foreignBoq=randomUUID();await action(foreman,"projects","boq",{project_id:projectB.id,item:{id:foreignBoq,revision:null,item_code:"DECIMAL-QA",section:"Fixture",description:"Supplied KWD decimal fixture",unit:"m2",boq_quantity:"1",rate:"0.123"}});
   await action(other,"projects","boq",{project_id:projectB.id,item:{id:boq,revision:null,item_code:"BLK-QA",section:"Fixture",description:"Forbidden reassignment",unit:"m2",boq_quantity:"1",rate:"0.123"}},404);
@@ -222,6 +223,9 @@ try {
   const foreignReport=await foreman.newPage();await foreignReport.goto(`${base}/reports/${foreignNote}`);await foreignReport.getByRole("heading",{name:"Approve this daily record"}).waitFor();assert.ok((await foreignReport.locator('.report-total').innerText()).includes("KWD 0.015"));await foreignReport.locator('form input[type="checkbox"]').check();await foreignReport.getByRole("button",{name:"Approve and lock report",exact:true}).click();await foreignReport.getByRole("dialog").getByRole("button",{name:"Approve and lock report",exact:true}).click();await foreignReport.locator('.report-stamp').waitFor();assert.equal((await foreman.request.get(`${base}/api/reports/${foreignNote}/pdf`)).status(),200);
   await foreignReport.goto(`${base}/projects/${projectB.id}`);await foreignReport.locator('[data-earned]').waitFor();assert.ok((await foreignReport.locator('[data-earned]').innerText()).includes("KWD 0.015"));assert.equal(sql(`select total_cost from public.reports where submission_id='${foreignNote}';`),"0.0151782");
   console.log("BoQ creation/cancellation, PM editing, foreman read-only, exact KWD costing/PDF and 390/768/1440px immutable dashboard figures pass.");
+  assert.equal(await reviewPage.locator('[name="note"]').count(),0,"Report keeps amendment entry in its own view");
+  await reviewPage.getByRole("link",{name:"Add an amendment",exact:true}).click();await reviewPage.waitForURL(`${base}/reports/${noteId}?view=amendment`);
+  assert.equal(await reviewPage.locator('.report-document').count(),0,"Amendment view focuses on the correction");
   await reviewPage.locator('[name="note"]').fill("A correction for dialog cancellation QA.");await reviewPage.getByRole("button",{name:"Save amendment",exact:true}).click();await reviewPage.getByRole("dialog").getByRole("button",{name:"Cancel",exact:true}).click();
   assert.equal(await reviewPage.locator('[name="note"]').inputValue(),"A correction for dialog cancellation QA.");assert.equal(sql(`select count(*) from public.amendments a join public.reports r on r.id=a.report_id where r.submission_id='${noteId}';`),"0");
   // Browser offline emulation tests the real IndexedDB queue and service worker.
@@ -231,12 +235,12 @@ try {
   for(const width of [390,768,1440]){await diary.setViewportSize({width,height:900});assert.ok(await diary.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await diary.screenshot({path:join(out,`today-empty-${width}.png`),fullPage:true});}await diary.setViewportSize({width:390,height:844});
   await diary.evaluate(()=>navigator.serviceWorker.ready);
   await eventually(()=>diary.evaluate(async()=>Boolean(await (await caches.open("siteledger-today-v1")).match("/today"))),"Offline public shell was not cached.");
-  await foreman.setOffline(true);await diary.locator('input[type="file"][accept^="audio/"]').setInputFiles({name:"qa.wav",mimeType:"audio/wav",buffer:audio});await diary.locator('input[type="file"][accept^="image/"]').setInputFiles({name:"synthetic.jpg",mimeType:"image/jpeg",buffer:photo});await diary.getByRole("button",{name:"Queue this site note",exact:true}).click();
+  await foreman.setOffline(true);await diary.locator('input[type="file"][accept^="audio/"]').setInputFiles({name:"qa.wav",mimeType:"audio/wav",buffer:audio});await diary.locator('input[type="file"][accept^="image/"]').setInputFiles({name:"synthetic.jpg",mimeType:"image/jpeg",buffer:photo});await diary.getByRole("button",{name:"Save offline",exact:true}).click();
   await diary.getByText("Queued — will send when data returns.",{exact:true}).waitFor();const queued=(await queuedNotes(diary))[0];assert.equal(queued.bytes.length,2);assert.equal(queued.project,project.id);
   await diary.screenshot({path:join(out,"offline-queue-mobile.png"),fullPage:true});await diary.reload();await diary.getByText("Queued — will send when data returns.",{exact:true}).waitFor();assert.deepEqual((await queuedNotes(diary))[0],queued);
   await foreman.setOffline(false);await eventually(async()=> (await queuedNotes(diary))[0]?.status==="sent","Offline note did not send on reconnect.");assert.equal(sql(`select count(*) from public.submissions where id='${queued.id}';`),"1");assert.equal((await queuedNotes(diary))[0].bytes.length,0);
   // A second pending note must survive membership removal without reassignment.
-  await foreman.setOffline(true);await diary.locator('input[type="file"][accept^="audio/"]').setInputFiles({name:"qa.wav",mimeType:"audio/wav",buffer:audio});await diary.locator('input[type="file"][accept^="image/"]').setInputFiles({name:"synthetic.jpg",mimeType:"image/jpeg",buffer:photo});await diary.getByRole("button",{name:"Queue this site note",exact:true}).click();
+  await foreman.setOffline(true);await diary.locator('input[type="file"][accept^="audio/"]').setInputFiles({name:"qa.wav",mimeType:"audio/wav",buffer:audio});await diary.locator('input[type="file"][accept^="image/"]').setInputFiles({name:"synthetic.jpg",mimeType:"image/jpeg",buffer:photo});await diary.getByRole("button",{name:"Save offline",exact:true}).click();
   await eventually(async()=> (await queuedNotes(diary)).filter(row=>row.status!=="sent").length===1,"Second queue was not saved.");const blocked=(await queuedNotes(diary)).find(row=>row.status!=="sent");
   await action(foreman,"account","profile",{name:"Foreman Updated",confirm_name:true});assert.equal(sql(`select content_snapshot::text from public.reports where submission_id='${noteId}';`),original);
   await action(foreman,"reports",`${noteId}/amendments`,{note:"QA correction",request_id:randomUUID()});
@@ -255,7 +259,11 @@ try {
   const telegram=await browser.newContext();const connected=(await action(telegram,"account","telegram",{init_data:signedTelegram(990001)})).account;
   assert.equal(connected.profile_id,accounts[0].profile_id);
   const direct=await browser.newContext(),directPage=await direct.newPage(),directProof=signedTelegram(990001);
-  await direct.route("https://telegram.org/js/telegram-web-app.js",route=>route.fulfill({contentType:"application/javascript",body:`window.Telegram={WebApp:{initData:${JSON.stringify(directProof)},ready(){},expand(){}}};`}));
+  await direct.route("https://telegram.org/js/telegram-web-app.js",route=>route.fulfill({contentType:"application/javascript",body:`window.Telegram={WebApp:{initData:new URLSearchParams(location.hash.slice(1)).get('tgWebAppData')??'',ready(){},expand(){}}};`}));
+  await directPage.goto(base+"/#tgWebAppData="+encodeURIComponent(directProof));
+  await directPage.waitForFunction(()=>Boolean(window.Telegram?.WebApp?.initData));
+  await directPage.locator('#content').getByRole("link",{name:"Sign in / Create account",exact:true}).click();await directPage.waitForURL(base+"/account");
+  await eventually(async()=>(await direct.cookies()).some(cookie=>cookie.name==="siteledger_session"),"Landing-page launch must retain signed Telegram identity for account access");
   await directPage.goto(`${base}/reports/${noteId}`);await directPage.locator(".report-document").waitFor();
   assert.ok((await direct.cookies()).some(cookie=>cookie.name==="siteledger_session"),"Linked Telegram record buttons authenticate a fresh Mini App session");
   await action(owner,"account","unlink_telegram",{});
@@ -267,7 +275,7 @@ try {
   await action(pm,"projects/actions","accept_transfer",{project_id:project.id,transfer_id:transfer.id});
   assert.equal(sql(`select owner_profile_id from public.account_projects where project_id='${project.id}';`),accounts[3].profile_id);
   const newBrowser=await browser.newContext();const login=(await action(newBrowser,"account","signin",{email:emails[3],password,captcha_token:captchaToken})).account;assert.equal(login.profile_id,accounts[3].profile_id);
-  const reopened=await newBrowser.newPage();await reopened.goto(`${base}/projects/${project.id}`);await reopened.getByRole("heading",{name:"Site records"}).waitFor();await reopened.screenshot({path:join(out,"project-history-mobile.png"),fullPage:true});
+  const reopened=await newBrowser.newPage();await reopened.goto(`${base}/projects/${project.id}?view=records`);await reopened.getByRole("heading",{name:"Site records"}).waitFor();await reopened.screenshot({path:join(out,"project-history-mobile.png"),fullPage:true});
   const mailStart=mail.length;await action(other,"account","recover",{email:emails[1],captcha_token:captchaToken});
   await action(other,"account","reset_password",{email:emails[1],token:await codeFor(emails[1],mailStart),password:"changed-native-qa-password"});
   await action(other,"account","signin",{email:emails[1],password,captcha_token:captchaToken},400);
@@ -283,11 +291,63 @@ try {
   for (const [context,path,name] of [[owner,"/account","account"],[owner,"/projects","projects"],[pm,`/projects/${project.id}/team`,"team"],[pm,`/reports/${noteId}`,"report"]]) {
     const desktop=await context.newPage();await desktop.setViewportSize({width:1440,height:1000});await desktop.goto(base+path);await desktop.locator("main").waitFor();await desktop.evaluate(()=>document.fonts.ready);
     assert.ok(await desktop.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${name} desktop layout overflows`);
-    if(name==="account"||name==="projects")await desktop.locator(name==="account"?".account-columns":".project-columns").waitFor();
+    if(name==="account")await desktop.locator(".account-ready").waitFor();
+    if(name==="projects")await desktop.getByRole("heading",{name:"Your authorized projects",exact:true}).waitFor();
     if(name==="team")await desktop.getByRole("heading",{name:"Active team",exact:true}).waitFor();
     if(name==="report")await desktop.locator(".report-stamp").waitFor();
     await desktop.screenshot({path:join(out,`${name}-desktop.png`),fullPage:true});await desktop.close();
   }
+  // Focused views expose one task at a time. Query navigation must retain Back.
+  const workPage=await owner.newPage();await workPage.goto(base+"/account");
+  assert.equal(await workPage.locator('input[name="name"]').count(),0,"Overview does not expose profile editing");
+  await workPage.getByRole("navigation",{name:"Account sections"}).getByRole("link",{name:"Profile",exact:true}).click();
+  await workPage.waitForURL(base+"/account?section=profile");await workPage.locator('input[name="name"]').waitFor();
+  await workPage.getByRole("button",{name:"Back",exact:true}).click();await workPage.waitForURL(base+"/account");
+  const currentSession=(await owner.cookies()).find(cookie=>cookie.name==="siteledger_session").value;
+  await workPage.getByRole("button",{name:"Sign out",exact:true}).click();await workPage.getByRole("dialog").getByRole("button",{name:"Cancel",exact:true}).click();
+  assert.equal((await owner.cookies()).find(cookie=>cookie.name==="siteledger_session").value,currentSession,"Cancelling signout preserves the session");
+  await workPage.getByRole("navigation",{name:"Account sections"}).getByRole("link",{name:"Email",exact:true}).click();await workPage.getByRole("heading",{name:"Email & password",exact:true}).waitFor();
+  assert.equal(await workPage.locator('[name="name"]').count(),0,"Email settings do not include profile editing");
+  assert.equal(await workPage.getByRole("link",{name:"Reset your password",exact:true}).count(),1);
+  await workPage.getByText("Confirm current password",{exact:true}).click();await workPage.locator('[name="password"]').fill(password);
+  await eventually(()=>workPage.getByRole("button",{name:"Confirm password",exact:true}).isEnabled(),"Settings password confirmation needs a fresh CAPTCHA token");
+  await workPage.getByRole("button",{name:"Confirm password",exact:true}).click();await workPage.getByRole("status").filter({hasText:"Password confirmed. Return to the action"}).waitFor();
+  for(const width of [390,768,1440]){await workPage.setViewportSize({width,height:900});for(const section of ["overview","profile","email","telegram"]){await workPage.goto(base+"/account"+(section==="overview"?"":`?section=${section}`));await workPage.locator('.settings-layout').waitFor();assert.ok(await workPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${section} settings overflow at ${width}`);await workPage.screenshot({path:join(out,`account-${section}-${width}.png`),fullPage:true});}}
+  await workPage.setViewportSize({width:390,height:844});
+  await workPage.goto(base+"/");const landingProjects=workPage.locator('#content').getByRole("link",{name:"Open your projects",exact:true});await landingProjects.waitFor();assert.equal(await landingProjects.getAttribute("href"),"/projects");
+  await landingProjects.click();await workPage.waitForURL(base+"/projects");
+  await action(owner,"projects/actions","select",{project_id:project.id});
+  await workPage.goto(`${base}/projects/${project.id}`);
+  assert.equal(await workPage.locator(".record-list").count(),0,"Overview keeps detailed records in their own view");
+  assert.equal(await workPage.locator(".ledger-table").count(),0,"Overview keeps detailed progress in its own view");
+  await workPage.getByRole("navigation",{name:"Project sections"}).getByRole("link",{name:"Site records",exact:true}).click();
+  await workPage.waitForURL(`${base}/projects/${project.id}?view=records`);await workPage.locator(".record-list").waitFor();
+  // Actual private photo-only upload: no audio/job/transcript is invented.
+  await workPage.goto(base+"/today");await eventually(()=>workPage.getByRole("button",{name:"Record voice note",exact:true}).isEnabled(),"Photo-only diary must finish opening");assert.equal(await workPage.getByRole("button",{name:"Save site note",exact:true}).isDisabled(),true,"Empty capture must be disabled");
+  await workPage.locator('input[type="file"][accept^="image/"]').setInputFiles({name:"synthetic-photo-only.jpg",mimeType:"image/jpeg",buffer:photo});
+  await eventually(()=>workPage.getByRole("button",{name:"Save site note",exact:true}).isEnabled(),"Photo preparation must finish before saving");
+  await workPage.getByRole("navigation",{name:"Mobile workspace navigation"}).getByRole("link",{name:"Projects",exact:true}).click();await workPage.getByRole("dialog").getByRole("button",{name:"Cancel",exact:true}).click();
+  assert.equal(workPage.url(),base+"/today","Cancelling navigation preserves the attachment");assert.equal(await workPage.getByRole("button",{name:"Remove photo 1",exact:true}).count(),1);
+  await workPage.getByRole("button",{name:"Save site note",exact:true}).click();
+  const receipt=workPage.getByRole("region",{name:"Saved note next step"});try{await receipt.waitFor();}catch(error){await workPage.screenshot({path:join(out,"photo-only-save-failure.png"),fullPage:true});console.log("Photo-only capture state:",await workPage.locator('main').innerText(),"Queue:",await queuedNotes(workPage));throw error;}
+  const reviewLink=receipt.getByRole("link",{name:"Review site note",exact:true});await reviewLink.waitFor();
+  assert.equal(await workPage.getByRole("region",{name:"New site note"}).count(),0,"Saved receipt replaces the capture form");
+  const photoOnlyId=(await reviewLink.getAttribute("href")).split("/").pop();await reviewLink.click();
+  await workPage.getByRole("button",{name:"Add work item",exact:true}).waitFor();
+  assert.equal(sql(`select (audio_url is null and transcript is null)::text from public.submissions where id='${photoOnlyId}';`),"true");
+  await workPage.getByRole("button",{name:"Add work item",exact:true}).click();
+  await workPage.locator('[name="w0.description"]').fill("Blockwork checked by human");await workPage.locator('[name="w0.quantity"]').fill("1");
+  await workPage.locator('[name="w0.boq"]').selectOption(boq);await workPage.locator('[name="w0.crew"]').fill("1");
+  await workPage.getByRole("button",{name:"Confirm and cost it",exact:true}).click();await workPage.waitForURL(`${base}/reports/${photoOnlyId}`);
+  // The QA PM supplied 11,800 above to check immutable historical prices.
+  assert.equal(Number(sql(`select total_cost::text from public.reports where submission_id='${photoOnlyId}';`)),11800);
+  // Actual voice-only upload follows the same private receipt and review path.
+  await workPage.goto(base+"/today");await eventually(()=>workPage.getByRole("button",{name:"Record voice note",exact:true}).isEnabled(),"Voice-only diary must finish opening");await workPage.locator('input[type="file"][accept^="audio/"]').setInputFiles({name:"voice-only.wav",mimeType:"audio/wav",buffer:audio});
+  await workPage.getByRole("button",{name:"Save site note",exact:true}).click();await receipt.getByRole("link",{name:"Review site note",exact:true}).waitFor();
+  const voiceOnlyId=(await receipt.getByRole("link",{name:"Review site note",exact:true}).getAttribute("href")).split("/").pop();
+  assert.equal(sql(`select count(*) from public.submission_photos where submission_id='${voiceOnlyId}';`),"0");
+  assert.equal(sql(`select (audio_url is not null)::text from public.submissions where id='${voiceOnlyId}';`),"true");
+  console.log("Focused account/project views, query Back, photo-only human costing, voice-only upload and clear saved-note review receipts pass.");
   // Task 10B uses the real local account service and server routes. Only the
   // browser widget + exact server Siteverify transport are disposable fixtures.
   const guest=await browser.newContext({viewport:{width:390,height:844}}),trialPage=await guest.newPage();
@@ -308,6 +368,7 @@ try {
   assert.equal((await guest.request.get(`${base}/api/reports/${trialNote}/pdf`)).status(),404,"Guest cannot export a client PDF");
   await action(guest,"reports",`${trialNote}/approve`,{document_version:"a".repeat(64)},401);
   await trialPage.getByRole("button",{name:"Add work item",exact:true}).click();
+  await trialPage.getByText("AI extraction details",{exact:true}).click();
   for(const [field,value] of [["description","Guest checked blockwork"],["quantity","18"],["crew","6"],["confidence","1"]])await trialPage.locator(`[name="w0.${field}"]`).fill(value);
   await trialPage.locator('[name="w0.unit"]').fill("m2");await trialPage.locator('[name="w0.boq"]').selectOption(trialBid);
   await trialPage.locator('textarea[name^="photo."]').fill("Human guest observation, retained after handover.");

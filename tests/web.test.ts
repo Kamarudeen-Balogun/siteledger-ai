@@ -5,6 +5,7 @@ import { POST as capturePOST } from "../app/api/web/access/route";
 import { captureAccess,verifyCaptureAccess } from "../lib/web/access";
 import { reserveWeb,uploadWeb,finishWeb,type WebDependencies } from "../lib/web/api";
 import { validManifest,validMedia,MAX_WEB_AUDIO,type WebManifest } from "../lib/web/types";
+import { describeFiles } from "../lib/web/files";
 const project="10000000-0000-4000-8000-000000000001",id="7a000000-0000-4000-8000-000000000001";
 const voice=Buffer.from("RIFF1234WAVEvoice"),photo=Buffer.from([255,216,255,...Array(20).fill(0)]);
 const digest=(bytes:Uint8Array)=>createHash("sha256").update(bytes).digest("hex");
@@ -12,6 +13,15 @@ const context={project_id:project,project_name:"Disposable QA",actor_id:7700001,
 const manifest:WebManifest={id,project_id:project,captured_at:new Date().toISOString(),timezone:"Africa/Lagos",assets:[
   {index:0,content_type:"audio/wav",bytes:voice.length,sha256:digest(voice)},
   {index:1,content_type:"image/jpeg",bytes:photo.length,sha256:digest(photo)}]};
+test("browser file preparation preserves JPEG at index zero for a photo-only save",async()=>{
+  const image=new Blob([photo],{type:"image/jpeg"}),audio=new Blob([voice],{type:"audio/wav"});
+  for(const files of [[image],[image,image],[audio],[audio,image]]){
+    const assets=await describeFiles(files);
+    assert.ok(validManifest({...manifest,assets}),"Prepared attachments must be accepted by capture validation");
+    assert.deepEqual(assets.map(asset=>asset.content_type),files.map(file=>file.type));
+    assert.deepEqual(assets.map(asset=>asset.sha256),await Promise.all(files.map(async file=>digest(new Uint8Array(await file.arrayBuffer())))));
+  }
+});
 const secret="local-web-qa",origin="https://siteledger.example";
 const request=(path:string,body?:string|Buffer,token="a".repeat(43),type="application/json")=>new Request(origin+path,{method:body instanceof Buffer?"PUT":"POST",
   headers:{Origin:origin,Cookie:"siteledger_session="+token,"Content-Type":type},body:typeof body==="string"?body:body?new Uint8Array(body):undefined});
@@ -38,6 +48,16 @@ test("manifest rejects prices, wrong project shape, too many photos, oversized m
     {...manifest,assets:[{...manifest.assets[0],content_type:"text/html"},manifest.assets[1]]},
     {...manifest,assets:[manifest.assets[0],{...manifest.assets[1],index:5}]}])assert.equal(validManifest(changed),false);
   assert.ok(validMedia(voice,"audio/wav"));assert.equal(validMedia(voice,"image/jpeg"),false);
+});
+test("regular notes accept voice-only, photos-only or both, but never empty or mixed audio after photos",()=>{
+  assert.ok(validManifest({...manifest,assets:[manifest.assets[0]]}));
+  const image={...manifest.assets[1],index:0};
+  assert.ok(validManifest({...manifest,assets:[image]}));
+  assert.ok(validManifest({...manifest,assets:Array.from({length:5},(_,index)=>({...image,index}))}));
+  assert.equal(validManifest({...manifest,assets:[]}),false);
+  assert.equal(validManifest({...manifest,assets:[image]},true),false,"Bounded private trial still requires voice");
+  assert.equal(validManifest({...manifest,assets:[image,{...manifest.assets[0],index:1}]}),false);
+  assert.equal(validManifest({...manifest,assets:Array.from({length:6},(_,index)=>({...image,index}))}),false);
 });
 test("unauthorized, altered and foreign-project reservations cannot reach storage",async()=>configured(async()=>{
   let calls=0;const dependency=deps(()=>{calls++;return {id,status:"pending",missing:[0,1]};});

@@ -1,0 +1,551 @@
+{
+  "report": {
+    "id": "40000000-0000-4000-8000-000000000004",
+    "status": "locked",
+    "approved_by": "Engr. Tola Adeyemi (demo PM)",
+    "locked_at": "2026-11-06T17:30:00+00:00",
+    "stale": false,
+    "document": {
+      "source": {
+        "date": "2026-11-06",
+        "items": [
+          {
+            "crew": 4,
+            "unit": "m3",
+            "confidence": "1.000",
+            "boq_item_id": "20000000-0000-4000-8000-000000000001",
+            "description": "Excavation, foundation trenches",
+            "confirmed_by": "Engr. Tola Adeyemi (demo PM)",
+            "quantity_done": "27.0000"
+          },
+          {
+            "crew": 6,
+            "unit": "m2",
+            "confidence": "1.000",
+            "boq_item_id": "20000000-0000-4000-8000-000000000007",
+            "description": "Blockwork — Internal partitions",
+            "confirmed_by": "Engr. Tola Adeyemi (demo PM)",
+            "quantity_done": "6.0000"
+          },
+          {
+            "crew": 6,
+            "unit": "m3",
+            "confidence": "1.000",
+            "boq_item_id": "20000000-0000-4000-8000-000000000004",
+            "description": "In-situ concrete, columns and beams",
+            "confirmed_by": "Engr. Tola Adeyemi (demo PM)",
+            "quantity_done": "0.5000"
+          },
+          {
+            "crew": 4,
+            "unit": "m3",
+            "confidence": "1.000",
+            "boq_item_id": "20000000-0000-4000-8000-000000000002",
+            "description": "Hardcore filling, compacted",
+            "confirmed_by": "Engr. Tola Adeyemi (demo PM)",
+            "quantity_done": "15.0000"
+          },
+          {
+            "crew": 6,
+            "unit": "tonne",
+            "confidence": "1.000",
+            "boq_item_id": "20000000-0000-4000-8000-000000000005",
+            "description": "Reinforcement, high-yield bars, cut and fixed",
+            "confirmed_by": "Engr. Tola Adeyemi (demo PM)",
+            "quantity_done": "0.1000"
+          },
+          {
+            "crew": 4,
+            "unit": "m2",
+            "confidence": "1.000",
+            "boq_item_id": "20000000-0000-4000-8000-000000000003",
+            "description": "Oversite concrete (German floor), 150mm",
+            "confirmed_by": "Engr. Tola Adeyemi (demo PM)",
+            "quantity_done": "25.0000"
+          },
+          {
+            "crew": 6,
+            "unit": "m2",
+            "confidence": "1.000",
+            "boq_item_id": "20000000-0000-4000-8000-000000000006",
+            "description": "Blockwork — East elevation",
+            "confirmed_by": "Engr. Tola Adeyemi (demo PM)",
+            "quantity_done": "10.0000"
+          }
+        ],
+        "delays": [
+          {
+            "hours": 2,
+            "reason": "Rain stopped external work",
+            "confidence": 1
+          }
+        ],
+        "issues": [],
+        "photos": [],
+        "status": "locked",
+        "project": {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "4-Bedroom Duplex, Lekki Phase 1, Lagos",
+          "client": "Adebayo Family (fictional demo client)",
+          "is_demo": true,
+          "location": "Lekki Phase 1, Lagos, Nigeria"
+        },
+        "materials": [],
+        "price_list": [
+          {
+            "id": "20000000-0000-4000-8000-000000000006",
+            "rate": "14500.00",
+            "unit": "m2",
+            "section": "Blockwork",
+            "item_code": "BLK-01",
+            "description": "Sandcrete blocks 225mm hollow, laid",
+            "boq_quantity": "420.0000",
+            "cumulative_locked_quantity": "36.0000"
+          },
+          {
+            "id": "20000000-0000-4000-8000-000000000007",
+            "rate": "11800.00",
+            "unit": "m2",
+            "section": "Blockwork",
+            "item_code": "BLK-02",
+            "description": "Sandcrete blocks 150mm hollow, laid",
+            "boq_quantity": "240.0000",
+            "cumulative_locked_quantity": "22.0000"
+          },
+          {
+            "id": "20000000-0000-4000-8000-000000000004",
+            "rate": "145000.00",
+            "unit": "m3",
+            "section": "Concrete",
+            "item_code": "CON-01",
+            "description": "In-situ concrete, columns and beams",
+            "boq_quantity": "35.0000",
+            "cumulative_locked_quantity": "3.5000"
+          },
+          {
+            "id": "20000000-0000-4000-8000-000000000005",
+            "rate": "1450000.00",
+            "unit": "tonne",
+            "section": "Concrete",
+            "item_code": "CON-02",
+            "description": "Reinforcement, high-yield bars, cut and fixed",
+            "boq_quantity": "4.5000",
+            "cumulative_locked_quantity": "0.3500"
+          },
+          {
+            "id": "20000000-0000-4000-8000-000000000010",
+            "rate": "4800.00",
+            "unit": "m2",
+            "section": "Finishes",
+            "item_code": "FIN-01",
+            "description": "Plastering, walls, 12mm",
+            "boq_quantity": "1100.0000",
+            "cumulative_locked_quantity": "0"
+          },
+          {
+            "id": "20000000-0000-4000-8000-000000000011",
+            "rate": "5500.00",
+            "unit": "m2",
+            "section": "Finishes",
+            "item_code": "FIN-02",
+            "description": "Screeding, floors",
+            "boq_quantity": "300.0000",
+            "cumulative_locked_quantity": "0"
+          },
+          {
+            "id": "20000000-0000-4000-8000-000000000012",
+            "rate": "16000.00",
+            "unit": "m2",
+            "section": "Finishes",
+            "item_code": "FIN-03",
+            "description": "Ceramic floor tiles, supplied and laid",
+            "boq_quantity": "280.0000",
+            "cumulative_locked_quantity": "0"
+          },
+          {
+            "id": "20000000-0000-4000-8000-000000000015",
+            "rate": "12000.00",
+            "unit": "day",
+            "section": "Labour (daywork)",
+            "item_code": "LAB-01",
+            "description": "Mason, per day",
+            "boq_quantity": "40.0000",
+            "cumulative_locked_quantity": "0"
+          },
+          {
+            "id": "20000000-0000-4000-8000-000000000016",
+            "rate": "6000.00",
+            "unit": "day",
+            "section": "Labour (daywork)",
+            "item_code": "LAB-02",
+            "description": "Labourer, per day",
+            "boq_quantity": "80.0000",
+            "cumulative_locked_quantity": "0"
+          },
+          {
+            "id": "20000000-0000-4000-8000-000000000008",
+            "rate": "28000.00",
+            "unit": "m2",
+            "section": "Roofing",
+            "item_code": "ROF-01",
+            "description": "Timber roof structure, treated",
+            "boq_quantity": "180.0000",
+            "cumulative_locked_quantity": "0"
+          },
+          {
+            "id": "20000000-0000-4000-8000-000000000009",
+            "rate": "19500.00",
+            "unit": "m2",
+            "section": "Roofing",
+            "item_code": "ROF-02",
+            "description": "Aluminium roofing sheets, long span",
+            "boq_quantity": "180.0000",
+            "cumulative_locked_quantity": "0"
+          },
+          {
+            "id": "20000000-0000-4000-8000-000000000013",
+            "rate": "35000.00",
+            "unit": "point",
+            "section": "Services",
+            "item_code": "SER-01",
+            "description": "Electrical first fix, conduit and wiring",
+            "boq_quantity": "75.0000",
+            "cumulative_locked_quantity": "0"
+          },
+          {
+            "id": "20000000-0000-4000-8000-000000000014",
+            "rate": "42000.00",
+            "unit": "point",
+            "section": "Services",
+            "item_code": "SER-02",
+            "description": "Plumbing first fix",
+            "boq_quantity": "48.0000",
+            "cumulative_locked_quantity": "0"
+          },
+          {
+            "id": "20000000-0000-4000-8000-000000000001",
+            "rate": "8500.00",
+            "unit": "m3",
+            "section": "Substructure",
+            "item_code": "SUB-01",
+            "description": "Excavation, foundation trenches",
+            "boq_quantity": "110.0000",
+            "cumulative_locked_quantity": "85.0000"
+          },
+          {
+            "id": "20000000-0000-4000-8000-000000000002",
+            "rate": "18000.00",
+            "unit": "m3",
+            "section": "Substructure",
+            "item_code": "SUB-02",
+            "description": "Hardcore filling, compacted",
+            "boq_quantity": "70.0000",
+            "cumulative_locked_quantity": "55.0000"
+          },
+          {
+            "id": "20000000-0000-4000-8000-000000000003",
+            "rate": "22500.00",
+            "unit": "m2",
+            "section": "Substructure",
+            "item_code": "SUB-03",
+            "description": "Oversite concrete (German floor), 150mm",
+            "boq_quantity": "180.0000",
+            "cumulative_locked_quantity": "105.0000"
+          }
+        ],
+        "processing": false,
+        "confirmed_at": null,
+        "confirmed_by": null,
+        "submitted_by": "Musa Bello (demo foreman)",
+        "pending_media": false,
+        "submission_id": "30000000-0000-4000-8000-000000000004"
+      },
+      "costing": {
+        "items": [
+          {
+            "boq_item_id": "20000000-0000-4000-8000-000000000001",
+            "quantity_done": "27",
+            "unit": "m3",
+            "crew": 4,
+            "confirmed_by": "Engr. Tola Adeyemi (demo PM)",
+            "rate": "8500",
+            "cost_today": "229500",
+            "cumulative_quantity": "112",
+            "percentage_complete": "101.818181818181818181818181818182",
+            "value_earned": "952000",
+            "planned_percentage": null,
+            "variance_percentage_points": null,
+            "is_overrun": true,
+            "is_behind_plan": false,
+            "variance_color": "red",
+            "productivity": "6.75"
+          },
+          {
+            "boq_item_id": "20000000-0000-4000-8000-000000000007",
+            "quantity_done": "6",
+            "unit": "m2",
+            "crew": 6,
+            "confirmed_by": "Engr. Tola Adeyemi (demo PM)",
+            "rate": "11800",
+            "cost_today": "70800",
+            "cumulative_quantity": "28",
+            "percentage_complete": "11.666666666666666666666666666667",
+            "value_earned": "330400",
+            "planned_percentage": null,
+            "variance_percentage_points": null,
+            "is_overrun": false,
+            "is_behind_plan": false,
+            "variance_color": null,
+            "productivity": "1"
+          },
+          {
+            "boq_item_id": "20000000-0000-4000-8000-000000000004",
+            "quantity_done": "0.5",
+            "unit": "m3",
+            "crew": 6,
+            "confirmed_by": "Engr. Tola Adeyemi (demo PM)",
+            "rate": "145000",
+            "cost_today": "72500",
+            "cumulative_quantity": "4",
+            "percentage_complete": "11.428571428571428571428571428571",
+            "value_earned": "580000",
+            "planned_percentage": null,
+            "variance_percentage_points": null,
+            "is_overrun": false,
+            "is_behind_plan": false,
+            "variance_color": null,
+            "productivity": "0.083333333333333333333333333333"
+          },
+          {
+            "boq_item_id": "20000000-0000-4000-8000-000000000002",
+            "quantity_done": "15",
+            "unit": "m3",
+            "crew": 4,
+            "confirmed_by": "Engr. Tola Adeyemi (demo PM)",
+            "rate": "18000",
+            "cost_today": "270000",
+            "cumulative_quantity": "70",
+            "percentage_complete": "100",
+            "value_earned": "1260000",
+            "planned_percentage": null,
+            "variance_percentage_points": null,
+            "is_overrun": false,
+            "is_behind_plan": false,
+            "variance_color": null,
+            "productivity": "3.75"
+          },
+          {
+            "boq_item_id": "20000000-0000-4000-8000-000000000005",
+            "quantity_done": "0.1",
+            "unit": "tonne",
+            "crew": 6,
+            "confirmed_by": "Engr. Tola Adeyemi (demo PM)",
+            "rate": "1450000",
+            "cost_today": "145000",
+            "cumulative_quantity": "0.45",
+            "percentage_complete": "10",
+            "value_earned": "652500",
+            "planned_percentage": null,
+            "variance_percentage_points": null,
+            "is_overrun": false,
+            "is_behind_plan": false,
+            "variance_color": null,
+            "productivity": "0.016666666666666666666666666667"
+          },
+          {
+            "boq_item_id": "20000000-0000-4000-8000-000000000003",
+            "quantity_done": "25",
+            "unit": "m2",
+            "crew": 4,
+            "confirmed_by": "Engr. Tola Adeyemi (demo PM)",
+            "rate": "22500",
+            "cost_today": "562500",
+            "cumulative_quantity": "130",
+            "percentage_complete": "72.222222222222222222222222222222",
+            "value_earned": "2925000",
+            "planned_percentage": null,
+            "variance_percentage_points": null,
+            "is_overrun": false,
+            "is_behind_plan": false,
+            "variance_color": null,
+            "productivity": "6.25"
+          },
+          {
+            "boq_item_id": "20000000-0000-4000-8000-000000000006",
+            "quantity_done": "10",
+            "unit": "m2",
+            "crew": 6,
+            "confirmed_by": "Engr. Tola Adeyemi (demo PM)",
+            "rate": "14500",
+            "cost_today": "145000",
+            "cumulative_quantity": "46",
+            "percentage_complete": "10.952380952380952380952380952381",
+            "value_earned": "667000",
+            "planned_percentage": null,
+            "variance_percentage_points": null,
+            "is_overrun": false,
+            "is_behind_plan": false,
+            "variance_color": null,
+            "productivity": "1.666666666666666666666666666667"
+          }
+        ],
+        "total_cost": "1495300"
+      },
+      "firm_name": "Perkins Limited",
+      "currency": "NGN",
+      "weather": "Rain, external work stopped for 2 hrs"
+    }
+  },
+  "log": {
+    "entries": [
+      {
+        "id": "40000000-0000-4000-8000-000000000001",
+        "date": "2026-11-03",
+        "kind": "report",
+        "author": "Engr. Tola Adeyemi (demo PM)",
+        "currency": "NGN",
+        "report_id": "40000000-0000-4000-8000-000000000001",
+        "timestamp": "2026-11-03T17:30:00+00:00",
+        "total_cost": "1795800.000000",
+        "submission_id": "30000000-0000-4000-8000-000000000001"
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000002",
+        "date": "2026-11-04",
+        "kind": "report",
+        "author": "Engr. Tola Adeyemi (demo PM)",
+        "currency": "NGN",
+        "report_id": "40000000-0000-4000-8000-000000000002",
+        "timestamp": "2026-11-04T17:30:00+00:00",
+        "total_cost": "2088900.000000",
+        "submission_id": "30000000-0000-4000-8000-000000000002"
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000003",
+        "date": "2026-11-05",
+        "kind": "report",
+        "author": "Engr. Tola Adeyemi (demo PM)",
+        "currency": "NGN",
+        "report_id": "40000000-0000-4000-8000-000000000003",
+        "timestamp": "2026-11-05T17:30:00+00:00",
+        "total_cost": "1986900.000000",
+        "submission_id": "30000000-0000-4000-8000-000000000003"
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000004",
+        "date": "2026-11-06",
+        "kind": "report",
+        "author": "Engr. Tola Adeyemi (demo PM)",
+        "currency": "NGN",
+        "report_id": "40000000-0000-4000-8000-000000000004",
+        "timestamp": "2026-11-06T17:30:00+00:00",
+        "total_cost": "1495300.000000",
+        "submission_id": "30000000-0000-4000-8000-000000000004",
+        "href": "/reports/demo"
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000005",
+        "date": "2026-11-07",
+        "kind": "report",
+        "author": "Engr. Tola Adeyemi (demo PM)",
+        "currency": "NGN",
+        "report_id": "40000000-0000-4000-8000-000000000005",
+        "timestamp": "2026-11-07T17:30:00+00:00",
+        "total_cost": "1478000.000000",
+        "submission_id": "30000000-0000-4000-8000-000000000005"
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000006",
+        "date": "2026-11-09",
+        "kind": "report",
+        "author": "Engr. Tola Adeyemi (demo PM)",
+        "currency": "NGN",
+        "report_id": "40000000-0000-4000-8000-000000000006",
+        "timestamp": "2026-11-09T17:30:00+00:00",
+        "total_cost": "984800.000000",
+        "submission_id": "30000000-0000-4000-8000-000000000006"
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000007",
+        "date": "2026-11-10",
+        "kind": "report",
+        "author": "Engr. Tola Adeyemi (demo PM)",
+        "currency": "NGN",
+        "report_id": "40000000-0000-4000-8000-000000000007",
+        "timestamp": "2026-11-10T17:30:00+00:00",
+        "total_cost": "659900.000000",
+        "submission_id": "30000000-0000-4000-8000-000000000007"
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000008",
+        "date": "2026-11-11",
+        "kind": "report",
+        "author": "Engr. Tola Adeyemi (demo PM)",
+        "currency": "NGN",
+        "report_id": "40000000-0000-4000-8000-000000000008",
+        "timestamp": "2026-11-11T17:30:00+00:00",
+        "total_cost": "790400.000000",
+        "submission_id": "30000000-0000-4000-8000-000000000008"
+      },
+      {
+        "id": "60000000-0000-4000-8000-000000000001",
+        "date": "2026-11-11",
+        "kind": "amendment",
+        "note": "Demo follow-up: column C3 inspected on 12 November. Local honeycombing repair completed and reviewed; the original observation remains in the locked record.",
+        "author": "Engr. Tola Adeyemi (demo PM)",
+        "report_id": "40000000-0000-4000-8000-000000000008",
+        "timestamp": "2026-11-12T14:40:00+00:00",
+        "submission_id": "30000000-0000-4000-8000-000000000008"
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000009",
+        "date": "2026-11-12",
+        "kind": "report",
+        "author": "Engr. Tola Adeyemi (demo PM)",
+        "currency": "NGN",
+        "report_id": "40000000-0000-4000-8000-000000000009",
+        "timestamp": "2026-11-12T17:30:00+00:00",
+        "total_cost": "563800.000000",
+        "submission_id": "30000000-0000-4000-8000-000000000009"
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000010",
+        "date": "2026-11-13",
+        "kind": "report",
+        "author": "Engr. Tola Adeyemi (demo PM)",
+        "currency": "NGN",
+        "report_id": "40000000-0000-4000-8000-000000000010",
+        "timestamp": "2026-11-13T17:30:00+00:00",
+        "total_cost": "833900.000000",
+        "submission_id": "30000000-0000-4000-8000-000000000010"
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000011",
+        "date": "2026-11-14",
+        "kind": "report",
+        "author": "Engr. Tola Adeyemi (demo PM)",
+        "currency": "NGN",
+        "report_id": "40000000-0000-4000-8000-000000000011",
+        "timestamp": "2026-11-14T17:30:00+00:00",
+        "total_cost": "703800.000000",
+        "submission_id": "30000000-0000-4000-8000-000000000011"
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000012",
+        "date": "2026-11-16",
+        "kind": "report",
+        "author": "Engr. Tola Adeyemi (demo PM)",
+        "currency": "NGN",
+        "report_id": "40000000-0000-4000-8000-000000000012",
+        "timestamp": "2026-11-16T17:30:00+00:00",
+        "total_cost": "979300.000000",
+        "submission_id": "30000000-0000-4000-8000-000000000012"
+      }
+    ],
+    "is_demo": true,
+    "project": {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "name": "4-Bedroom Duplex, Lekki Phase 1, Lagos"
+    }
+  }
+}
