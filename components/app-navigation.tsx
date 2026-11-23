@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
 import Script from "next/script";
-import { usePathname, useRouter } from "next/navigation";
-import { createContext, Suspense, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { createContext, Suspense, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { isWorkspacePath, navigationFallback } from "@/lib/navigation/routes";
+import { useActionConfirmation } from "./action-confirmation";
 
 type TelegramApp = { initData: string; ready: () => void; expand: () => void;
   BackButton: { show: () => void; hide: () => void; onClick: (callback: () => void) => void; offClick: (callback: () => void) => void } };
@@ -15,25 +16,26 @@ function recordedDepth(state: unknown) {
 }
 
 function PathChanges({ changed }: { changed: (path: string) => void }) {
-  const pathname = usePathname();
-  useEffect(() => changed(pathname), [pathname, changed]);
+  const pathname = usePathname(), query = useSearchParams().toString();
+  useEffect(() => changed(pathname + (query ? `?${query}` : "")), [pathname, query, changed]);
   return null;
 }
 
 export function AppNavigation({ children }: { children: ReactNode }) {
   const router = useRouter(), depth = useRef(0), lastPath = useRef<string | null>(null);
+  const { confirm, confirmation } = useActionConfirmation();
   const [pathname, setPathname] = useState("/");
   const [canBack, setCanBack] = useState(false), [telegram, setTelegram] = useState<TelegramApp | null>(null);
   useEffect(() => {
     function popped(event: PopStateEvent) {
-      depth.current = recordedDepth(event.state); lastPath.current = window.location.pathname;
+      depth.current = recordedDepth(event.state); lastPath.current = window.location.pathname + window.location.search;
       setCanBack(depth.current > 0);
     }
     window.addEventListener("popstate", popped);
     return () => window.removeEventListener("popstate", popped);
   }, []);
   const changed = useCallback((path: string) => {
-    setPathname(path);
+    setPathname(path.split("?")[0]);
     if (lastPath.current === path) return;
     if (lastPath.current === null) {
       depth.current = recordedDepth(window.history.state);
@@ -50,10 +52,27 @@ export function AppNavigation({ children }: { children: ReactNode }) {
     window.history.replaceState({ ...state, [marker]: { depth: depth.current } }, "");
     setCanBack(depth.current > 0);
   }, []);
-  const back = useCallback(() => {
+  const canLeave = useCallback(async () => !document.querySelector('[data-unsaved="true"]') || await confirm({title:"Leave without saving these changes?",description:"Attachments or edits on this screen have not been saved. Saved notes and reports stay in your project.",confirmLabel:"Leave page",danger:true}),[confirm]);
+  const back = useCallback(async () => {
+    const dialog=document.querySelector<HTMLDialogElement>("dialog[open]");
+    if(dialog){dialog.close();return;}
+    if(!await canLeave())return;
     if (depth.current > 0) window.history.back();
-    else router.push(navigationFallback(lastPath.current ?? window.location.pathname));
-  }, [router]);
+    else router.push(navigationFallback(lastPath.current?.split("?")[0] ?? window.location.pathname));
+  }, [router,canLeave]);
+  useEffect(()=>{
+    function leaving(event:BeforeUnloadEvent){if(document.querySelector('[data-unsaved="true"]')){event.preventDefault();event.returnValue="";}}
+    async function navigate(event:MouseEvent){
+      if(event.defaultPrevented||event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||!document.querySelector('[data-unsaved="true"]'))return;
+      const link=(event.target as Element)?.closest<HTMLAnchorElement>("a[href]");
+      if(!link||link.download||link.target==="_blank")return;
+      const target=new URL(link.href);if(target.origin!==location.origin||target.pathname+target.search===location.pathname+location.search)return;
+      event.preventDefault();event.stopPropagation();
+      if(await canLeave())router.push(target.pathname+target.search+target.hash);
+    }
+    window.addEventListener("beforeunload",leaving);document.addEventListener("click",navigate,true);
+    return()=>{window.removeEventListener("beforeunload",leaving);document.removeEventListener("click",navigate,true);};
+  },[router,canLeave]);
   useEffect(() => {
     if (!telegram) return;
     telegram.BackButton.onClick(back);
@@ -64,7 +83,7 @@ export function AppNavigation({ children }: { children: ReactNode }) {
     if (canBack || pathname !== "/") telegram.BackButton.show();
     else telegram.BackButton.hide();
   }, [telegram, pathname, canBack]);
-  return <Navigation.Provider value={{ back }}>{children}<Suspense fallback={null}><PathChanges changed={changed}/></Suspense>{isWorkspacePath(pathname) &&
+  return <Navigation.Provider value={{ back }}>{children}{confirmation}<Suspense fallback={null}><PathChanges changed={changed}/></Suspense>{(isWorkspacePath(pathname)||pathname==="/") &&
     <Script src="https://telegram.org/js/telegram-web-app.js" onReady={() => {
       const app = (window as Window & { Telegram?: { WebApp?: TelegramApp } }).Telegram?.WebApp;
       if (app?.initData && app.BackButton) { app.ready(); app.expand(); setTelegram(app); }
@@ -72,27 +91,15 @@ export function AppNavigation({ children }: { children: ReactNode }) {
 }
 
 export function WorkspaceNavigation({ current }: { current: "today" | "account" | "projects" | "reports" }) {
-  const navigation = useContext(Navigation), menuId = useId(), [open, setOpen] = useState(false);
-  const container = useRef<HTMLDivElement>(null), menuButton = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    function outside(event: PointerEvent) { if (!container.current?.contains(event.target as Node)) setOpen(false); }
-    function escape(event: KeyboardEvent) {
-      if (event.key === "Escape") { setOpen(false); menuButton.current?.focus(); }
-    }
-    document.addEventListener("pointerdown", outside); document.addEventListener("keydown", escape);
-    return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape); };
-  }, [open]);
+  const navigation = useContext(Navigation);
   const links = [["/today", "Today"], ["/projects", "Projects"], ["/account", "Account"], ["/help", "Help"]];
   function back() {
     if (navigation) navigation.back();
     else window.location.assign(navigationFallback(window.location.pathname));
   }
-  return <div className="workspace-navigation" ref={container}>
+  return <div className="workspace-navigation">
     <button type="button" className="workspace-back" onClick={back}><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m12 5-7 7 7 7M5 12h14" /></svg>Back</button>
     <nav aria-label="Workspace navigation" className="workspace-desktop-nav">{links.map(([href, label]) => <Link key={href} href={href} aria-current={href === `/${current}` ? "page" : undefined}>{label}</Link>)}</nav>
-    <div className="workspace-mobile-menu"><button ref={menuButton} type="button" aria-expanded={open} aria-controls={menuId} className="workspace-menu-button" onClick={() => setOpen(value => !value)}>Menu</button>
-      {open && <nav id={menuId} aria-label="Workspace menu">{links.map(([href, label]) => <Link key={href} href={href} aria-current={href === `/${current}` ? "page" : undefined} onClick={() => setOpen(false)}>{label}</Link>)}</nav>}
-    </div>
+    <nav aria-label="Mobile workspace navigation" className="workspace-dock">{links.map(([href, label], index) => <Link key={href} href={href} prefetch={false} aria-current={href === `/${current}` ? "page" : undefined}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d={["M8 3H5v18h14V3h-3M8 2h8v4H8zM8 11h8M8 15h6", "M3 6h7l2 2h9v12H3z", "M20 21v-2a6 6 0 0 0-12 0v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8", "M9 9a3 3 0 1 1 5 2c-2 1-2 2-2 3M12 17v1M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20"][index]} /></svg><span>{label}</span></Link>)}</nav>
   </div>;
 }

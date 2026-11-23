@@ -112,7 +112,8 @@ export async function handleTelegramWebhook(request: Request, dependencies: Inta
     const summary = receipt.payload.kind === "today" && receipt.reply_path !== "/account" && receipt.status !== "blocked" ? await dependencies.todaySummary?.(receipt.payload) : null;
     const reviewId = receipt.submission_id ?? (receipt.payload.kind === "today" && !receipt.reply_path ? await dependencies.reviewSubmission?.(receipt.payload) : null);
     let link:string|undefined;
-    try {const origin=new URL(process.env.SITELEDGER_APP_URL??"");const path=summary?.path??receipt.reply_path??(reviewId?`/confirm/${reviewId}`:"/account");
+    const landingStart=receipt.payload.kind==="start"&&!receipt.payload.link_hash&&!receipt.payload.project_code;
+    try {const origin=new URL(process.env.SITELEDGER_APP_URL??"");const path=landingStart?"/":summary?.path??receipt.reply_path??(reviewId?`/confirm/${reviewId}`:"/account");
       if(origin.protocol==="https:" && path.startsWith("/") && !path.startsWith("//"))link=new URL(path,origin.origin).toString();}catch{ /* Saved receipt can be retried when the origin is configured. */ }
     await dependencies.sendReply(receipt.payload.chat_id,
       (summary?.text ?? receipt.reply_text) + (resumed ? "\nA saved media file has resumed. Use /today again if more photos are still queued." : ""),

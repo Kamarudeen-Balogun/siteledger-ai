@@ -1,6 +1,6 @@
 # SiteLedger AI
 
-**Turn a site voice note and photos into a confirmed, costed daily report.**
+**Turn voice notes or site photos into a confirmed, costed daily report.**
 
 Built by [CodeFlowX](https://codeflowx.dev) — **Kamarudeen Balogun**, civil engineer and AI & automation builder. [GitHub profile](https://github.com/Kamarudeen-Balogun).
 
@@ -18,30 +18,30 @@ The public landing page explains the workflow and opens the fictional sample or
 private account access. About, Help/FAQ, Contact, Privacy and Terms share its navigation.
 Account, project, team and report screens also adapt to desktop widths.
 
-<img src="docs/images/site-diary-desktop.png" width="760" alt="Desktop site diary with a large voice-recording button, a visible keyboard focus ring on the voice-file picker and a separate queue column">
+<img src="docs/images/site-diary-desktop.png" width="760" alt="Desktop site diary with a large voice-recording button, a visible keyboard focus ring on the voice-file picker and an expandable recent-notes column">
 
-The work diary shares the account/project navigation. Phone layouts stack the
-capture controls and queue; desktop gives them separate columns. Loading,
+The work diary shares the account/project navigation. Saved notes lead directly
+to review; recent device notes are expandable. Loading,
 unclear extraction, failed requests and offline work have visible guidance.
 
 <img src="docs/images/costed-report.png" width="360" alt="Mobile locked report showing 18 square metres of blockwork and a cost of 261,000 naira">
-<img src="docs/images/account-confirmation.png" width="360" alt="Mobile signup confirmation with a six-digit email code and professional-name confirmation">
+<img src="docs/images/account-confirmation.png" width="360" alt="Mobile signup confirmation with email-code entry and professional-name confirmation">
 
 These screenshots use a disposable test project. Construction images are labelled synthetic demonstrations, not genuine site evidence. [Photo provenance](public/demo/photos/PROVENANCE.md).
 
 ## How it works
 
-1. **Choose your project.** Sign in on the website or through the Telegram Mini App. Only authorized projects appear.
-2. **Send the day's work.** Record or upload a voice note and attach 1–5 photos. The web diary keeps queued files on your device when data drops.
-3. **Check the extraction.** Review work items, quantities, crew, materials, delays and possible photo findings. Edit uncertain values and dismiss suggestions you disagree with.
+1. **Choose your project.** Open the website or Telegram landing page. Sign in, or choose Open your projects when your session is active. Only authorized projects appear.
+2. **Send the day's work.** Record/upload a voice note, add 1–5 photos, or use both. Empty notes are rejected. The web diary keeps queued files on your device when data drops.
+3. **Check the extraction.** Review work items, quantities, crew, materials, delays and possible photo findings. Enter photo-only quantities yourself. Edit uncertain values and dismiss suggestions you disagree with.
 4. **Confirm and cost it.** The engine uses confirmed quantities and supplied BoQ rates to calculate cost, cumulative quantities, completion, variance and productivity.
 5. **Review the report.** Open its web view or download the A4 PDF with costs, photos, observations and signature blocks.
 6. **Approve and preserve it.** A PM approves the current draft in a separate action. Locked originals cannot be edited or deleted; corrections become linked amendments.
 
 ```mermaid
 flowchart LR
-    A[Voice note and photos] --> B[AI extraction and possible findings]
-    B --> C[Human review and confirmation]
+    A[Voice note, photos, or both] --> B[Voice extraction and possible photo findings]
+    B --> C[Human quantities, review and confirmation]
     C --> D[BoQ costing engine]
     D --> E[Draft report and PDF]
     E --> F[PM approval]
@@ -121,7 +121,7 @@ retry guidance without exposing private error details.
 
 The core voice/photo → confirmation → costing → PDF → locked log flow is implemented, along with private accounts, projects, teams, secure Telegram linking and recovery, six public pages and desktop layouts. Task 10B adds the private 24-hour trial and verified account handover.
 
-New projects start with an **empty BoQ**; saved trials receive their frozen demo BoQ. The supplied-rate editor, private project ledger and task 12 polish are implemented. Production is deployed on Vercel Hobby and Telegram uses the production URL. Email verification accepts the full Supabase code, including eight digits. Work screens include Back, a compact phone menu and Telegram's native Back button. Public-page, static-PDF, navigation and unauthenticated access checks pass; task 13 awaits the builder's full phone flow over mobile data. [Deployment and phone-check steps](docs/production-deployment.md). The final README gallery, Telegram conversation/voice captures, Kiro write-up and narrated video targeting **2:50** follow deployment checks in task 14. See [the ordered tasks](.kiro/specs/siteledger/tasks.md) and [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
+New projects start with an **empty BoQ**; saved trials receive their frozen demo BoQ. The supplied-rate editor, private project ledger and task 12 polish are implemented. Production is deployed on Vercel Hobby and Telegram uses the production URL. Email verification accepts the full Supabase code, including eight digits. GitHub is connected to Vercel: pushes to `main` deploy production, and review branches get previews. Work screens include Back, persistent phone navigation and Telegram's native Back button. Account settings and project overview, records, progress and team administration use focused views; locked-report amendments open separately. Public-page, static-PDF, navigation and unauthenticated access checks pass; task 13 awaits the builder's full phone flow over mobile data. [Deployment and phone-check steps](docs/production-deployment.md). The final README gallery, Telegram conversation/voice captures, Kiro write-up and narrated video targeting **2:50** follow deployment checks in task 14. See [the ordered tasks](.kiro/specs/siteledger/tasks.md) and [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
 
 The public `/reports/demo`, `/log/demo` and demo summary expose only the original fictional seed, excluding genuine uploads, private amendments and live totals. Rates are **illustrative, not live market prices**; use QS-verified rates for real work.
 
@@ -192,7 +192,7 @@ npm run telegram:configure-menu
 npm run setup:verify
 ```
 
-Menu setup verifies the bot, webhook, account page and database functions before publishing all seven commands in default/private-chat and English scopes. It preserves pending updates and prints no credentials. The workspace's `supabase_siteledger` MCP connection is scoped separately from unrelated projects.
+Menu setup verifies the bot, webhook, account page and database functions before publishing all seven commands in default/private-chat and English scopes. The main Mini App opens the landing page; active sessions see Open your projects. It preserves pending updates and prints no credentials. The workspace's `supabase_siteledger` MCP connection is scoped separately from unrelated projects.
 
 ### Offline use
 

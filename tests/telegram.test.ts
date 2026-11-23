@@ -55,6 +55,18 @@ test("professional commands never save supplied passwords as notes", () => {
     assert.equal(parsed?.payload.text,undefined);
   }
 });
+test("ordinary start opens the landing page while account and identity links keep their destinations", async () => {
+  const previous=process.env.SITELEDGER_APP_URL;process.env.SITELEDGER_APP_URL="https://siteledger.example";
+  try {
+    for(const [command,replyPath,expected] of [["/start","/account","/"],["/account","/account","/account"],["/start link_"+"a".repeat(43),"/account","/account"],["/start LEKKI-DEMO-01","/projects/authorized","/projects/authorized"]]){
+      const {dependencies}=fixture();let link:string|undefined;
+      dependencies.prepare=async(id,payload)=>({update_id:id,payload,status:"saved",storage_path:null,submission_id:null,reply_text:"Open SiteLedger.",reply_sent_at:null,reply_path:replyPath});
+      dependencies.sendReply=async(_chat,_text,url)=>{link=url;};
+      assert.equal((await handleTelegramWebhook(request({...update,message:{...update.message,voice:undefined,text:command}}),dependencies,secret)).status,200);
+      assert.equal(link,"https://siteledger.example"+expected);
+    }
+  } finally { if(previous===undefined)delete process.env.SITELEDGER_APP_URL;else process.env.SITELEDGER_APP_URL=previous; }
+});
 test("blocked media receipts never download, upload or finalize evidence", async () => {
   const {dependencies,events}=fixture();
   dependencies.prepare=async(id,payload)=>({update_id:id,payload,status:"blocked",storage_path:null,submission_id:null,reply_text:"Project access changed.",reply_sent_at:null,reply_path:"/projects"});

@@ -10,8 +10,9 @@ const commands = [
   { command: "logout", description: "Sign out of Telegram access; keep your records" },
 ];
 try {
-  const origin = new URL(process.env.SITELEDGER_APP_URL ?? "");
-  if (origin.protocol !== "https:" || origin.origin !== process.env.SITELEDGER_APP_URL) throw new Error("App origin");
+  const appOrigin=process.argv[2]??process.env.SITELEDGER_APP_URL;
+  const origin = new URL(appOrigin ?? "");
+  if (origin.protocol !== "https:" || origin.origin !== appOrigin) throw new Error("App origin");
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) throw new Error("Bot configuration");
   async function call(method, body = {}) {
@@ -24,7 +25,7 @@ try {
   }
   const bot = await call("getMe");
   if (bot.username?.toLowerCase() !== "siteledgerngbot") throw new Error("Unexpected bot");
-  const menuUrl = new URL("/account", origin).toString();
+  const menuUrl = new URL("/", origin).toString();
   const page = await fetch(menuUrl, { headers: { "ngrok-skip-browser-warning": "true" }, signal: AbortSignal.timeout(15000) });
   if (!page.ok) throw new Error("Menu page unavailable");
   const webhook = await call("getWebhookInfo");
@@ -36,14 +37,16 @@ try {
   if (!ready.ok) throw new Error("Account bot schema unavailable");
   const commandScopes = [{}, {scope:{type:"all_private_chats"}}, {language_code:"en"}, {scope:{type:"all_private_chats"},language_code:"en"}];
   for (const scope of commandScopes) await call("setMyCommands", { commands, ...scope });
-  await call("setChatMenuButton", { menu_button: { type: "web_app", text: "SiteLedger", web_app: { url: menuUrl } } });
+  await call("setChatMenuButton", { menu_button: { type: "web_app", text: "Open SiteLedger", web_app: { url: menuUrl } } });
   const menu = await call("getChatMenuButton");
-  if (menu.type !== "web_app" || menu.web_app?.url !== menuUrl) throw new Error("Settings not saved");
+  if (menu.type !== "web_app" || menu.text !== "Open SiteLedger" || menu.web_app?.url !== menuUrl) throw new Error("Settings not saved");
   for (const scope of commandScopes) {
     if (JSON.stringify(await call("getMyCommands",scope)) !== JSON.stringify(commands)) throw new Error("Settings not saved");
   }
-  console.log("Seven slash suggestions verified in default/private-chat and English menus; account Mini App verified.");
-} catch {
-  console.error("Could not configure SiteLedger's menu. Check the HTTPS app and bot configuration. No credentials printed.");
+  console.log("Seven slash suggestions verified in default/private-chat and English menus; landing-page Mini App verified.");
+} catch (error) {
+  const known=["App origin","Bot configuration","Unexpected bot","Menu page unavailable","Webhook does not match this app","Database configuration","Account bot schema unavailable","Settings not saved","Telegram request"];
+  const reason=error instanceof Error&&known.includes(error.message)?error.message:"Network or unexpected response";
+  console.error(`Could not configure SiteLedger's menu: ${reason}. No credentials printed.`);
   process.exitCode = 1;
 }

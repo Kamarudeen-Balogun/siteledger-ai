@@ -75,9 +75,13 @@ fixes and their acceptance; the full mobile-data flow remains pending.
 
 ## GitHub checkpoint
 
+The builder's 22–23 November work-screen feedback and optional-media revision
+are recorded in [task-13-work-ui.md](task-13-work-ui.md). The redesigned work
+views preserve the landing page and the existing report/PDF branding.
+
 The builder requested a GitHub push on 22 November. All tested deployment,
 email-code and navigation changes are published on `task-13-production`, with
 a draft pull request against `main`. The final milestone is still open until
 the real-phone flow passes. Environment files, local artifacts and the unrelated
-session-start probe are excluded. This source push does not create another
-Vercel deployment; the project is deployed through the CLI.
+session-start probe are excluded. At the builder’s 23 November request, GitHub is now connected to Vercel.
+Review branches produce previews; main triggers production after acceptance.

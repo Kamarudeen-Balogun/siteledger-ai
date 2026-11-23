@@ -4,6 +4,8 @@ import { mkdir } from "node:fs/promises";
 import { chromium } from "@playwright/test";
 const origin = "http://127.0.0.1:3011", out = "supabase/.temp/task-13/navigation";
 await mkdir(out, { recursive: true });
+const startupDeadline=Date.now()+30000;
+while(true){try{if((await fetch(origin+"/reports/demo",{signal:AbortSignal.timeout(2000)})).ok)break;}catch{/* Preview may still be starting. */}if(Date.now()>startupDeadline)throw new Error("Start the local preview on port 3011 before checking navigation.");await new Promise(resolve=>setTimeout(resolve,250));}
 const browser = await chromium.launch();
 try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
@@ -18,11 +20,8 @@ try {
   page.on("pageerror", error => errors.push(error.message));
   await page.goto(origin + "/reports/demo?source=navigation-test");
   await page.waitForFunction(() => window.navigationBackVisible && window.navigationBackCallbacks?.size === 1);
-  const menu = page.getByRole("button", { name: "Menu", exact: true });
-  await menu.click(); await page.getByRole("navigation", { name: "Workspace menu" }).waitFor();
-  await page.keyboard.press("Escape"); assert.equal(await menu.getAttribute("aria-expanded"), "false");
-  assert.equal(await menu.evaluate(node => node === document.activeElement), true);
-  await menu.click(); await page.locator("h1").click(); assert.equal(await menu.getAttribute("aria-expanded"), "false");
+  const mobileNavigation = page.getByRole("navigation", { name: "Mobile workspace navigation" });
+  await mobileNavigation.waitFor();assert.equal(await mobileNavigation.getByRole("link").count(),4);
   await page.getByRole("link", { name: "Open demo dispute log", exact: true }).click();
   await page.waitForURL(origin + "/log/demo");
   await page.waitForFunction(() => window.navigationBackCallbacks?.size === 1);
@@ -37,10 +36,12 @@ try {
   await page.getByRole("link", { name: "Open locked report", exact: true }).first().click();
   await page.waitForURL(origin + "/reports/demo");
   await page.getByRole("button", { name: "Back", exact: true }).click(); await page.waitForURL(origin + "/log/demo");
-  await menu.click(); await page.getByRole("navigation", { name: "Workspace menu" }).getByRole("link", { name: "Account", exact: true }).click();
+  await mobileNavigation.getByRole("link", { name: "Account", exact: true }).click();
   await page.waitForURL(origin + "/account");
   await page.getByRole("link", { name: "Forgot your password?", exact: true }).click();
   await page.waitForURL(origin + "/account/recover");
+  assert.equal(await page.locator('[name="token"]').count(),0,"Recovery starts with one request step");
+  await page.getByRole("button",{name:"I already have a recovery code",exact:true}).click();
   const code = page.locator('[name="token"]');
   await code.fill("01234567"); assert.equal(await code.inputValue(), "01234567");
   assert.equal(await code.evaluate(node => node.checkValidity()), true);
@@ -54,10 +55,10 @@ try {
     await page.setViewportSize({ width, height: 1000 }); await page.goto(origin + "/reports/demo");
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     assert.ok(await page.getByRole("button", { name: "Back", exact: true }).evaluate(node => node.getBoundingClientRect().height >= 48));
-    if (width < 1024) assert.equal(await menu.isVisible(), true);
-    else { assert.equal(await menu.isVisible(), false); assert.equal(await page.getByRole("navigation", { name: "Workspace navigation" }).isVisible(), true); }
+    if (width < 1024) assert.equal(await mobileNavigation.isVisible(), true);
+    else { assert.equal(await mobileNavigation.isVisible(), false); assert.equal(await page.getByRole("navigation", { name: "Workspace navigation" }).isVisible(), true); }
     await page.screenshot({ path: `${out}/workspace-${width}.png`, fullPage: false });
   }
   assert.deepEqual(errors, []);
-  console.log("Back/Forward, direct-link fallback, native Telegram Back, mobile menu keyboard/outside closure, full eight-digit form entry and 390/768/1440px navigation pass. No account or evidence created.");
+  console.log("Back/Forward, direct-link fallback, native Telegram Back, persistent mobile navigation, full eight-digit form entry and 390/768/1440px navigation pass. No account or evidence created.");
 } finally { await browser.close(); }

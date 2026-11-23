@@ -21,6 +21,7 @@ begin
   perform pg_temp.check_true(boq is not null,'Fixture takes NGN rate from existing supplied demo BoQ');
   insert into public.boq_items(project_id,item_code,section,description,unit,boq_quantity,rate) values(p2,'DECIMAL','Fixture','Supplied decimal fixture','m2',1,'0.123') returning id into foreign_boq;
   insert into public.submissions(project_id,submitted_by,source,status) values(p1,'Foreman Original','web','extracted') returning id into note;
+  update public.submissions set audio_url='site-evidence/'||p1::text||'/'||note::text||'/0.wav' where id=note;
   insert into public.account_submission_people(submission_id,profile_id,role,name,currency,timezone,site_date) values(note,foreman,'foreman','Foreman Original','NGN','Africa/Lagos',(now() at time zone 'Africa/Lagos')::date);
   perform pg_temp.check_true(public.account_review(repeat('b',64),note) is null,'Independent owner cannot read note/photos');
   perform pg_temp.check_true(public.account_report_input(repeat('b',64),note) is null,'Independent owner cannot read report/PDF input');
@@ -56,6 +57,7 @@ begin
   perform pg_temp.check_true((select content_snapshot=before_doc from public.reports where id=report),'Archive/removal preserve locked evidence');
   -- A solo owner/PM uses distinct confirmation and approval with the same honest identity.
   insert into public.submissions(project_id,submitted_by,source,status) values(p2,'Owner Two','web','extracted') returning id into solo;
+  update public.submissions set audio_url='site-evidence/'||p2::text||'/'||solo::text||'/0.wav' where id=solo;
   insert into public.account_submission_people(submission_id,profile_id,role,name,currency,timezone,site_date) values(solo,owner2,'pm','Owner Two','KWD','Asia/Kuwait',(now() at time zone 'Asia/Kuwait')::date);
   extraction := jsonb_set(extraction,'{work_items,0,quantity}','0.1234');
   perform public.account_confirm(repeat('b',64),solo,extraction,jsonb_build_array(foreign_boq),'[]'::jsonb);

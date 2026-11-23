@@ -29,8 +29,8 @@ Only one webhook is active per bot; starting a local preview does not move it.
 
 The public landing/support pages, fictional report and dispute log are
 prerendered. The sample PDF is a static asset; `/api/reports/demo/pdf` rewrites
-to that asset with download and cache headers. They avoid application-function
-CPU during public demonstration visits. The static exports contain only the
+to that asset with download and cache headers. Static content delivery avoids application rendering CPU. The landing page
+also makes one lightweight session lookup so active accounts can resume work. The static exports contain only the
 original fictional seed, never private uploads or live project totals.
 
 Account/project actions, uploads, AI processing and private PDFs still need
@@ -41,13 +41,18 @@ does not charge five minutes of active CPU in advance. No paid plan,
 automatic top-up, scheduled polling or additional messaging service is set up.
 
 The initial deployment used the standard Hobby build machine. Build work is
-separate from the Active CPU time meter for application functions. Subsequent
-deployment is deliberate through the CLI; no Git auto-deploy connection was
-added during this task.
+separate from the Active CPU time meter for application functions. GitHub is connected to this Vercel project. Pushes to `main` trigger production
+deployments; other branches produce previews. Build work remains separate from
+Fluid Active CPU time. A CLI deployment can still publish a tested checkpoint.
 
 ## Updating the deployment
 
-Read the project brief and finish local validation first. Authenticate using
+The GitHub repository is `Kamarudeen-Balogun/siteledger-ai`, with `main` verified
+as the production branch on 23 November 2026. Push a review branch to test its
+preview; merge into `main` after acceptance to trigger production. The current
+public URL already runs the task 13 CLI checkpoint before that merge.
+
+For a deliberate CLI deployment, finish local validation first. Authenticate using
 the current Vercel device-code login flow; keep credentials out of commands
 and version control. Then deploy the linked project:
 
@@ -73,13 +78,13 @@ node scripts/set-telegram-webhook.mjs https://siteledger-ai.vercel.app
 PowerShell, using the existing ignored environment file without modifying it:
 
 ```powershell
-node --env-file=.env.local -e 'process.env.SITELEDGER_APP_URL="https://siteledger-ai.vercel.app"; import("./scripts/configure-telegram-menu.mjs");'
+node scripts/configure-telegram-menu.mjs https://siteledger-ai.vercel.app
 ```
 
 Registration checks the expected bot and rejects an unauthenticated webhook
 request before switching. Pending updates are retained, with one Telegram
 connection at a time. Menu setup verifies all seven commands in default,
-private-chat and English scopes, and the HTTPS account Mini App.
+private-chat and English scopes, and the HTTPS landing-page Mini App.
 
 ## Final phone check
 
@@ -87,7 +92,8 @@ Turn Wi-Fi off and use mobile data throughout. Use a separate private project
 named clearly as a production test; keep its records after approval because
 locked evidence is immutable. Existing genuine records need no modification.
 
-1. Open `/account` in @SiteLedgerNGbot, sign in to your verified website account
+1. Open SiteLedger from @SiteLedgerNGbot to see the landing page. Choose sign-in,
+   or Open your projects when your session is active. Sign in to your verified account
    and explicitly connect Telegram if prompted. Cloudflare should complete.
    Passwords belong only in the HTTPS form, never a chat message.
 2. Create/select the test project with currency NGN and timezone Africa/Lagos.
@@ -126,7 +132,40 @@ digits; signup confirmation, invitation verification and recovery accept this
 supported range while Supabase checks validity and expiry. The existing email
 templates need no changes for an eight-digit code.
 
-Work screens provide **Back** and a compact phone **Menu** for Today, Projects,
+Work screens provide **Back** and persistent phone navigation for Today, Projects,
 Account and Help. Desktop shows the same links. Telegram's native Back button
 uses the same navigation. A direct link with no previous SiteLedger screen
 returns to a useful parent, such as the account page after password recovery.
+
+## Focused work views and media
+
+Account uses separate Overview, Profile, Telegram and Email views. Email settings
+include password recovery and an expandable current-password check for sensitive
+actions. Project Overview keeps the lead figures and recording action; Site
+records and Progress contain the detailed history and BoQ. Owners open Team &
+settings for separate member, invitation and project-setting views.
+
+Regular capture accepts voice-only, photo-only or both, with at least one
+attachment. Saving replaces capture with a receipt and its review link. Photos
+alone never supply a work quantity: the person enters and confirms it before
+costing. The 24-hour trial still requires voice and allows zero to three photos.
+Locked-report amendments open in their own view. Unsaved capture, review,
+profile and amendment changes have a leave-page confirmation.
+
+The hosted database must include
+`20261122000300_optional_capture_media.sql` before deploying this capture UI.
+It replaces four authorized intake/confirmation functions and does not rewrite
+stored reports, media or attribution. Validate the hosted function definitions
+and compare evidence fingerprints before and after applying it.
+
+## Telegram landing entry
+
+The main bot button and ordinary `/start` reply open the production landing page.
+`/account`, project/report links and expiring identity-link challenges retain
+appropriate direct destinations. The SDK initializes before website navigation,
+so account access can still prove the signed Telegram launch identity.
+
+The landing design stays intact. Its account links share one lightweight,
+private session lookup per visit and show **Open your projects** for an active
+session. Anonymous visitors retain sign-in and trial choices. The page body is
+still prerendered; the session lookup uses a server function, without polling.

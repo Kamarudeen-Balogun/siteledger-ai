@@ -81,7 +81,7 @@ export async function drainQueue(context:CaptureContext,onChange:()=>Promise<voi
       }
       if(result.id!==row.manifest.id || result.status!=="saved" || result.review_url!==`/confirm/${row.manifest.id}`)
         throw new SendError("Could not verify receipt. Your saved files will retry.",false);
-      await updateQueue(row.manifest.id,owner,{status:"sent",message:"Saved on the server — review and confirm your note.",files:undefined,review_url:result.review_url,lease_until:0,owner:undefined});
+      await updateQueue(row.manifest.id,owner,{status:"sent",message:"Attachments saved. Review the details to create your report.",files:undefined,review_url:result.review_url,lease_until:0,owner:undefined});
     } catch(error) {
       await updateQueue(row.manifest.id,owner,{status:error instanceof SendError && error.blocked ? "blocked":"queued",message:error instanceof SendError ? error.message:"Queued — will send when data returns.",lease_until:0,owner:undefined});
       if(!(error instanceof SendError && error.blocked))break;

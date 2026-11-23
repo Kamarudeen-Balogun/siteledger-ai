@@ -1,19 +1,23 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { currentAccount } from "@/lib/auth/session";
-import { AccountLogin, EmailProof, ProfessionalProfile, TelegramAccountEntry, TelegramLink, TelegramConnect } from "@/components/account-forms";
+import { AccountLogin, AccountSignOut, EmailProof, ProfessionalProfile, TelegramAccountEntry, TelegramLink, TelegramConnect } from "@/components/account-forms";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { TrialReturnLink } from "@/components/trial-return-link";
 import { DiaryNotice } from "@/components/diary-notice";
 export const metadata={title:"Your account — SiteLedger AI",robots:{index:false,follow:false}};
-async function AccountContent() {
+async function AccountContent({ searchParams }: { searchParams: Promise<{ section?: string }> }) {
   const account = await currentAccount(), siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
-  if (!account) return <><TelegramAccountEntry /><div className="account-columns"><AccountLogin siteKey={siteKey}/><aside className="account-aside"><h2>One account for your site work.</h2><p>Sign in with your email, or create an account and confirm its email code. Use the same account when connecting Telegram.</p><p>Your professional name appears on future records. Projects and site files stay private to authorized people.</p><Link href="/help" className="text-link mt-5">Read the account guide</Link><br/><Link href="/reports/demo" className="text-link">Explore a sample report</Link></aside></div></>;
-  return <><TelegramConnect account={account} siteKey={siteKey} /><div className="account-columns"><div><p className="mt-5 leading-7">{account.professional_name ?? "Confirm your professional name to begin."}</p><ProfessionalProfile account={account} />
-    {account.name_confirmed_at && <Link href="/projects" className="inline-flex min-h-12 items-center border border-ink px-5 py-3">Open your projects</Link>}
-    </div><div>{account.source === "telegram" ? <AccountLogin siteKey={siteKey} telegramAccount={account} /> : <><EmailProof siteKey={siteKey} account={account} /><TelegramLink siteKey={siteKey} account={account} /></>}</div></div>
-  </>;
+  if (!account) return <><TelegramAccountEntry /><AccountLogin siteKey={siteKey}/><Link href="/help" className="text-link mt-5">Need help signing in?</Link></>;
+  const requested = (await searchParams).section ?? "overview";
+  const section = ["profile", "telegram", "email"].includes(requested) ? requested : "overview";
+  return <div className="settings-layout"><nav aria-label="Account sections" className="work-tabs settings-nav">{[["overview","Overview"],["profile","Profile"],["telegram","Telegram"],["email","Email"]].map(([key,label])=><Link key={key} href={key==="overview"?"/account":`/account?section=${key}`} prefetch={false} aria-current={section===key?"page":undefined}>{label}</Link>)}</nav><div className="settings-content">
+    {section==="overview"&&<>{account.source === "telegram" ? <AccountLogin siteKey={siteKey} telegramAccount={account}/> : <><TelegramConnect account={account} siteKey={siteKey}/><section className="work-state account-ready"><p className="eyebrow">Your workspace</p><h2>{account.name_confirmed_at ? `Ready, ${account.professional_name}` : "Finish your profile"}</h2><p>{account.name_confirmed_at?"Choose a project to record work or open its saved reports.":"Confirm the professional name that will appear on your site records."}</p><Link href={account.name_confirmed_at?"/projects":"/account?section=profile"} className="work-button work-button-primary mt-5">{account.name_confirmed_at?"Open your projects":"Complete profile"}</Link></section><dl className="settings-summary"><div><dt>Email</dt><dd>{account.email}<span>{account.email_verified?"Verified":"Verification needed"}</span></dd><Link href="/account?section=email">Manage email</Link></div><div><dt>Telegram</dt><dd>{account.telegram_linked?"Connected":"Not connected"}<span>{account.telegram_linked?"Website and chat use your linked identity":"Connect to send notes from chat"}</span></dd><Link href="/account?section=telegram">{account.telegram_linked?"Manage connection":"Connect Telegram"}</Link></div></dl></> }<AccountSignOut account={account}/></>}
+    {section==="profile"&&<ProfessionalProfile account={account}/>}
+    {section==="email"&&(account.source==="telegram"?<AccountLogin siteKey={siteKey} telegramAccount={account}/>:<EmailProof siteKey={siteKey} account={account}/>)}
+    {section==="telegram"&&<><TelegramConnect account={account} siteKey={siteKey}/>{account.source==="browser"?<TelegramLink siteKey={siteKey} account={account}/>:<p className="my-5">This Telegram account is connected. Add website access from the Email section.</p>}</>}
+  </div></div>;
 }
-export default function AccountPage() {
-  return <main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><WorkspaceHeader current="account" title="Your account"/><Suspense fallback={null}><TrialReturnLink/></Suspense><Suspense fallback={<DiaryNotice busy title="Opening your account…">Checking your current session.</DiaryNotice>}><AccountContent /></Suspense></main>;
+export default function AccountPage(props: { searchParams: Promise<{section?:string}> }) {
+  return <main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><WorkspaceHeader current="account" title="Your account"/><Suspense fallback={null}><TrialReturnLink/></Suspense><Suspense fallback={<DiaryNotice busy title="Opening your account…">Checking your current session.</DiaryNotice>}><AccountContent {...props}/></Suspense></main>;
 }
