@@ -44,10 +44,25 @@ Phone captures were visually inspected and led to moving the next action ahead
 of navigation and supporting copy. Old tests expecting financial figures on Home
 were updated to the dedicated Progress route. No financial logic changed.
 
-GitHub/Vercel publication is in progress. No new physical-phone acceptance or
-Kiro execution is claimed. The existing Supabase schema and Auth settings are
+PR #3 is merged into main and the code release is deployed. No new physical-phone
+acceptance or Kiro execution is claimed. The existing Supabase schema and Auth settings are
 unchanged; this is a presentation update using existing authorised actions.
 
 Original builder documents and the unrelated session-start probe are preserved.
 Task 13 remains open for the real-phone report/approval/amendment flow. Feedback
 13A and the README/video task 14 remain scheduled separately.
+
+## Release verification — 25 November
+
+PR #3: https://github.com/Kamarudeen-Balogun/siteledger-ai/pull/3.
+Merge commit `fd7b552` triggered production deployment
+`dpl_HkWM1r2rLvTusF52oih4L9veokEs`, READY at https://siteledger-ai.vercel.app.
+The configured review branch passed its Vercel check before merging. No temporary
+preview bypass or new Cloudflare/Supabase setting was needed for this pass.
+
+Nineteen production HTTP checks and public layouts at 390/768/1440 px pass.
+Projects, guided creation and account security open safely without exposing
+fixture/project data to anonymous requests; anonymous creation is rejected.
+No live signup, email, site note or report was created by release verification.
+Local Docker/test services were stopped after the disposable browser suite.
+The builder still needs to retry the complete workflow on a real phone.

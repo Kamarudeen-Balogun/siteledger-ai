@@ -199,3 +199,22 @@ Hosted migration 20261125024102 is installed and all 37 checked table fingerprin
 are preserved. Deployment checks pass; task 13 remains open for the builder’s
 real-phone flow. Close and reopen Telegram, select the test project, finish the
 BoQ, then continue through a note, confirmation, PDF, approval and amendment.
+
+## Focused project flow — 25 November
+
+The project-flow redesign is deployed from PR #3. Projects now has one Open
+project action per site and a separate archived view. New project opens a
+two-step form, retaining fields when going back and explicitly reviewing the
+supplied budget, currency and timezone before creation.
+
+Project home leads with the next existing step: record, human review, deliberate
+costing, draft review or archived history. Its main action sits ahead of supporting
+copy and navigation on phones. Records, BoQ, Progress and Manage project are
+separate destinations; the default home no longer shows a financial dashboard.
+
+Owner controls open deliberately. Ownership transfer is in Settings, and current
+password confirmation is available in Account security without requiring Telegram.
+All existing permissions, capture/media rules and approved evidence remain intact.
+138 unit/API checks and the full disposable browser workflow pass, including
+390×700 next-action checks. Repeat the creation/note/report/approval/amendment flow
+on a real phone before closing task 13.

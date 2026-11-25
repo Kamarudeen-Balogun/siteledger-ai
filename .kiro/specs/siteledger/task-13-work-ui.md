@@ -119,4 +119,5 @@ Progress, record filters and focused owner/security views are implemented and
 verified in task-13-project-journey.md. The complete native browser workflow
 passes, including compact 390×700 actions, and 138 unit/API checks pass. This
 uses existing APIs and preserves all money, identity and locked evidence rules.
-Git publication is in progress; physical-phone acceptance remains pending.
+PR #3 is merged and deployed; 19 live HTTP checks, public widths and entry
+privacy checks pass. Physical-phone acceptance remains pending.
