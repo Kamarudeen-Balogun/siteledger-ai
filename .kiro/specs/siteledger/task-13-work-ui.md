@@ -110,3 +110,13 @@ preserves all 37 checked table fingerprints. PR #2 is merged into main and the
 production release is READY; 19 live HTTP checks, public widths and import-route
 privacy checks pass. See task-13-telegram-boq.md. The builder's real
 phone acceptance, task 13A feedback and task 14 documentation/video remain pending.
+
+## Project journey redesign — 25 November
+
+The builder requests clearer project management and fewer competing details.
+Guided creation, single-action project selection/home, separate financial
+Progress, record filters and focused owner/security views are implemented and
+verified in task-13-project-journey.md. The complete native browser workflow
+passes, including compact 390×700 actions, and 138 unit/API checks pass. This
+uses existing APIs and preserves all money, identity and locked evidence rules.
+Git publication is in progress; physical-phone acceptance remains pending.

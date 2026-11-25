@@ -337,3 +337,47 @@ h1, h2, h3, [id] { scroll-margin-top: 24px; }
 }
 
 @media (max-width: 640px) { .boq-table.ledger-table th:first-child { min-width: 0; max-width: none; } }
+
+/* Focused project workspaces keep the next action ahead of optional detail. */
+.project-breadcrumb { display: inline-flex; align-items: center; min-height: 48px; color: #57534e; text-decoration: underline; text-underline-offset: 4px; }
+.project-navigation { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; border-bottom: 1px solid var(--rule); margin-bottom: 28px; }
+.project-tabs.work-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; gap: 4px; overflow: visible; border: 0; margin: 0; }
+.project-tabs a { justify-content: center; text-align: center; padding: 12px 4px; white-space: normal; min-height: 56px; }
+.project-manage-link { display: inline-flex; align-items: center; justify-content: flex-end; gap: 12px; min-height: 48px; padding: 4px 0; color: #57534e; margin-left: auto; }
+.project-list { margin-block: 28px; }
+.project-list-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.project-picker li { padding: 28px 0; gap: 20px; }
+.project-picker li > div { min-width: 0; }
+.project-picker li h3 { overflow-wrap: anywhere; }
+.project-empty { border-block: 1px solid var(--rule); padding-block: 28px; line-height: 1.8; }
+.project-home { display: block; margin-block: 28px; }
+.project-next { border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 28px 24px; background: #fffdf9; }
+.project-next h2 { font: 30px/1.25 var(--font-serif); margin-top: 14px; text-wrap: balance; }
+.project-next > p:not(.eyebrow) { margin-top: 16px; line-height: 1.8; max-width: 580px; }
+.project-next-context { font-size: 14px; color: #57534e; }
+.project-next-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.project-records { margin-top: 28px; }
+.record-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 24px; }
+.record-filters button { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; border: 1px solid var(--rule); padding: 10px 14px; font-size: 16px; }
+.record-filters button[aria-pressed=true] { background: #f5e9dc; border-color: var(--accent); color: #9a3412; }
+.record-filters button span { font: 12px var(--font-mono); }
+.project-record-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 20px; padding: 24px 0; border-top: 1px solid var(--rule); }
+.project-creation { max-width: 720px; margin: 28px auto; }
+.creation-steps { margin-block: 28px; }
+.creation-steps ol { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.creation-steps li { border-top: 2px solid var(--rule); padding-top: 16px; color: #57534e; }
+.creation-steps li[aria-current] { border-color: var(--accent); color: #9a3412; font-weight: 600; }
+.creation-steps span { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-right: 8px; border: 1px solid currentColor; font: 12px var(--font-mono); }
+.project-creation form { border: 1px solid var(--rule); background: #fffdf9; padding: 28px 24px; }
+.creation-heading h2 { font: 28px/1.3 var(--font-serif); margin-top: 12px; }
+.creation-heading > p:last-child { margin-top: 16px; line-height: 1.8; }
+.creation-fields { display: grid; gap: 24px; margin-top: 28px; border: 0; padding: 0; }
+.creation-actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin-top: 28px; }
+@media (min-width: 768px) { .project-tabs.work-tabs { width: auto; min-width: 430px; gap: 20px; } .project-home { max-width: 800px; } }
+@media (max-width: 480px) { .project-next { padding: 24px 20px; } .project-next-actions, .creation-actions { flex-direction: column; } .project-next-actions > *, .creation-actions > button { width: 100%; } .project-next-actions button { width: 100%; } .project-creation form { padding: 24px 20px; } }
+
+.project-breadcrumb + .work-intro { margin-block: 16px 20px; }
+@media (max-width: 480px) { .project-next { padding: 20px; } }
+
+.project-next-secondary { margin-top: 20px; }
+@media (max-width: 480px) { .project-next-secondary button { width: 100%; } }
