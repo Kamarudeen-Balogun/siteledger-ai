@@ -61,6 +61,14 @@ Artifacts stay in ignored `supabase/.temp/task-13` and
 
 ## Remaining task 13 acceptance
 
+Builder update, 25 November: the latest Telegram phone run stopped while entering
+the BoQ, before voice capture, confirmation, costing, PDF, approval or amendments.
+The new test log's outcome cells remain blank. Earlier partial phone runs and
+automated passes do not certify this run. The builder requests review of the
+session/navigation blockers and BoQ proposals; see
+`docs/telegram-boq-review.md`. The supplied Codex prompt is not treated as blanket
+authorization to build every feature or change the project's design rules.
+
 Verify the redesigned production flow: review and edit quantities, deterministic
 costing, PDF, PM approval and a dated amendment on a real phone over mobile data.
 Keep task 13 unchecked until the builder reports this result. Preserve the
@@ -91,3 +99,12 @@ protects previews, so browser testing may require the builder's Vercel login.
 Use the stable alias for requests; random deployment URLs have a different
 origin. The bot stays on production. Telegram is optional for the complete
 email/password website flow.
+
+## Approved follow-up — 25 November 2026
+
+The bounded Telegram session/navigation and BoQ entry/import update is implemented
+and passes local unit/API, SQL, fresh/legacy migration, native browser, lint and
+build checks. See task-13-telegram-boq.md for evidence and limits. Supabase MCP
+is reconnected; hosted migration 20261125024102 adds the new BoQ functions and
+preserves all 37 checked table fingerprints. Git publication is in progress. The builder's real
+phone acceptance, task 13A feedback and task 14 documentation/video remain pending.

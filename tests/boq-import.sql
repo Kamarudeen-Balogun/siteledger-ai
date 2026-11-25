@@ -1,0 +1,36 @@
+-- Disposable identities/projects, with rollback of all fixture writes.
+begin;
+create function pg_temp.check_true(value boolean,label text) returns void language plpgsql as $$ begin if value is distinct from true then raise exception 'FAIL: %',label; end if; end; $$;
+insert into auth.users(id,email,created_at,updated_at,aud,role,is_anonymous) select ('8b000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'import-fixture-'||n||'@example.test',now(),now(),'authenticated','authenticated',false from generate_series(1,3) n;
+insert into auth.sessions(id,user_id,created_at,updated_at) select ('8b000000-0000-4000-8000-'||lpad((n+10)::text,12,'0'))::uuid,('8b000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,now(),now() from generate_series(1,3) n;
+do $$ declare owner_id uuid; other_id uuid; foreman_id uuid; project uuid; items jsonb; result jsonb; count_events bigint; report_fingerprint text; photo_fingerprint text; amendment_fingerprint text;
+begin
+ owner_id:=(public.account_browser_session('8b000000-0000-4000-8000-000000000001','8b000000-0000-4000-8000-000000000011',repeat('d',64),'Import Owner')->>'profile_id')::uuid;
+ other_id:=(public.account_browser_session('8b000000-0000-4000-8000-000000000002','8b000000-0000-4000-8000-000000000012',repeat('e',64),'Other Owner')->>'profile_id')::uuid;
+ foreman_id:=(public.account_browser_session('8b000000-0000-4000-8000-000000000003','8b000000-0000-4000-8000-000000000013',repeat('f',64),'Import Foreman')->>'profile_id')::uuid;
+ project:=(public.account_create_project(repeat('d',64),'Import Project','Fixture','Lagos','25000000','NGN','Africa/Lagos')->>'id')::uuid;
+ insert into public.account_memberships(project_id,profile_id,role) values(project,foreman_id,'foreman');
+ select md5(coalesce(string_agg(to_jsonb(r)::text,'' order by id),'')) into report_fingerprint from public.reports r;
+ select md5(coalesce(string_agg(to_jsonb(r)::text,'' order by id),'')) into photo_fingerprint from public.submission_photos r;
+ select md5(coalesce(string_agg(to_jsonb(r)::text,'' order by id),'')) into amendment_fingerprint from public.amendments r;
+ items:=jsonb_build_array(jsonb_build_object('id','8b000000-0000-4000-8000-000000000021','revision',null,'item_code','IMPORT-1','section','Blockwork','description','Supplied blockwork','unit','m2','boq_quantity','420','rate','14500'),jsonb_build_object('id','8b000000-0000-4000-8000-000000000022','revision',null,'item_code','IMPORT-2','section','Concrete','description','Supplied concrete','unit','m3','boq_quantity','50','rate','145000'));
+ perform pg_temp.check_true(public.account_boq_import(repeat('e',64),project,items) is null and public.account_boq_import(repeat('f',64),project,items) is null,'Stranger and foreman cannot import');
+ result:=public.account_boq_import(repeat('d',64),project,items);
+ perform pg_temp.check_true(result->>'saved'='2' and (select count(*)=2 from public.boq_items where project_id=project),'Both rows imported together');
+ select count(*) into count_events from public.account_project_events where project_id=project;
+ result:=public.account_boq_import(repeat('d',64),project,items);
+ perform pg_temp.check_true(result->>'already_saved'='true' and (select count(*)=count_events from public.account_project_events where project_id=project),'Retry creates no duplicate items or events');
+ result:=public.account_boq_import(repeat('d',64),project,jsonb_build_array(items->0||jsonb_build_object('id',gen_random_uuid(),'item_code','NEW-BUT-ROLLBACK'),items->1||jsonb_build_object('id',gen_random_uuid())));
+ perform pg_temp.check_true(result->>'error'='duplicate_code' and result->>'row'='2','Second-row duplicate is explained');
+ perform pg_temp.check_true((select count(*)=2 from public.boq_items where project_id=project) and (select count(*)=count_events from public.account_project_events where project_id=project),'Failed second row rolls back first item AND its event');
+ result:=public.account_boq_import(repeat('d',64),project,jsonb_build_array(items->0||jsonb_build_object('id',gen_random_uuid(),'item_code','NEW-BUT-INVALID'),items->1||jsonb_build_object('id',gen_random_uuid(),'item_code','INVALID','rate','-1')));
+ perform pg_temp.check_true(result->>'error'='invalid' and (select count(*)=2 from public.boq_items where project_id=project),'Invalid numeric row rolls back all new items');
+ result:=public.account_boq_import(repeat('d',64),project,jsonb_build_array(items->0||jsonb_build_object('id',gen_random_uuid(),'item_code','DECIMAL','rate','0.123456789123456789','boq_quantity','0.1234')));
+ perform pg_temp.check_true(result->>'saved'='1' and (select rate=0.123456789123456789 and boq_quantity=0.1234 from public.boq_items where project_id=project and item_code='DECIMAL'),'Decimals are stored exactly');
+ perform pg_temp.check_true(jsonb_array_length(public.account_boq_history(repeat('d',64),project))=3 and public.account_boq_history(repeat('e',64),project) is null and public.account_boq_history(repeat('f',64),project) is null,'BoQ history is scoped to authorized PMs');
+ perform public.account_archive_project(repeat('d',64),project,true);
+ perform pg_temp.check_true(public.account_boq_import(repeat('d',64),project,items)->>'error'='archived' and public.account_boq_history(repeat('d',64),project) is not null,'Archive blocks imports and preserves PM history');
+ perform pg_temp.check_true(report_fingerprint=(select md5(coalesce(string_agg(to_jsonb(r)::text,'' order by id),'')) from public.reports r) and photo_fingerprint=(select md5(coalesce(string_agg(to_jsonb(r)::text,'' order by id),'')) from public.submission_photos r) and amendment_fingerprint=(select md5(coalesce(string_agg(to_jsonb(r)::text,'' order by id),'')) from public.amendments r),'Imports preserve every report, photo and amendment');
+ perform pg_temp.check_true(not has_function_privilege('anon','public.account_boq_import(text,uuid,jsonb)','execute') and not has_function_privilege('authenticated','public.account_boq_history(text,uuid)','execute'),'Direct native role execution denied');
+end $$;
+rollback;

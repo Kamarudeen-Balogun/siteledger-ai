@@ -9,6 +9,7 @@ import type { Account } from "@/lib/auth/types";
 import { clearCachedContext } from "@/lib/web/queue";
 import { EMAIL_CODE_MIN_LENGTH, EMAIL_CODE_MAX_LENGTH, EMAIL_CODE_PATTERN } from "@/lib/auth/email-code";
 import { WorkDisclosure } from "./work-flow";
+import { resolveClientAccount } from "@/lib/auth/client-session";
 
 const field = "mt-2 min-h-12 w-full border border-rule bg-[#fffdf9] px-3 py-3 text-base";
 const button = "min-h-12 border border-ink px-5 py-3 text-base disabled:opacity-50";
@@ -17,6 +18,7 @@ export async function accountAction(action: string, input: Record<string, unknow
   const response = await fetch(`/api/account/${action}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input), cache: "no-store" });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error ?? "Could not complete this account action.");
+  if (data.account || action === "logout") window.dispatchEvent(new Event("siteledger-account-change"));
   return data;
 }
 function Feedback({ error, message }: { error: string; message?: string }) { return error || message ? <p role={error ? "alert" : "status"} className={`my-5 border-l-4 p-4 leading-7 ${error ? "border-amber-700 bg-amber-50 text-amber-900" : "border-[#657055] bg-[#eef0e7]"}`}>{error || message}</p> : null; }
@@ -42,17 +44,17 @@ export function AccountLogin({ siteKey, telegramAccount, nextPath }: { siteKey: 
   }
   if (pending) return <SignupConfirmation pending={pending} telegramAccount={telegramAccount} nextPath={nextPath} />;
   return <section className="auth-panel">
-    <h2 className="font-serif text-2xl">{telegramAccount ? "Connect website access" : signup ? "Create your account" : "Sign in to your site diary"}</h2>
-    <p className="mt-4 leading-7">{telegramAccount ? "Use your existing website account, or add email access to this Telegram account." : "Access your private projects and site records."}</p>
+    <h2 className="font-serif text-2xl">{telegramAccount?.browser_linked ? "Sign in to manage email" : telegramAccount ? "Connect website access" : signup ? "Create your account" : "Sign in to your site diary"}</h2>
+    <p className="mt-4 leading-7">{telegramAccount?.browser_linked ? "Your projects are already available. Use your linked website login for email and sensitive account settings." : telegramAccount ? "Use your existing website account, or add email access to this Telegram account." : "Access your private projects and site records."}</p>
     <div className="auth-mode"><button type="button" aria-pressed={!signup} disabled={busy} onClick={() => { setSignup(false); setError(""); }}>Sign in</button>{!telegramAccount?.browser_linked && <button type="button" aria-pressed={signup} disabled={busy} onClick={() => { setSignup(true); setError(""); }}>Create account</button>}</div>
     <form onSubmit={submit}>
       <Label title="Email address"><input className={field} name="email" type="email" required maxLength={254} autoComplete="email" spellCheck={false}/></Label>
       <Label title="Password"><input className={field} name="password" type="password" required minLength={12} maxLength={128} autoComplete={signup ? "new-password" : "current-password"} /></Label>
       {signup && <p className="text-sm leading-6">Use 12–128 characters.</p>}
       {signup && <><Label title="Professional name for site records"><input className={field} name="name" required maxLength={120} autoComplete="name" defaultValue={telegramAccount?.professional_name ?? ""} /></Label><label className="my-4 flex min-h-12 items-center gap-3"><input type="checkbox" name="confirm_name" value="yes" required className="h-6 w-6 shrink-0" />I confirm this is the name to appear on my records.</label><p className="leading-7">We’ll send an email code before your first login. Enter the full code from the email.</p></>}
-      {telegramAccount && !signup && <label className="my-4 flex min-h-12 items-center gap-3"><input type="checkbox" name="combine_profiles" value="yes" required className="h-6 w-6 shrink-0" />Connect this Telegram profile and the website account I sign into, keeping their project records.</label>}
+      {telegramAccount && !telegramAccount.browser_linked && !signup && <label className="my-4 flex min-h-12 items-center gap-3"><input type="checkbox" name="combine_profiles" value="yes" required className="h-6 w-6 shrink-0" />Connect this Telegram profile and the website account I sign into, keeping their project records.</label>}
       <Turnstile siteKey={siteKey} onToken={setToken} reset={reset} /><Feedback error={error} />
-      <button type="submit" disabled={busy || !token} className={primary}>{busy ? "Connecting…" : signup ? "Create account" : telegramAccount ? "Sign in and connect" : "Sign in"}</button>
+      <button type="submit" disabled={busy || !token} className={primary}>{busy ? "Connecting…" : signup ? "Create account" : telegramAccount && !telegramAccount.browser_linked ? "Sign in and connect" : "Sign in"}</button>
     </form>
     <Link href="/account/recover" className="mt-5 inline-flex min-h-12 items-center underline">Forgot your password?</Link>
     <WorkDisclosure title="Have a signup code already?"><Link href="/account/confirm" className="flex min-h-12 items-center underline">Enter your signup email code</Link></WorkDisclosure>
@@ -81,7 +83,7 @@ export function TelegramAccountEntry() {
     const api = (window as Window & { Telegram?: { WebApp?: { initData: string; ready: () => void; expand: () => void } } }).Telegram?.WebApp;
     if (!api?.initData) return;
     api.ready(); api.expand();
-    try { const result = await accountAction("telegram", { init_data: api.initData }); if (result.account) router.refresh(); }
+    try { const account = await resolveClientAccount(); if (account) router.refresh(); }
     catch (error) { setError(error instanceof Error ? error.message : "Reopen from Telegram."); }
   }
   return <><Script src="https://telegram.org/js/telegram-web-app.js" onReady={() => { void connect(); }} /><Feedback error={error} />{error && <button className={button} onClick={connect}>Reconnect Telegram</button>}</>;
