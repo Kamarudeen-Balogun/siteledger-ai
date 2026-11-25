@@ -180,3 +180,22 @@ require its own account login before opening this protected preview. New review
 branches need their own environment/hostname setup, or reuse the configured
 review branch. The bot's main button remains on production. A Telegram connection
 is optional for website account, project, capture and report use.
+
+## Telegram and BoQ update — 25 November
+
+PR #2 is merged and deployed from main. Linked Telegram users can restore their
+account from a fresh signed launch on the landing page and continue to projects.
+Recording is available before BoQ setup; pricing still requires supplied BoQ
+values and explicit human confirmation.
+
+Manual entry asks for description, unit, full planned quantity and rate. Optional
+details hold the generated code and section. CSV/XLSX import has sheet/header
+selection, column mapping, row correction and an explicit all-or-nothing save.
+Use the header-only `/boq-import-template.csv` download; no prices are suggested.
+Existing items are edited through their revision check, and approved records
+retain their snapshots. PMs can expand Recent BoQ changes.
+
+Hosted migration 20261125024102 is installed and all 37 checked table fingerprints
+are preserved. Deployment checks pass; task 13 remains open for the builder’s
+real-phone flow. Close and reopen Telegram, select the test project, finish the
+BoQ, then continue through a note, confirmation, PDF, approval and amendment.

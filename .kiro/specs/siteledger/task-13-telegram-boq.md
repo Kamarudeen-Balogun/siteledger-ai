@@ -66,8 +66,8 @@ archive/history, ownership transfer, native email recovery and trial handover.
 BoQ layouts pass at 390/768/1440 px; the phone capture was visually inspected.
 Loading checks observe actual running animations under reduced motion and visible
 pages during streamed navigation, avoiding stale hidden-page selectors.
-No physical phone pass or new Kiro run is claimed. Hosted migration verification
-is recorded below; GitHub/Vercel publication is in progress.
+No physical phone pass or new Kiro run is claimed. Hosted migration and
+GitHub/Vercel release verification are recorded below.
 The unrelated sessionstart-probe.json and original test documents remain untouched.
 
 ## Release and next phone test
@@ -87,8 +87,8 @@ and reject direct public calls; no test account or evidence was created.
 
 The installed Supabase skills and current documentation informed the hosted
 permission/transaction review. Public RLS, native CAPTCHA and account settings
-were not changed. The existing Git review branch will produce a preview; the
-builder's standing authorization allows merging the verified update into main.
+were not changed. PR #2 merged the verified update into main at `9735d28` under the builder’s
+standing authorization. GitHub triggered the production deployment automatically.
 
 After release, reopen Telegram with the linked account, open a project, add or
 import the supplied BoQ, and record a note. Continue through human confirmation,
@@ -96,3 +96,20 @@ PDF, approval and an amendment. With the builder’s 18 m² and 2 m³ work quant
 at supplied rates 14,500 and 145,000, the daily cost is ₦551,000. The test concrete
 planned quantity of 50 m³ makes 2 m³ equal 4%. Task 13 stays unchecked until the
 builder reports the real mobile-data flow.
+
+## Production release — 25 November
+
+PR: https://github.com/Kamarudeen-Balogun/siteledger-ai/pull/2.
+Preview deployment `dpl_Di1vXm6uZXRHrrPURVRzwX9BZGVG` passed GitHub’s Vercel
+check and route/privacy checks. The CLI-created temporary preview-access token
+was revoked after testing; existing deployment protection and Turnstile remain.
+
+The code release is production deployment `dpl_74ccQeYh5Xa7iEoBDQoVCkLeWZRk`,
+READY at https://siteledger-ai.vercel.app, from merge commit `9735d28`.
+Nineteen production HTTP checks and public layouts at 390/768/1440 px pass.
+Both import routes reject missing accounts with 401; a foreign Origin is rejected
+with 403. The public CSV template is present and contains headers only.
+Telegram’s webhook remains on production, and Open SiteLedger opens the landing
+page. The landing URL’s trailing slash is normalized during that check.
+No live account, upload, report or email was created by deployment verification.
+The builder’s real-phone capture/report/approval/amendment test remains required.

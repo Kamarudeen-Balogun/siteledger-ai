@@ -106,5 +106,7 @@ The bounded Telegram session/navigation and BoQ entry/import update is implement
 and passes local unit/API, SQL, fresh/legacy migration, native browser, lint and
 build checks. See task-13-telegram-boq.md for evidence and limits. Supabase MCP
 is reconnected; hosted migration 20261125024102 adds the new BoQ functions and
-preserves all 37 checked table fingerprints. Git publication is in progress. The builder's real
+preserves all 37 checked table fingerprints. PR #2 is merged into main and the
+production release is READY; 19 live HTTP checks, public widths and import-route
+privacy checks pass. See task-13-telegram-boq.md. The builder's real
 phone acceptance, task 13A feedback and task 14 documentation/video remain pending.
