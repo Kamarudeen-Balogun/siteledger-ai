@@ -66,20 +66,29 @@ archive/history, ownership transfer, native email recovery and trial handover.
 BoQ layouts pass at 390/768/1440 px; the phone capture was visually inspected.
 Loading checks observe actual running animations under reduced motion and visible
 pages during streamed navigation, avoiding stale hidden-page selectors.
-No physical phone pass, hosted migration, production deployment or new Kiro run
-is claimed. The hosted update awaits MCP tools after the builder's VS Code reload.
+No physical phone pass or new Kiro run is claimed. Hosted migration verification
+is recorded below; GitHub/Vercel publication is in progress.
 The unrelated sessionstart-probe.json and original test documents remain untouched.
 
 ## Release and next phone test
 
-Apply supabase/migrations/20261125000100_boq_import.sql only to the SiteLedger
-Supabase project (tfpxfxzawcjqjwrchlky). It adds two server-only RPC functions and
-changes no stored records. Supabase MCP login succeeded on 25 November. Its
-registration is enabled and
-scoped to this exact project. Its tools are still absent in the running session;
-reload VS Code to expose them. Hosted readiness checks return 404 for both new
-functions, so local verification does not establish hosted installation. Keep
-main unchanged until the migration and review build are ready.
+Hosted Supabase migration `20261125024102_reviewed_boq_import` was applied on
+25 November through the reconnected, project-scoped MCP. Its two function bodies
+match supabase/migrations/20261125000100_boq_import.sql. The application retains
+the existing supplied-value and project-access functions unchanged.
+
+The hosted transaction guarded the original BoQ save function's definition and
+compared every public table plus Storage objects before committing. An additional
+before/after read confirms all 37 table fingerprints unchanged: 13 reports,
+2 amendments, 16 submissions, 5 photos and 9 Storage objects are preserved.
+Both new functions use an empty search path, deny anon/authenticated execution
+and allow only server execution. REST checks return null with no valid session
+and reject direct public calls; no test account or evidence was created.
+
+The installed Supabase skills and current documentation informed the hosted
+permission/transaction review. Public RLS, native CAPTCHA and account settings
+were not changed. The existing Git review branch will produce a preview; the
+builder's standing authorization allows merging the verified update into main.
 
 After release, reopen Telegram with the linked account, open a project, add or
 import the supplied BoQ, and record a note. Continue through human confirmation,

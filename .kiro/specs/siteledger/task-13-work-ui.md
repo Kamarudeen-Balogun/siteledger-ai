@@ -105,6 +105,6 @@ email/password website flow.
 The bounded Telegram session/navigation and BoQ entry/import update is implemented
 and passes local unit/API, SQL, fresh/legacy migration, native browser, lint and
 build checks. See task-13-telegram-boq.md for evidence and limits. Supabase MCP
-login succeeded for the correct SiteLedger project; its tools await VS Code
-reload. No new hosted migration or deployment is claimed. The builder's real
+is reconnected; hosted migration 20261125024102 adds the new BoQ functions and
+preserves all 37 checked table fingerprints. Git publication is in progress. The builder's real
 phone acceptance, task 13A feedback and task 14 documentation/video remain pending.
