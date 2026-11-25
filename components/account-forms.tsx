@@ -26,7 +26,7 @@ function Label({ children, title }: { children: ReactNode; title: string }) { re
 function EmailCodeInput() {
   return <input className={field} name="token" required inputMode="numeric" pattern={EMAIL_CODE_PATTERN} minLength={EMAIL_CODE_MIN_LENGTH} maxLength={EMAIL_CODE_MAX_LENGTH} autoComplete="one-time-code" spellCheck={false} />;
 }
-export function AccountLogin({ siteKey, telegramAccount, nextPath }: { siteKey: string; telegramAccount?: Account; nextPath?: string }) {
+export function AccountLogin({ siteKey, telegramAccount, nextPath, purpose="email" }: { siteKey: string; telegramAccount?: Account; nextPath?: string; purpose?: "email" | "security" }) {
   const router = useRouter(), [signup, setSignup] = useState(false), [error, setError] = useState(""), [busy, setBusy] = useState(false);
   const [token, setToken] = useState(""), [reset, setReset] = useState(0);
   const [pending, setPending] = useState<{ email: string; name: string } | null>(null);
@@ -44,7 +44,7 @@ export function AccountLogin({ siteKey, telegramAccount, nextPath }: { siteKey: 
   }
   if (pending) return <SignupConfirmation pending={pending} telegramAccount={telegramAccount} nextPath={nextPath} />;
   return <section className="auth-panel">
-    <h2 className="font-serif text-2xl">{telegramAccount?.browser_linked ? "Sign in to manage email" : telegramAccount ? "Connect website access" : signup ? "Create your account" : "Sign in to your site diary"}</h2>
+    <h2 className="font-serif text-2xl">{telegramAccount?.browser_linked ? purpose==="security"?"Confirm website access":"Sign in to manage email" : telegramAccount ? "Connect website access" : signup ? "Create your account" : "Sign in to your site diary"}</h2>
     <p className="mt-4 leading-7">{telegramAccount?.browser_linked ? "Your projects are already available. Use your linked website login for email and sensitive account settings." : telegramAccount ? "Use your existing website account, or add email access to this Telegram account." : "Access your private projects and site records."}</p>
     <div className="auth-mode"><button type="button" aria-pressed={!signup} disabled={busy} onClick={() => { setSignup(false); setError(""); }}>Sign in</button>{!telegramAccount?.browser_linked && <button type="button" aria-pressed={signup} disabled={busy} onClick={() => { setSignup(true); setError(""); }}>Create account</button>}</div>
     <form onSubmit={submit}>
