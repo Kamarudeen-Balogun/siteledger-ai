@@ -7,7 +7,7 @@ create function pg_temp.lock_fixture(p_hash text,p_project uuid,p_boq uuid,p_per
 declare note uuid; src jsonb; doc jsonb; rate numeric; actor jsonb;
 begin
  actor:=public.account_project_access(p_hash,p_project);
- insert into public.submissions(project_id,submitted_by,source,status) values(p_project,actor->>'professional_name','web','extracted') returning id into note;
+ insert into public.submissions(project_id,submitted_by,source,status,audio_url) values(p_project,actor->>'professional_name','web','extracted','site-evidence/disposable-fixture.wav') returning id into note;
  insert into public.account_submission_people(submission_id,profile_id,role,name,currency,timezone,site_date) values(note,p_person,actor->>'role',actor->>'professional_name',actor->>'currency',actor->>'timezone',(now() at time zone (actor->>'timezone'))::date);
  perform public.account_confirm(p_hash,note,jsonb_build_object('work_items',jsonb_build_array(jsonb_build_object('description','Confirmed fixture','matched_boq_hint',null,'quantity',p_quantity,'unit','m2','crew',1,'confidence',1)),'materials','[]'::jsonb,'delays','[]'::jsonb,'issues','[]'::jsonb,'raw_language_notes',''),jsonb_build_array(p_boq),'[]'::jsonb);
  src:=public.account_report_input(p_hash,note)->'source'; select b.rate into rate from public.boq_items b where id=p_boq;

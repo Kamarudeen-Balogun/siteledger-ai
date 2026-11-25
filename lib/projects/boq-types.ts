@@ -10,6 +10,6 @@ export function validBoqEdit(value: unknown): value is BoqEdit {
     && (row.revision === null || /^[a-f0-9]{32}$/.test(row.revision))
     && [row.item_code, row.section, row.description].every(text => Boolean(projectText(text)))
     && boqUnits.includes(row.unit) && typeof row.boq_quantity === "string"
-    && /^[0-9]{1,10}(\.[0-9]{1,4})?$/.test(row.boq_quantity) && /[1-9]/.test(row.boq_quantity)
+    && /^[0-9]{1,10}(\.[0-9]{1,4})?$/.test(row.boq_quantity) && /[1-9]/.test(row.boq_quantity) && Number(row.boq_quantity) < 10000000000
     && typeof row.rate === "string" && row.rate.length <= 40 && /^[0-9]+(\.[0-9]+)?$/.test(row.rate);
 }

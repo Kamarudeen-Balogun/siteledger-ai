@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+
 :root {
   color-scheme: light;
   --background: #faf7f2;
@@ -215,7 +216,6 @@ button[aria-pressed="true"] { background: var(--foreground); color: var(--backgr
   .settings-nav.work-tabs a[aria-current="page"] { background: #f5e9dc; }
   .settings-content .auth-panel { margin-top: 0; }
 }
-main:has(.telegram-connect-required) .account-ready { display: none; }
 body:has(.workspace-header) > div > footer[aria-label="Creator credit"], body:has(.workspace-header) footer[aria-label="Creator credit"] { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
 button, a, summary { touch-action: manipulation; }
 h1, h2, h3, [id] { scroll-margin-top: 24px; }
@@ -324,3 +324,16 @@ h1, h2, h3, [id] { scroll-margin-top: 24px; }
   .report-scroll-hint { display: none; }
   .report-document figure, .report-signatures { break-inside: avoid; }
 }
+
+.boq-table.ledger-table { min-width: 0; width: 100%; }
+.boq-table.ledger-table th, .boq-table.ledger-table td { overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .boq-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .boq-table, .boq-table tbody, .boq-table tr { display: block; }
+  .boq-table tr { border-top: 1px solid var(--rule); padding: 16px 0; }
+  .boq-table.ledger-table th, .boq-table.ledger-table td { display: block; border: 0; padding: 8px 0; }
+  .boq-table.ledger-table td[data-label] { display: flex; justify-content: space-between; gap: 16px; }
+  .boq-table.ledger-table td[data-label]::before { content: attr(data-label); text-align: left; font-family: var(--font-sans); font-weight: 400; }
+}
+
+@media (max-width: 640px) { .boq-table.ledger-table th:first-child { min-width: 0; max-width: none; } }

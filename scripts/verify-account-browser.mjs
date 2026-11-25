@@ -77,7 +77,7 @@ try {
       const chunks=[];let length=0;for await(const chunk of request){length+=chunk.length;if(length>4*1024*1024){response.writeHead(413);response.end();return;}chunks.push(chunk);}
       const body=Buffer.concat(chunks),path=request.url??"/";
       if (forceAccountError && path === "/rest/v1/rpc/account_session") { response.writeHead(503,{"Content-Type":"application/json"});response.end('{"error":"private-fixture-details-must-not-appear"}');return; }
-      if (slowReview && path === "/rest/v1/rpc/account_review") await new Promise(resolve=>setTimeout(resolve,1500));
+      if (slowReview && path === "/rest/v1/rpc/account_review") await new Promise(resolve=>setTimeout(resolve,5000));
       if(path.startsWith("/storage/v1/object/")){
         const object=path.slice("/storage/v1/object/".length).replace(/^authenticated\//,"");
         if(request.headers.apikey!==settings.SERVICE_ROLE_KEY){response.writeHead(404);response.end();return;}
@@ -157,12 +157,36 @@ try {
   await page.getByRole("button",{name:"Restore project",exact:true}).click();await modal.getByRole("button",{name:"Restore project",exact:true}).click();await page.getByRole("button",{name:"Archive project",exact:true}).waitFor();
   console.log("Independent owners, targeted invites, replay/cancellation and different roles on two projects pass.");
   // Supply only the brief's NGN demo rate. A foreign decimal is a labelled fixture.
+  await page.goto(`${base}/projects/${project.id}`);await page.getByRole("button",{name:"Record a site note",exact:true}).waitFor();
   await page.goto(`${base}/projects/${project.id}/boq`);await page.getByRole("button",{name:"Add BoQ item",exact:true}).click();
-  for(const [name,value] of [["item_code","BLK-QA"],["section","Blockwork"],["description","Sandcrete blocks 225mm hollow, laid"],["boq_quantity","420"],["rate","14500"]])await page.locator(`[name="${name}"]:visible`).fill(value);
+  assert.equal(await page.locator('[name="item_code"]').isVisible(),false,"Generated code is optional");
+  await page.getByRole("button",{name:"Review and save",exact:true}).click();assert.equal(await page.locator('input[name="description"]').getAttribute("aria-invalid"),"true");
+  await page.locator("summary").filter({hasText:"Optional details"}).click();
+  for(const [name,value] of [["item_code","BLK-QA"],["section","Blockwork"],["description","Sandcrete blocks 225mm hollow, laid"],["boq_quantity","420"],["rate","14,500"]])await page.locator(`[name="${name}"]:visible`).fill(value);
   await page.getByRole("button",{name:"Review and save",exact:true}).click();await page.getByRole("dialog").getByRole("button",{name:"Cancel",exact:true}).click();assert.equal(sql(`select count(*) from public.boq_items where project_id='${project.id}';`),"0","Cancelling BoQ review makes no item");
   await page.getByRole("button",{name:"Review and save",exact:true}).click();await page.getByRole("dialog").getByRole("button",{name:"Save BoQ item",exact:true}).click();await page.getByRole("status").filter({hasText:"BoQ item saved"}).waitFor();
   const boq=sql(`select id from public.boq_items where project_id='${project.id}' and item_code='BLK-QA';`);
-  const readOnlyBoq=await foreman.newPage();await readOnlyBoq.goto(`${base}/projects/${project.id}/boq`);await readOnlyBoq.getByText("Read-only BoQ.",{exact:false}).waitFor();assert.equal(await readOnlyBoq.getByRole("button",{name:"Add BoQ item",exact:true}).count(),0);
+  // Mapping, row correction and cancellation never save a partial import.
+  await page.getByRole("button",{name:"Import CSV / XLSX",exact:true}).click();
+  await page.locator('input[name="file"]').setInputFiles({name:"Supplied-BoQ.csv",mimeType:"text/csv",buffer:Buffer.from('Description,Unit,Quantity,Rate,Code\nImported blockwork,m2,420,"14,500",CSV-1\nImported concrete,bags,50,,CSV-2\n')});
+  await page.getByRole("button",{name:"Read file",exact:true}).click();await page.getByRole("button",{name:"Review rows",exact:true}).waitFor();
+  await page.getByRole("button",{name:"Review rows",exact:true}).click();await page.getByRole("status").filter({hasText:"rows need correction"}).waitFor();
+  assert.equal(sql(`select count(*) from public.boq_items where project_id='${project.id}';`),"1","Reading an import saves nothing");
+  const secondRow=page.locator('.import-rows > li').nth(1);await secondRow.getByLabel("Measurement unit").selectOption("m3");await secondRow.getByLabel("Rate per unit",{exact:true}).fill("145,000");
+  await page.getByRole("button",{name:"Save 2 reviewed items",exact:true}).click();await page.getByRole("dialog").getByRole("button",{name:"Cancel",exact:true}).click();
+  assert.equal(sql(`select count(*) from public.boq_items where project_id='${project.id}';`),"1","Cancelling import review saves nothing");
+  await page.getByRole("button",{name:"Save 2 reviewed items",exact:true}).click();await page.getByRole("dialog").getByRole("button",{name:"Confirm import",exact:true}).click();await page.getByRole("status").filter({hasText:"2 BoQ items imported"}).waitFor();
+  assert.equal(sql(`select rate=145000 from public.boq_items where project_id='${project.id}' and item_code='CSV-2';`),"t");
+  await page.locator("summary").filter({hasText:"Recent BoQ changes"}).click();await page.getByRole("heading",{name:"Imported concrete",exact:true}).waitFor();
+  for(const width of [390,768,1440]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`BoQ overflow at ${width}`);await page.screenshot({path:join(out,`boq-import-${width}.png`),fullPage:true});}
+  await page.setViewportSize({width:390,height:900});
+  const xlsx=Buffer.from(command(process.execPath,["--import","tsx","-e",'const {boqWorkbook}=require("./tests/fixtures/boq-workbook.ts");process.stdout.write(Buffer.from(boqWorkbook()).toString("base64"));']),"base64");
+  await page.getByRole("button",{name:"Import CSV / XLSX",exact:true}).click();await page.locator('input[name="file"]').setInputFiles({name:"Decimal-Fixture.xlsx",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",buffer:xlsx});
+  const readXlsx=page.waitForResponse(response=>response.url().endsWith("/api/projects/boq/import")&&response.request().method()==="POST");await page.getByRole("button",{name:"Read file",exact:true}).click();const xlsxResponse=await readXlsx;assert.equal(xlsxResponse.status(),200,JSON.stringify(await xlsxResponse.json()));await page.getByLabel("Sheet",{exact:true}).waitFor();await page.getByLabel("Sheet",{exact:true}).selectOption("1");
+  await page.getByRole("button",{name:"Review rows",exact:true}).click();assert.equal(await page.locator('.import-rows').getByLabel("Rate per unit",{exact:true}).inputValue(),"0.123456789123456789");
+  await page.getByRole("button",{name:"Save 1 reviewed item",exact:true}).click();await page.getByRole("dialog").getByRole("button",{name:"Confirm import",exact:true}).click();await page.getByRole("status").filter({hasText:"1 BoQ item imported"}).waitFor();
+  assert.equal(sql(`select rate=0.123456789123456789 from public.boq_items where project_id='${project.id}' and item_code='ITEM-001';`),"t");
+  const readOnlyBoq=await foreman.newPage();await readOnlyBoq.goto(`${base}/projects/${project.id}/boq`);await readOnlyBoq.locator('[role="status"]:visible').filter({hasText:"Read-only BoQ."}).waitFor();assert.equal(await readOnlyBoq.getByRole("button",{name:"Add BoQ item",exact:true}).count(),0);
   await action(foreman,"projects/actions","select",{project_id:project.id});
   const audio=Buffer.from("RIFF1234WAVEdisposable"),photo=await readFile(join(root,"public/demo/photos/synthetic-blockwork.jpg"));
   const noteId=randomUUID(),manifest={id:noteId,project_id:project.id,captured_at:new Date().toISOString(),timezone:"Africa/Lagos",assets:[audio,photo].map((bytes,index)=>({index,bytes:bytes.length,sha256:createHash("sha256").update(bytes).digest("hex"),content_type:index===0?"audio/wav":"image/jpeg"}))};
@@ -178,7 +202,7 @@ try {
   // Task 12: genuine loading UI, blank low-confidence values and intact retries.
   const uncertain={...values,work_items:[{...values.work_items[0],confidence:0.4}]};sql(`update public.submissions set extraction='${JSON.stringify(uncertain)}'::jsonb where id='${noteId}';`);
   const statePage=await foreman.newPage();await statePage.emulateMedia({reducedMotion:"reduce"});slowReview=true;await statePage.goto(`${base}/confirm/${noteId}`,{waitUntil:"commit"});
-  await statePage.getByRole("heading",{name:"Opening your site note…",exact:true}).waitFor();assert.equal(await statePage.locator('.diary-loading-line').evaluate(node=>getComputedStyle(node,'::after').animationName),"none");await statePage.screenshot({path:join(out,"loading-review-mobile.png"),fullPage:true});slowReview=false;
+  await statePage.getByRole("heading",{name:"Opening your site note…",exact:true}).waitFor();assert.equal(await statePage.locator('.diary-loading-line:visible').evaluate(node=>node.getAnimations({subtree:true}).filter(animation=>animation.playState!=="finished").length),0,"Reduced-motion loading must not run animations");await statePage.screenshot({path:join(out,"loading-review-mobile.png"),fullPage:true});slowReview=false;
   await statePage.locator('[data-confidence="low"]').waitFor();assert.equal(await statePage.locator('[name="w0.quantity"]').inputValue(),"");const warningColor=await statePage.locator('[name="w0.quantity"]').evaluate(node=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=1;const context=canvas.getContext('2d');context.fillStyle=getComputedStyle(node).backgroundColor;context.fillRect(0,0,1,1);return [...context.getImageData(0,0,1,1).data].slice(0,3);});assert.deepEqual(warningColor,[255,251,235]);
   for(const width of [390,768,1440]){await statePage.setViewportSize({width,height:900});assert.ok(await statePage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));const small=await statePage.locator('main button:visible, main input:not([type="checkbox"]):not([type="hidden"]):visible, main select:visible, main textarea:visible').evaluateAll(nodes=>nodes.filter(node=>node.getBoundingClientRect().height<48||parseFloat(getComputedStyle(node).fontSize)<16).map(node=>node.getAttribute('name')??node.textContent));assert.deepEqual(small,[],"Review controls need readable type and 48px targets");await statePage.screenshot({path:join(out,`review-low-${width}.png`),fullPage:true});}await statePage.close();
   await action(foreman,"confirm",noteId,{human_confirmed:true,values,boq_ids:[boq],photo_notes:[{id:mediaId,note:"Human QA observation"}]});
@@ -187,7 +211,7 @@ try {
   await confirmPage.getByRole("button",{name:"Confirm changes and rebuild report",exact:true}).click();await confirmPage.getByRole("alert").filter({hasText:"Connection interrupted for QA"}).waitFor();assert.equal(await confirmPage.locator('[name="w0.quantity"]').inputValue(),"19");await confirmPage.screenshot({path:join(out,"review-retry-mobile.png"),fullPage:true});await foreman.unroute(`${base}/api/confirm/${noteId}`);await confirmPage.locator('[name="w0.quantity"]').fill("18");
   await confirmPage.getByRole("button",{name:/Dismiss.*Surface voids/}).click();assert.equal(await confirmPage.locator(`[name="photo.${mediaId}"]`).inputValue(),"Human QA observation");
   await confirmPage.getByRole("button",{name:"Confirm changes and rebuild report",exact:true}).click();await confirmPage.waitForURL(`${base}/reports/${noteId}`);
-  assert.equal((await confirmPage.locator(".report-document").innerText()).includes("scripted QA fixture"),false);
+  assert.equal((await confirmPage.locator(".report-document:visible").innerText()).includes("scripted QA fixture"),false);
   await action(foreman,"reports",noteId,{weather:"Dry"});
   await action(foreman,"confirm",noteId,{human_confirmed:true,values:{...values,issues:["QA review complete"]},boq_ids:[boq],photo_notes:[{id:mediaId,note:"Human QA observation"}]});
   await action(foreman,"reports",noteId,{});
@@ -198,7 +222,7 @@ try {
   // Read the rendered version from the actual page; JSONB order is not JS source order.
   const reviewPage=await pm.newPage();await reviewPage.goto(`${base}/reports/${noteId}`);await reviewPage.getByRole("heading",{name:"Approve this daily record"}).waitFor();
   await reviewPage.locator('form input[type="checkbox"]').check();await reviewPage.getByRole("button",{name:"Approve and lock report",exact:true}).click();await reviewPage.getByRole("dialog").getByRole("button",{name:"Cancel",exact:true}).click();assert.equal(sql(`select status from public.reports where submission_id='${noteId}';`),"draft");
-  await reviewPage.getByRole("button",{name:"Approve and lock report",exact:true}).click();await reviewPage.getByRole("dialog").getByRole("button",{name:"Approve and lock report",exact:true}).click();await reviewPage.locator(".report-stamp").waitFor();
+  await reviewPage.getByRole("button",{name:"Approve and lock report",exact:true}).click();await reviewPage.getByRole("dialog").getByRole("button",{name:"Approve and lock report",exact:true}).click();await reviewPage.locator(".report-stamp:visible").waitFor();
   await reviewPage.screenshot({path:join(out,"locked-report-mobile.png"),fullPage:true});
   assert.equal(sql(`select status from public.reports where submission_id='${noteId}';`),"locked");
   await action(foreman,"reports",`${noteId}/approve`,{document_version:version},403);
@@ -220,12 +244,12 @@ try {
   await action(foreman,"web/submissions",`${foreignNote}/finish`,{});await eventually(()=>sql(`select status from public.submission_ai_jobs where submission_id='${foreignNote}';`)==="manual_entry","Foreign fixture processing did not finish");
   const foreignPhoto=sql(`select id from public.submission_photos where submission_id='${foreignNote}';`);await action(foreman,"confirm",foreignNote,{human_confirmed:true,values:{...values,work_items:[{...values.work_items[0],quantity:0.1234}]},boq_ids:[foreignBoq],photo_notes:[{id:foreignPhoto,note:"Supplied foreign currency fixture"}]});
   await action(foreman,"reports",foreignNote,{});
-  const foreignReport=await foreman.newPage();await foreignReport.goto(`${base}/reports/${foreignNote}`);await foreignReport.getByRole("heading",{name:"Approve this daily record"}).waitFor();assert.ok((await foreignReport.locator('.report-total').innerText()).includes("KWD 0.015"));await foreignReport.locator('form input[type="checkbox"]').check();await foreignReport.getByRole("button",{name:"Approve and lock report",exact:true}).click();await foreignReport.getByRole("dialog").getByRole("button",{name:"Approve and lock report",exact:true}).click();await foreignReport.locator('.report-stamp').waitFor();assert.equal((await foreman.request.get(`${base}/api/reports/${foreignNote}/pdf`)).status(),200);
+  const foreignReport=await foreman.newPage();await foreignReport.goto(`${base}/reports/${foreignNote}`);await foreignReport.getByRole("heading",{name:"Approve this daily record"}).waitFor();assert.ok((await foreignReport.locator('.report-total:visible').innerText()).includes("KWD 0.015"));await foreignReport.locator('form input[type="checkbox"]').check();await foreignReport.getByRole("button",{name:"Approve and lock report",exact:true}).click();await foreignReport.getByRole("dialog").getByRole("button",{name:"Approve and lock report",exact:true}).click();await foreignReport.locator('.report-stamp:visible').waitFor();assert.equal((await foreman.request.get(`${base}/api/reports/${foreignNote}/pdf`)).status(),200);
   await foreignReport.goto(`${base}/projects/${projectB.id}`);await foreignReport.locator('[data-earned]').waitFor();assert.ok((await foreignReport.locator('[data-earned]').innerText()).includes("KWD 0.015"));assert.equal(sql(`select total_cost from public.reports where submission_id='${foreignNote}';`),"0.0151782");
   console.log("BoQ creation/cancellation, PM editing, foreman read-only, exact KWD costing/PDF and 390/768/1440px immutable dashboard figures pass.");
   assert.equal(await reviewPage.locator('[name="note"]').count(),0,"Report keeps amendment entry in its own view");
   await reviewPage.getByRole("link",{name:"Add an amendment",exact:true}).click();await reviewPage.waitForURL(`${base}/reports/${noteId}?view=amendment`);
-  assert.equal(await reviewPage.locator('.report-document').count(),0,"Amendment view focuses on the correction");
+  assert.equal(await reviewPage.locator('.report-document:visible').count(),0,"Amendment view focuses on the correction");
   await reviewPage.locator('[name="note"]').fill("A correction for dialog cancellation QA.");await reviewPage.getByRole("button",{name:"Save amendment",exact:true}).click();await reviewPage.getByRole("dialog").getByRole("button",{name:"Cancel",exact:true}).click();
   assert.equal(await reviewPage.locator('[name="note"]').inputValue(),"A correction for dialog cancellation QA.");assert.equal(sql(`select count(*) from public.amendments a join public.reports r on r.id=a.report_id where r.submission_id='${noteId}';`),"0");
   // Browser offline emulation tests the real IndexedDB queue and service worker.
@@ -262,10 +286,14 @@ try {
   await direct.route("https://telegram.org/js/telegram-web-app.js",route=>route.fulfill({contentType:"application/javascript",body:`window.Telegram={WebApp:{initData:new URLSearchParams(location.hash.slice(1)).get('tgWebAppData')??'',ready(){},expand(){}}};`}));
   await directPage.goto(base+"/#tgWebAppData="+encodeURIComponent(directProof));
   await directPage.waitForFunction(()=>Boolean(window.Telegram?.WebApp?.initData));
-  await directPage.locator('#content').getByRole("link",{name:"Sign in / Create account",exact:true}).click();await directPage.waitForURL(base+"/account");
+  const restoredLink=directPage.locator('#content').getByRole("link",{name:"Open your projects",exact:true});await restoredLink.waitFor();
+  await restoredLink.click();await directPage.waitForURL(base+"/projects");
+  await directPage.goto(base+"/account");await directPage.locator(".account-ready:visible").waitFor();assert.equal(await directPage.getByRole("heading",{name:"Connect website access"}).count(),0,"Linked Telegram account is already onboarded");
   await eventually(async()=>(await direct.cookies()).some(cookie=>cookie.name==="siteledger_session"),"Landing-page launch must retain signed Telegram identity for account access");
-  await directPage.goto(`${base}/reports/${noteId}`);await directPage.locator(".report-document").waitFor();
+  await directPage.goto(`${base}/reports/${noteId}`);await directPage.locator(".report-document:visible").waitFor();
   assert.ok((await direct.cookies()).some(cookie=>cookie.name==="siteledger_session"),"Linked Telegram record buttons authenticate a fresh Mini App session");
+  await direct.clearCookies();const reopenedProof=signedTelegram(990001);await directPage.goto(base+"/#tgWebAppData="+encodeURIComponent(reopenedProof));await directPage.locator('#content').getByRole("link",{name:"Open your projects",exact:true}).waitFor();
+  await directPage.goto(base+"/account");await directPage.locator(".account-ready:visible").waitFor();
   await action(owner,"account","unlink_telegram",{});
   assert.equal((await direct.request.get(`${base}/api/reports/${noteId}/pdf`)).status(),404);
   assert.equal((await action(telegram,"account","telegram",{init_data:signedTelegram(990001)})).needs_login,true);
@@ -291,10 +319,10 @@ try {
   for (const [context,path,name] of [[owner,"/account","account"],[owner,"/projects","projects"],[pm,`/projects/${project.id}/team`,"team"],[pm,`/reports/${noteId}`,"report"]]) {
     const desktop=await context.newPage();await desktop.setViewportSize({width:1440,height:1000});await desktop.goto(base+path);await desktop.locator("main").waitFor();await desktop.evaluate(()=>document.fonts.ready);
     assert.ok(await desktop.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${name} desktop layout overflows`);
-    if(name==="account")await desktop.locator(".account-ready").waitFor();
+    if(name==="account")await desktop.locator(".account-ready:visible").waitFor();
     if(name==="projects")await desktop.getByRole("heading",{name:"Your authorized projects",exact:true}).waitFor();
     if(name==="team")await desktop.getByRole("heading",{name:"Active team",exact:true}).waitFor();
-    if(name==="report")await desktop.locator(".report-stamp").waitFor();
+    if(name==="report")await desktop.locator(".report-stamp:visible").waitFor();
     await desktop.screenshot({path:join(out,`${name}-desktop.png`),fullPage:true});await desktop.close();
   }
   // Focused views expose one task at a time. Query navigation must retain Back.
@@ -373,7 +401,7 @@ try {
   await trialPage.locator('[name="w0.unit"]').fill("m2");await trialPage.locator('[name="w0.boq"]').selectOption(trialBid);
   await trialPage.locator('textarea[name^="photo."]').fill("Human guest observation, retained after handover.");
   await trialPage.getByRole("button",{name:"Confirm and cost it",exact:true}).click();await trialPage.waitForURL(base+"/trial/report");
-  await trialPage.getByRole("heading",{name:"Daily site report",exact:true}).waitFor();assert.ok((await trialPage.locator(".report-total").innerText()).includes("₦261,000"));
+  await trialPage.getByRole("heading",{name:"Daily site report",exact:true}).waitFor();assert.ok((await trialPage.locator(".report-total:visible").innerText()).includes("₦261,000"));
   assert.equal(await trialPage.getByRole("button",{name:"Approve and lock report",exact:true}).count(),0);
   await trialPage.screenshot({path:join(out,"trial-draft-mobile.png"),fullPage:true});
   const originalTrial=sql(`select jsonb_build_object('manifest',manifest,'transcript',transcript,'extraction',extraction,'confirmed_values',confirmed_values,'draft',draft,'confirmed_at',confirmed_at)::text from public.trial_sessions where note_id='${trialNote}';`);
@@ -397,7 +425,7 @@ try {
   // Require the safe unavailable page and absence of the private record itself.
   assert.ok(deniedBody.includes("This page isn’t available"));assert.equal(deniedBody.includes("Guest checked blockwork"),false);
   await trialPage.getByRole("button",{name:"Confirm and cost it",exact:true}).click();await trialPage.waitForURL(base+`/reports/${trialNote}`);
-  await trialPage.locator('form input[type="checkbox"]:visible').check();await trialPage.getByRole("button",{name:"Approve and lock report",exact:true}).click();await trialPage.getByRole("dialog").getByRole("button",{name:"Approve and lock report",exact:true}).click();await trialPage.locator(".report-stamp").waitFor();
+  await trialPage.locator('form input[type="checkbox"]:visible').check();await trialPage.getByRole("button",{name:"Approve and lock report",exact:true}).click();await trialPage.getByRole("dialog").getByRole("button",{name:"Approve and lock report",exact:true}).click();await trialPage.locator(".report-stamp:visible").waitFor();
   assert.equal((await guest.request.get(base+`/api/reports/${trialNote}/pdf`)).status(),200);
   console.log("Private trial CAPTCHA replay denial, upload/draft, native signup, explicit handover, preserved edits and verified approval/PDF pass.");
   assert.deepEqual(errors,[]);
