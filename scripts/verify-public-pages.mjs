@@ -11,7 +11,8 @@ try {
     await page.setViewportSize({width,height:1000});
     for(const path of ["/","/about","/help","/contact","/privacy","/terms"]){
       const response=await page.goto(origin+path);assert.equal(response.status(),200);await page.evaluate(()=>document.fonts.ready);
-      assert.equal(await page.locator("h1").count(),1,`${path} needs one main heading`);
+      await page.getByRole("heading",{level:1}).waitFor();
+      assert.equal(await page.getByRole("heading",{level:1}).count(),1,`${path} needs one main heading`);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${path} overflows at ${width}`);
       const broken=await page.locator('a[href^="/"]').evaluateAll(links=>links.map(link=>link.getAttribute('href')));
       for(const target of new Set(broken))if(!checkedLinks.has(target)){assert.ok((await page.request.get(origin+target)).ok(),`${target} is unavailable`);checkedLinks.add(target);}

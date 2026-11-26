@@ -67,6 +67,19 @@ test("ordinary start opens the landing page while account and identity links kee
     }
   } finally { if(previous===undefined)delete process.env.SITELEDGER_APP_URL;else process.env.SITELEDGER_APP_URL=previous; }
 });
+test("Telegram links accept copied one-time codes without putting the code in a site record", () => {
+  const code = "Abc123-xyz_KLM098pQr456s";
+  const fromText = (text: string) => parseTelegramUpdate({ ...update, message: { ...update.message, text } })?.payload;
+  const copied = fromText(`TG-${code}`);
+  assert.match(copied?.link_hash ?? "", /^[a-f0-9]{64}$/);
+  assert.equal(copied?.text, undefined);
+  assert.deepEqual(fromText(`/link TG-${code}`), copied);
+  assert.deepEqual(fromText(`/start link_${code}`), copied);
+  assert.equal(fromText(`/link TG-${code}z`)?.text, undefined);
+  assert.equal(fromText("/link")?.link_help, true);
+  assert.equal(fromText("/project lekki-demo-01")?.project_code, "LEKKI-DEMO-01");
+  assert.equal(fromText("/project")?.kind, "projects");
+});
 test("blocked media receipts never download, upload or finalize evidence", async () => {
   const {dependencies,events}=fixture();
   dependencies.prepare=async(id,payload)=>({update_id:id,payload,status:"blocked",storage_path:null,submission_id:null,reply_text:"Project access changed.",reply_sent_at:null,reply_path:"/projects"});

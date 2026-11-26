@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { DiaryIcon } from "./diary-icon";
 
 type Step = [target: string, title: string, note: string];
 const shared: Step[] = [
@@ -27,10 +28,16 @@ export function DiaryTour({ path, person }: { path: string; person: string }) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const [capture, setCapture] = useState(false);
+  const [generation,setGeneration] = useState(0);
   const screen = path === "/today" ? capture ? "capture" : "today" : /^\/confirm\/[^/]+$/.test(path) ? "confirm" :
     /^\/reports\/(?!demo$)[^/]+$/.test(path) ? "report" : /^\/log\/(?!demo$)[^/]+$/.test(path) ? "log" :
     path.endsWith("/boq") ? "boq" : path.endsWith("/team") ? "team" : path === "/account" ? "profile" : null;
   const target = useCallback((name: string) => document.querySelector<HTMLElement>(`[data-tour="${name}"]`), []);
+  useEffect(() => {
+    const restart = () => setGeneration(value=>value+1);
+    window.addEventListener(replay,restart);
+    return () => window.removeEventListener(replay,restart);
+  },[]);
   useEffect(() => {
     if (path !== "/today") return;
     const check = () => setCapture(Boolean(target("record")?.getClientRects().length));
@@ -54,16 +61,18 @@ export function DiaryTour({ path, person }: { path: string; person: string }) {
       try { if (localStorage.getItem(`${prefix}${person}:${screen}`)) return; } catch { /* Continue for this visit. */ }
       const visible = (step: Step) => Boolean(target(step[0])?.getClientRects().length);
       if (!primary.some(visible)) return;
+      if (document.querySelector("dialog[open]")) return;
       observed = true;
       timer = setTimeout(() => {
-        if (!document.querySelector("dialog[open]")) { setSteps([...primary, ...shared].filter(visible)); setIndex(0); }
+        if (document.querySelector("dialog[open]")) { observed=false; return; }
+        setSteps([...primary, ...shared].filter(visible)); setIndex(0);
       }, 500);
     }
     const observer = new MutationObserver(open);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["open"] });
     open();
     return () => { observer.disconnect(); clearTimeout(timer); panel?.close(); };
-  }, [person,screen,target]);
+  }, [person,screen,target,generation]);
 
   const step = steps[index];
   useEffect(() => {
@@ -87,10 +96,11 @@ export function DiaryTour({ path, person }: { path: string; person: string }) {
   </dialog>;
 }
 
-export function ReplayTour() {
+export function ReplayTour({ label = "Take the tour again", inPlace = false, help = false }: { label?: string; inPlace?: boolean; help?:boolean }) {
   const router = useRouter();
-  return <button type="button" className="work-button" onClick={() => {
+  return <button type="button" className={help?"stitch-menu-row":"stitch-button"} data-primary={help||undefined} onClick={() => {
     try { for (const key of Object.keys(localStorage)) if (key.startsWith(prefix)) localStorage.removeItem(key); } catch { /* Continue to Today. */ }
-    window.dispatchEvent(new Event(replay)); router.push("/today");
-  }}>Take the tour again</button>;
+    window.dispatchEvent(new Event(replay));
+    if (!inPlace) router.push("/today");
+  }}><DiaryIcon name="tour" size={19}/>{help?<><span><strong>{label}</strong><small>Step-by-step highlights on each screen</small></span><DiaryIcon name="play" size={18}/></>:label}</button>;
 }

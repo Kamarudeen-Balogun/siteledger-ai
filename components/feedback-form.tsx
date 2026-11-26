@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { displayTimestamp } from "@/lib/reports/model";
 import type { FeedbackItem } from "@/lib/feedback/data";
+import { DiaryIcon } from "./diary-icon";
 
 async function send(input: object) {
   const response=await fetch("/api/feedback",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(input)});
@@ -13,6 +14,7 @@ async function send(input: object) {
 }
 export function FeedbackForm({ name,email,project }: { name:string;email:string|null;project?:string }) {
   const [error,setError]=useState(""),[busy,setBusy]=useState(false),[sent,setSent]=useState(false);
+  const [attached,setAttached]=useState(false);
   async function submit(event:FormEvent<HTMLFormElement>) {
     event.preventDefault();setBusy(true);setError("");
     try {
@@ -27,11 +29,13 @@ export function FeedbackForm({ name,email,project }: { name:string;email:string|
     }catch(error){setError(error instanceof Error?error.message:"Could not send feedback.");}finally{setBusy(false);}
   }
   if(sent)return <section className="diary-panel"><h2>Feedback sent</h2><p>You can follow replies in your feedback history.</p><Link href="/account" className="work-button work-button-primary mt-4">Back to profile</Link><Link href="/account/feedback?view=history" className="text-link ml-4">My feedback</Link></section>;
-  return <form onSubmit={submit} className="diary-panel max-w-xl"><h1>Send feedback</h1><p>{name}{email?` · ${email}`:""}{project?` · ${project}`:""}</p>
-    <label className="block mt-4">Type<select name="kind" className="mt-2 min-h-12 w-full border border-rule bg-background px-3" required defaultValue=""><option value="" disabled>Choose a type</option><option>Bug</option><option>Improvement</option><option>Complaint</option></select></label>
-    <label className="block mt-4">Message<textarea className="mt-2 min-h-32 w-full border border-rule bg-background p-3" name="message" required maxLength={5000}/></label>
-    <label className="block mt-4">Screenshot (optional)<input className="mt-2 min-h-12 w-full border border-rule p-2" type="file" name="photo" accept="image/jpeg,image/png,image/webp"/></label>
-    {error&&<p role="alert" className="mt-3 text-amber-900">{error}</p>}<button className="diary-primary mt-4" disabled={busy}>{busy?"Sending…":"Send feedback"}</button>
+  return <form onSubmit={submit} className="stitch-feedback max-w-xl"><h1 className="sr-only">Send feedback</h1>
+    <p>Tell us what happened, or what would make SiteLedger better. Your account details are filled in below.</p>
+    <fieldset><legend className="stitch-kicker">Type</legend><div className="stitch-feedback-types">{["Bug","Improvement","Complaint"].map(kind=><label key={kind} className="stitch-button"><input className="sr-only" name="kind" type="radio" value={kind} required/>{kind}</label>)}</div></fieldset>
+    <label className="block"><span className="stitch-kicker">Your message</span><textarea placeholder="What happened? What did you expect instead?" className="stitch-feedback-message" name="message" required maxLength={5000}/></label>
+    <label className="block"><span className="stitch-kicker">Screenshot (optional)</span><span className="stitch-button w-full"><DiaryIcon name="attach" size={18}/>{attached?"Screenshot attached":"Attach a screenshot"}</span><input className="sr-only" type="file" name="photo" accept="image/jpeg,image/png,image/webp" onChange={event=>setAttached(Boolean(event.target.files?.length))}/></label>
+    <dl className="stitch-card stitch-profile-values">{[["Your name",name],["Email",email??"Not provided"],["Project",project??"No active project"]].map(([key,value])=><div key={key}><dt className="stitch-kicker">{key}</dt><dd>{value}</dd></div>)}</dl>
+    {error&&<p role="alert" className="stitch-review-warning">{error}</p>}<button className="stitch-button w-full" data-primary disabled={busy}><DiaryIcon name="send" size={19}/>{busy?"Sending…":"Send feedback"}</button>
   </form>;
 }
 function FeedbackAdmin({ item }: { item:FeedbackItem }) {
@@ -44,7 +48,12 @@ function FeedbackAdmin({ item }: { item:FeedbackItem }) {
   return <form onSubmit={save} className="mt-4 border-t border-rule pt-4"><label className="block">Status<select name="status" className="min-h-12 w-full border border-rule bg-background px-3" defaultValue={item.status}><option>New</option><option>In progress</option><option>Resolved</option></select></label><label className="mt-4 block">Reply<textarea name="reply" maxLength={5000} className="min-h-24 w-full border border-rule bg-background p-3"/></label><button className="work-button work-button-primary mt-4" disabled={busy}>Save update</button>{message&&<p role="status" className="mt-3">{message}</p>}</form>;
 }
 export function FeedbackHistory({ items,admin }: { items:FeedbackItem[];admin:boolean }) {
-  return <section className="diary-panel"><h1>{admin?"Feedback inbox":"My feedback"}</h1>{admin&&<p>{items.filter(item=>item.status!=="Resolved").length} open</p>}{!items.length&&<p>No feedback yet.</p>}
-    {items.map(item=><details key={item.id} className="work-disclosure"><summary><span><strong>{item.kind} · {item.status}</strong><small>{admin?`${item.name} · `:""}{item.project?`${item.project} · `:""}{displayTimestamp(item.date)}</small></span></summary><div className="work-disclosure-body"><p className="whitespace-pre-wrap">{item.message}</p>{item.has_photo&&<Image src={`/api/feedback?photo=${item.id}`} width={800} height={600} className="mt-3 w-full h-auto" unoptimized alt="Screenshot attached to feedback"/>}{item.replies.map((reply,index)=><div className="mt-4 border-t border-rule pt-3" key={index}><p className="eyebrow">Reply · {displayTimestamp(reply.date)}</p><p className="whitespace-pre-wrap">{reply.text}</p></div>)}{admin&&<FeedbackAdmin item={item}/>}</div></details>)}
+  return <section className="stitch-feedback-inbox"><h1 className="sr-only">{admin?"Feedback inbox":"My feedback"}</h1>
+    {admin&&<p>{items.filter(item=>item.status!=="Resolved").length} open · {items.length} total. Open an item to read it in full, reply and update its status.</p>}
+    {!items.length&&<p>No feedback yet.</p>}
+    {items.map(item=><details key={item.id} className="stitch-card"><summary>
+      <div><span className="stitch-kicker stitch-chip" data-tone={item.status==="In progress"?"red":item.status==="Resolved"?"green":undefined}>{item.status}</span><strong>{item.kind}</strong><small>{displayTimestamp(item.date)}</small></div>
+      <p>{item.message}</p><small>{[admin?item.name:null,item.project].filter(Boolean).join(" · ")}</small>
+    </summary><div className="stitch-feedback-thread"><p className="whitespace-pre-wrap">{item.message}</p>{item.has_photo&&<Image src={`/api/feedback?photo=${item.id}`} width={800} height={600} className="mt-3 w-full h-auto" unoptimized alt="Screenshot attached to feedback"/>}{item.replies.map((reply,index)=><div className="mt-4 border-t border-rule pt-3" key={index}><p className="eyebrow">Reply · {displayTimestamp(reply.date)}</p><p className="whitespace-pre-wrap">{reply.text}</p></div>)}{admin&&<FeedbackAdmin item={item}/>}</div></details>)}
   </section>;
 }

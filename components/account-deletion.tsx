@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useActionConfirmation } from "./action-confirmation";
 import { displayTimestamp } from "@/lib/reports/model";
+import { DiaryIcon } from "./diary-icon";
 
 async function request(input:object) {
   const response=await fetch("/api/account/deletion",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(input)});
@@ -23,7 +24,7 @@ export function RequestDeletion({email,pending}:{email:string;pending:boolean}) 
     try{await request({action:"verify",code:new FormData(event.currentTarget).get("code")});setRequested(true);}
     catch(error){setError(error instanceof Error?error.message:"Could not submit your request.");}finally{setBusy(false);}
   }
-  return <section className="diary-panel max-w-xl"><h1>Delete your account</h1>
+  return <section className="stitch-card max-w-xl stitch-deletion"><h1 className="stitch-section-title"><DiaryIcon name="trash" size={20}/> Delete your account</h1>
     {requested?<><p role="status">Your request is awaiting administrator review. We’ll email you after deletion.</p><Link className="text-link" href="/account">Back to profile</Link></>:<>
       <p>An administrator reviews your request. After approval, you lose access to this account and cannot sign up with {email} again for 30 days.</p>
       <p>Locked project reports, original attribution and amendments remain in the project history. Transfer or archive projects you own before requesting deletion.</p>
@@ -44,7 +45,7 @@ export function ReviewDeletions({items}:{items:DeletionItem[]}) {
     try{const result=await request({action:"approve",id:item.id});setMessage(result.emailSent?"Account deleted and confirmation emailed.":"Account deleted. Confirmation email could not be sent. You can retry it here.");router.refresh();}
     catch(error){setError(error instanceof Error?error.message:"Could not approve deletion.");}finally{setBusy("");}
   }
-  return <section className="diary-panel">{confirmation}<h1>Account deletion requests</h1><p>{items.filter(item=>!item.approved_at).length} pending</p>
+  return <section className="stitch-card stitch-deletion">{confirmation}<h1 className="stitch-section-title">Account deletion requests</h1><p>{items.filter(item=>!item.approved_at).length} pending</p>
     {message&&<p className="my-4" role="status">{message}</p>}{error&&<p className="my-4 text-amber-900" role="alert">{error}</p>}
     {!items.length&&<p>No deletion requests yet.</p>}
     <ol>{items.map(item=><li key={item.id} className="border-b border-rule py-4"><h2>{item.name||item.email||"Deleted account"}</h2>{item.email&&<p>{item.email}</p>}<p>{displayTimestamp(item.requested_at)} · {item.approved_at?item.notified_at?"Deleted · email sent":"Deleted · email pending":"Awaiting approval"}</p>{!item.notified_at&&<button type="button" className="work-button mt-3" disabled={Boolean(busy)} onClick={()=>void approve(item)}>{busy===item.id?"Saving…":item.approved_at?"Retry email":"Review and approve"}</button>}</li>)}</ol>

@@ -10,8 +10,9 @@ import { TelegramFrame } from "@/components/telegram-frame";
 import { PhotoObservations } from "@/components/photo-observations";
 import { WorkspaceHeader } from "./workspace-header";
 import { DiaryNotice } from "./diary-notice";
-import { WorkFlow, WorkDisclosure } from "./work-flow";
+import { WorkDisclosure } from "./work-flow";
 import type { ReviewDraft } from "@/lib/confirm/draft";
+import { DiaryIcon } from "./diary-icon";
 
 const empty: SiteExtraction = { work_items: [], materials: [], delays: [], issues: [], raw_language_notes: "" };
 const inputClass = "min-h-12 w-full rounded-none border border-rule bg-[#fffdf9] px-3 py-2 text-base outline-offset-2 focus:outline-accent";
@@ -33,7 +34,23 @@ function Score({ name, value }: { name: string; value: number }) {
   return <input type="hidden" name={name} value={value} />;
 }
 function Section({ title, children }: { title: string; children: ReactNode }) {
-  return <section className="diary-panel"><h2 className="mb-4">{title}</h2>{children}</section>;
+  return <section className="stitch-review-items"><h2 className="stitch-section-title"><DiaryIcon name="review" size={20}/>{title}</h2>{children}</section>;
+}
+function VoicePlayback({ src, label }: { src: string; label: string }) {
+  const audio = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [duration, setDuration] = useState<number|null>(null);
+  const [error, setError] = useState(false);
+  return <section className="stitch-card stitch-transcript">
+    <div className="stitch-title-row"><p className="stitch-kicker"><DiaryIcon name="mic" size={18}/>Voice intake transcript</p><time className="stitch-kicker stitch-chip">{label}</time></div>
+    <div className="stitch-audio">
+      <audio ref={audio} src={src} preload="metadata" onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)} onEnded={()=>setPlaying(false)} onLoadedMetadata={event=>{const seconds=event.currentTarget.duration;if(Number.isFinite(seconds))setDuration(seconds);}}/>
+      <button className="stitch-button" data-primary type="button" aria-label={playing?"Pause original site voice note":"Play original site voice note"} onClick={()=>{if(playing)audio.current?.pause();else void audio.current?.play().catch(()=>setError(true));}}><DiaryIcon name={playing?"pause":"play"} size={20}/></button>
+      <div className="stitch-wave" aria-hidden="true">{[7,13,18,12,24,14,19,10,21,13,18,10,5].map((height,index)=><i key={index} style={{height,opacity:index<5?1:.4}}/>)}</div>
+      {duration!==null&&<span className="stitch-kicker">{Math.floor(duration/60)}:{String(Math.floor(duration%60)).padStart(2,"0")}</span>}
+    </div>
+    {error&&<p role="alert">Could not play the original voice note.</p>}
+  </section>;
 }
 export function ConfirmForm({ record, draft, trial = false, banner, children }: { record: ReviewRecord; draft?: ReviewDraft | null; trial?: boolean; banner?: ReactNode; children?: ReactNode }) {
   const router = useRouter();
@@ -78,6 +95,7 @@ export function ConfirmForm({ record, draft, trial = false, banner, children }: 
       const result = await response.json();
       if (!response.ok) throw new Error(result.error);
       setDirty(false); setDraftNotice(true);
+      router.push("/today");
     } catch (error) { setError(error instanceof Error ? error.message : "Could not save this draft. Try again."); focusFeedback.current = true; }
     finally { setSavingDraft(false); }
   }
@@ -118,16 +136,16 @@ export function ConfirmForm({ record, draft, trial = false, banner, children }: 
     } catch { setError("Could not reach SiteLedger. Your edits are still here; try again."); }
     finally { setSaving(false); setCosting(false); }
   }
-  const date = new Intl.DateTimeFormat("en-NG", { dateStyle: "long", timeStyle: "short", timeZone: record.timezone ?? "Africa/Lagos" }).format(new Date(record.created_at));
-  return <main className="mx-auto max-w-7xl px-5 pb-12 pt-7 sm:px-10">
+  const time = new Intl.DateTimeFormat("en-GB", { timeStyle: "short", timeZone: record.timezone ?? "Africa/Lagos" }).format(new Date(record.created_at));
+  return <main className="mx-auto max-w-7xl px-5 pb-12 pt-7 sm:px-10 stitch-confirm">
     <TelegramFrame />
-    <WorkspaceHeader current="reports" title="Confirm" project={record.project_name}/>{banner}
-    <header className="border-b border-rule pb-5"><p className="eyebrow">Human review</p>
-      <h1 className="mt-4 font-serif text-3xl">Review your site note</h1><p className="mt-3 leading-7">{record.project_name}</p>
-      <p className="mt-2 text-sm">Recorded by {record.submitted_by}</p><details className="log-reference"><summary>Capture details</summary><p className="mt-2 font-mono text-sm">{date} · {record.timezone ?? "Africa/Lagos"}</p></details>
+    <WorkspaceHeader current="reports" title="Voice Log Recorder" project={record.project_name} detail/>{banner}
+    <header className="stitch-human-gate stitch-card"><span><DiaryIcon name={locked?"lock":"verified"} size={18}/></span><div>
+      <p className="stitch-kicker" data-ink="orange">{locked?"Locked record":"Mandatory human review"}</p>
+      <h1>{locked?"This site note belongs to a locked report.":"Human confirmation mandatory — nothing is costed or locked until you verify."}</h1></div></header>
       {record.guest_origin && <p className="mt-4 border-l-4 border-accent pl-4 leading-7">Originally captured by {record.guest_origin.recorded_by}. Your guest edits are carried forward. Confirm this work under your verified professional name before approval.</p>}
       {record.guest_origin && <Link className="inline-flex min-h-12 items-center underline" href={`/trial/original/${record.id}`}>View the preserved guest trial</Link>}
-      {trial && <p className="mt-4 border-l-4 border-accent pl-4 leading-7">Private trial. Demo rates are illustrative. Confirmation creates a draft; save to a verified account before approval.</p>}</header>
+      {trial && <p className="stitch-card mt-4">Private trial. Demo rates are illustrative. Save your work to a verified account before approval.</p>}
     <div ref={feedback} tabIndex={-1} className="outline-none">
       {error ? <DiaryNotice tone="error" title="Your changes need another check">{error}</DiaryNotice>
         : saved && <div role="status" className={"mt-5 border-l-4 p-5 " + (dirty ? "border-amber-700 bg-amber-50" : "border-[#657055] bg-[#EEF0E7]")}>
@@ -138,26 +156,32 @@ export function ConfirmForm({ record, draft, trial = false, banner, children }: 
         </div>}
     </div>
     {saved && !dirty && <Link prefetch={false} className="mt-4 block min-h-12 py-3 font-semibold underline" href={trial ? "/trial/report" : `/reports/${record.id}`}>Open costed report</Link>}
-    <WorkFlow step="review"/><p className="my-5 leading-7">Check each quantity and BoQ item. Confirm only the work and observations you know are correct.</p>
     {!record.audio_url&&record.photos.length>0&&<DiaryNotice title="Photo-only site note">Add the work and quantities you want costed. Photo findings are suggestions; they do not supply a quantity or price.</DiaryNotice>}
     {archived && <p role="status" className="my-4 border-l-4 border-accent p-4">Archived project. This site note is available for reading; the owner must restore the project before changes.</p>}
-    {locked && <p className="my-4 border-2 border-accent p-4 font-mono text-accent">LOCKED — this record cannot be changed.</p>}
-    {record.audio_url && <WorkDisclosure title="Original voice note & transcript"><audio aria-label="Original site voice note" className="w-full mt-5" controls preload="none" src={mediaUrl("audio")} />
-      <details className="mt-4"><summary className="min-h-12 cursor-pointer py-3">Read the original transcript</summary>
-        <p className="whitespace-pre-wrap border-l-2 border-rule pl-4 leading-7">{record.transcript ?? "The original audio is saved. A transcript isn’t available."}</p></details></WorkDisclosure>}
+    {record.audio_url && <div className="stitch-transcript-block">
+      <VoicePlayback src={mediaUrl("audio")} label={time}/>
+      <blockquote>{record.transcript ? <>“{record.transcript}”</> : "The original audio is saved. A transcript isn’t available yet."}</blockquote>
+      {source.raw_language_notes && <p className="stitch-language"><DiaryIcon name="translate" size={18}/>{source.raw_language_notes}</p>}
+    </div>}
     {listening ? <DiaryNotice busy title="Listening to your note…">Your audio and photos are saved. This page will update when your note is ready to check.</DiaryNotice>
       : <form onSubmit={submit} onChange={() => setDirty(true)} data-unsaved={dirty&&!locked&&!archived&&!saving}>
       {record.job_status === "manual_entry" && <DiaryNotice tone="warning" title="Enter the site details">We couldn’t read this note reliably. Your audio and photos are saved. Enter what happened below.</DiaryNotice>}
       <fieldset disabled={locked || archived || saving}>
       <Section title="Work items">
-        <p className="mb-5 leading-7">Choose the agreed BoQ item and check the work quantity.</p>
-        {!work.length && <p className="mb-5">No work items were picked up. Add an item if work was done.</p>}
+        {!work.length && <p className="stitch-card">No work items were picked up. Add an item if work was done.</p>}
         <table className="w-full table-fixed border-collapse text-left"><caption className="sr-only">Editable work quantities and BoQ choices</caption>
           <thead className="sr-only"><tr><th scope="col">Work item</th><th scope="col">Quantity</th></tr></thead>
           <tbody>{work.map(({ key, value, boqId, unitValue }, i) => <tr key={key} className="review-row border-b border-rule" data-confidence={low(value.confidence) ? "low" : undefined}><td colSpan={2} className="py-5">
-            {low(value.confidence) && <p className="mb-3 text-amber-900">Check this one — this item needs your input.</p>}
-            <div className="review-work-fields" data-tour={i===0?"work-items":undefined}><div><Field label="Description" name={`w${i}.description`} value={value.description} initial={fields[`w${i}.description`]} required low={low(value.confidence)} /></div>
-              <Field label={unitValue ? `Quantity (${unitLabel(unitValue)})` : "Quantity"} name={`w${i}.quantity`} value={value.quantity} initial={fields[`w${i}.quantity`]} number required low={low(value.confidence) || value.quantity === null} /></div>
+            <div className="stitch-title-row" data-tour={i===0?"work-items":undefined}><span className="stitch-kicker" data-ink="orange">{record.boq.find(item=>item.id===boqId)?.section ?? "Work item"}</span><span className="stitch-kicker stitch-chip" data-tone={low(value.confidence)?"red":"green"}>{value.confidence.toFixed(2)} conf.</span></div>
+            {low(value.confidence) && <p className="stitch-review-warning">Check this one — this item needs your input.</p>}
+            <Field label="Description" name={`w${i}.description`} value={value.description} initial={fields[`w${i}.description`]} required low={low(value.confidence)} />
+            <div className="stitch-quantity">
+              <label htmlFor={`quantity-${key}`} className="stitch-kicker">{unitValue ? `Quantity (${unitLabel(unitValue)})` : "Quantity"} *</label>
+              <button type="button" className="stitch-button" aria-label={`Decrease quantity for work item ${i+1}`} onClick={event=>{const input=event.currentTarget.parentElement?.querySelector("input");if(input){input.value=String(Math.max(0,(Number(input.value)||0)-1));setDirty(true);}}}>−</button>
+              <input id={`quantity-${key}`} className={inputClass} name={`w${i}.quantity`} type="number" step="any" min="0" inputMode="decimal" defaultValue={fields[`w${i}.quantity`] ?? (low(value.confidence) ? "" : value.quantity ?? "")} required aria-describedby={low(value.confidence) || value.quantity === null ? `quantity-hint-${key}` : undefined}/>
+              <button type="button" className="stitch-button" aria-label={`Increase quantity for work item ${i+1}`} onClick={event=>{const input=event.currentTarget.parentElement?.querySelector("input");if(input){input.value=String((Number(input.value)||0)+1);setDirty(true);}}}>+</button>
+              {(low(value.confidence) || value.quantity === null) && <span id={`quantity-hint-${key}`} className="sr-only">Check this one — enter the value.</span>}
+            </div>
             <label className="mt-4 block">BoQ item *<select className={inputClass + " mt-2"} name={`w${i}.boq`} value={boqId} onChange={event => {
               const selected = event.target.value; const chosen = record.boq.find(item => item.id === selected);
               setWork(rows => rows.map(row => row.key === key ? { ...row, boqId: selected, unitValue: chosen?.unit ?? row.unitValue } : row));
@@ -216,9 +240,9 @@ export function ConfirmForm({ record, draft, trial = false, banner, children }: 
       <p className="mb-4">By confirming, you confirm that these are the quantities and observations from your site.</p>
       {!record.audio_url&&!record.photos.length&&!locked&&<p role="status" className="my-4">Add a voice note or photo in the same Telegram chat before confirming.</p>}
       {draftNotice&&!dirty&&<p role="status" className="mb-3">Draft saved. <Link href="/today" className="text-link">Return to Today</Link></p>}
-      {!locked&&!archived&&<div className="diary-confirm-actions"><button type="submit" disabled={saving || savingDraft || record.pending_media || record.pending_photo_analysis || (!record.audio_url&&!record.photos.length) || (!!saved && !dirty && !draftNotice)} className="diary-primary">
-        {saving ? costing ? "Costing against the BoQ…" : "Saving your confirmation…" : saved ? "Confirm changes and rebuild report" : "Confirm and cost it"}</button>
-        {!trial&&<button type="button" data-tour="save-draft" className="work-button" disabled={saving||savingDraft} onClick={event=>void saveDraft(event.currentTarget.form)}>{savingDraft?"Saving draft…":"Save draft — finish later"}</button>}</div>}
+      {!locked&&!archived&&<div className="diary-confirm-actions"><button type="submit" disabled={saving || savingDraft || record.pending_media || record.pending_photo_analysis || (!record.audio_url&&!record.photos.length) || (!!saved && !dirty && !draftNotice)} className="stitch-button" data-primary>
+        <DiaryIcon name="check" size={20}/>{saving ? costing ? "Costing against the BoQ…" : "Saving your confirmation…" : saved ? "Confirm changes and rebuild report" : "Confirm and cost it"}</button>
+        {!trial&&<button type="button" data-tour="save-draft" className="stitch-button" disabled={saving||savingDraft} onClick={event=>void saveDraft(event.currentTarget.form)}><DiaryIcon name="bookmark" size={20}/>{savingDraft?"Saving draft…":"Save draft — finish later"}</button>}</div>}
       </form>}{children}
   </main>;
 }

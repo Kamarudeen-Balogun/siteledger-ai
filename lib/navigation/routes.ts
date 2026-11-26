@@ -1,5 +1,5 @@
 export function navigationFallback(path: string): string {
-  if (path === "/account/confirm" || path === "/account/recover") return "/account";
+  if (path.startsWith("/account/") || path === "/help" || path === "/about") return "/account";
   const project = path.match(/^\/projects\/([^/]+)\/(?:boq|team)$/);
   if (project) return `/projects/${project[1]}`;
   if (/^\/projects\/[^/]+$/.test(path)) return "/projects";

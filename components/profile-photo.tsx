@@ -15,7 +15,8 @@ export function ProfilePhoto({ name, hasPhoto }: { name: string; hasPhoto: boole
   const router = useRouter(), dialog = useRef<HTMLDialogElement>(null);
   const [preview,setPreview]=useState<string|null>(null),[file,setFile]=useState<File|null>(null),[zoom,setZoom]=useState(1);
   const [busy,setBusy]=useState(false),[error,setError]=useState(""),[version,setVersion]=useState(0);
-  const initials=name.trim().split(/\s+/).slice(0,2).map(word=>Array.from(word)[0]).join("").toLocaleUpperCase();
+  const words=name.trim().split(/\s+/).filter(word=>word&&!/^(engr|dr|mr|ms|mrs|prof)\.?$/i.test(word));
+  const initials=words.slice(0,2).map(word=>Array.from(word)[0]).join("").toLocaleUpperCase();
   useEffect(()=>{if(!file)return;const url=URL.createObjectURL(file);const timer=setTimeout(()=>setPreview(url));return()=>{clearTimeout(timer);URL.revokeObjectURL(url);};},[file]);
   async function save(remove=false) {
     setBusy(true);setError("");

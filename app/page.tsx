@@ -1,12 +1,37 @@
 import { PublicSite } from "@/components/public-site";
 import { LandingAccountLink } from "@/components/landing-account-link";
+import { DiaryIcon } from "@/components/diary-icon";
 export const metadata={title:"SiteLedger AI — From site voice note to costed record",description:"Record site work by voice, confirm the quantities, cost them against your BoQ and preserve an approved report with photos and amendments."};
 export default function Home() {
   return <PublicSite current="/">
-    <section className="landing-hero landing-hero--trial content-width" aria-labelledby="hero-title"><div className="hero-copy"><p className="eyebrow">For the site. For the record.</p><h1 id="hero-title">The day’s work.<br/><span className="text-accent">With the money attached.</span></h1><p className="hero-description">Turn a foreman’s voice note and photos into a daily report, costed against the Bill of Quantities. Check the quantities. Approve the record. Keep the proof.</p><div className="mt-8 flex flex-wrap gap-3"><LandingAccountLink trial className="public-button bg-accent font-semibold text-white" anonymousLabel="Try a private site record"/><LandingAccountLink className="public-button border border-rule" anonymousLabel="Sign in / Create account"/></div><p className="mt-5 text-sm leading-6">Telegram or web intake · Human-confirmed quantities · Project BoQ rates</p></div></section>
-    <div className="content-width"><div className="landing-principles"><p><span className="eyebrow">01 / Money</span>Cost the work against your BoQ.</p><p><span className="eyebrow">02 / Proof</span>Keep quantities, photos and approvals together.</p><p><span className="eyebrow">03 / Site fit</span>Speak in chat. Queue web notes offline.</p></div></div>
-    <section id="how-it-works" className="landing-section content-width" aria-labelledby="workflow-title"><div className="section-heading"><p className="eyebrow">From the site to the client</p><h2 id="workflow-title">A clear record.<br/>One deliberate step at a time.</h2><p>AI helps with the first draft. A person checks the work. The price list decides the money.</p></div><ol className="workflow-list">{[["Send what happened","Record a voice note and attach site photos in Telegram or the web diary. Web notes can wait on your device until data returns."],["Check the quantities","Review the transcript, work items, crew and possible photo findings. Correct unclear values before costing."],["Cost and review","Confirmed quantities meet your supplied BoQ rates. Open the daily report and download its client-ready PDF."],["Approve and preserve","A PM approves the draft in a separate action. The locked original stays intact; later corrections become linked amendments."]].map(([title,text],i)=><li key={title}><span className="workflow-number" aria-hidden="true">0{i+1}</span><div><h3>{title}</h3><p>{text}</p></div></li>)}</ol></section>
-    <section className="landing-section content-width" aria-labelledby="evidence-title"><div className="section-heading"><p className="eyebrow">An account of the work</p><h2 id="evidence-title">Built for the questions that come later.</h2><p>What was completed? Who confirmed it? Which rate was used? An approved report keeps those answers with the original record.</p></div><ul className="ruled-points"><li>Professional names and roles recorded at each action.</li><li>Possible photo findings people can correct or dismiss.</li><li>Locked originals and a separate amendment history.</li><li>Private projects with owner-controlled team access.</li></ul></section>
-    <section className="audience-section content-width" aria-labelledby="audience-title"><p className="eyebrow">A shared record. Different jobs.</p><h2 id="audience-title" className="section-title">Easy on site. Clear at the desk.</h2><div className="audience-columns">{[["Foremen & site engineers","Send voice and photos. Check your own work without learning a complex dashboard."],["PMs & quantity surveyors","Review quantities and rates on a wider screen. Approve the current draft deliberately."],["Clients & consultants","Read the approved PDF with work items, costs, observations and signatures. No account needed to read a PDF you receive."]].map(([title,text])=><div key={title}><h3>{title}</h3><p>{text}</p></div>)}</div></section>
+    <div className="content-width stitch-landing">
+      <section className="stitch-card stitch-landing-hero" aria-labelledby="hero-title">
+        <p className="stitch-kicker" data-ink="orange">Digital Site Diary</p>
+        <h1 id="hero-title">The day’s work.<br/><span>With the money attached.</span></h1>
+        <p>Turn a foreman’s voice note and photos into a daily report, costed against the Bill of Quantities. Check the quantities. Approve the record. Keep the proof.</p>
+        <div className="stitch-menu-list">
+          <LandingAccountLink trial className="stitch-button stitch-landing-primary" anonymousLabel="Try a private site record"/>
+          <LandingAccountLink className="stitch-button" anonymousLabel="Sign in / Create account"/>
+        </div>
+      </section>
+      <section id="how-it-works" aria-labelledby="workflow-title">
+        <h2 id="workflow-title" className="stitch-section-title">How it works</h2>
+        <ol className="stitch-menu-list">{([
+          ["mic","Send what happened","Record a voice note, attach site photos, or do both. Use Telegram or the web diary. Web notes can wait on your device until data returns."],
+          ["review","Check the quantities","Review the transcript, work items, crew and possible photo findings. Correct unclear values before costing."],
+          ["boq","Cost and review","Confirmed quantities meet your supplied BoQ rates. Open the daily report and download its client-ready PDF."],
+          ["lock","Approve and preserve","A PM approves the draft in a separate action. The locked original stays intact. Later corrections become linked amendments."],
+        ] as const).map(([icon,title,description])=><li key={title} className="stitch-menu-row"><DiaryIcon name={icon}/><span><strong>{title}</strong><small>{description}</small></span></li>)}</ol>
+      </section>
+      <section className="stitch-card stitch-landing-evidence">
+        <h2>Keep a record you can return to</h2>
+        <ul>
+          <li><DiaryIcon name="profile" size={18}/>Professional names and roles recorded at each action.</li>
+          <li><DiaryIcon name="camera" size={18}/>Possible photo findings people can correct or dismiss.</li>
+          <li><DiaryIcon name="history" size={18}/>Locked originals and a separate amendment history.</li>
+          <li><DiaryIcon name="team" size={18}/>Private projects with owner-controlled access.</li>
+        </ul>
+      </section>
+    </div>
   </PublicSite>;
 }

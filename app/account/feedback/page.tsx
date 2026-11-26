@@ -14,11 +14,11 @@ async function Content({searchParams}:{searchParams:Promise<{view?:string}>}) {
   if(params.view==="admin"||params.view==="history"){
     const data=await feedbackData(hash);
     if(!data||(params.view==="admin"&&!data.admin))notFound();
-    return <FeedbackHistory items={data.items} admin={params.view==="admin"&&data.admin}/>;
+    return <><WorkspaceHeader current="account" title={params.view==="admin"?"Feedback Inbox":"My Feedback"} hideProfile/><FeedbackHistory items={data.items} admin={params.view==="admin"&&data.admin}/></>;
   }
   const list=await privateProjects();
-  return <FeedbackForm name={account.professional_name??"SiteLedger user"} email={account.email} project={list?.projects.find(project=>project.id===list.active_project_id)?.name}/>;
+  return <><WorkspaceHeader current="account" title="Send Feedback" hideProfile/><FeedbackForm name={account.professional_name??"SiteLedger user"} email={account.email} project={list?.projects.find(project=>project.id===list.active_project_id)?.name}/></>;
 }
 export default function Page(props:{searchParams:Promise<{view?:string}>}) {
-  return <main className="mx-auto max-w-5xl px-5 py-7"><WorkspaceHeader current="account" title="Feedback"/><Suspense fallback={<DiaryNotice busy title="Opening feedback…"/>}><Content {...props}/></Suspense></main>;
+  return <main className="mx-auto max-w-5xl px-5 py-7"><Suspense fallback={<><WorkspaceHeader current="account" title="Feedback" hideProfile/><DiaryNotice busy title="Opening feedback…"/></>}><Content {...props}/></Suspense></main>;
 }

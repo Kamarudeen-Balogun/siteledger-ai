@@ -1,5 +1,5 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/costing/format-money";
@@ -7,7 +7,7 @@ import { displayRatio, displayUnit } from "@/lib/reports/model";
 import type { ProjectDashboard } from "@/lib/projects/dashboard";
 import { boqUnits, type BoqRow } from "@/lib/projects/boq-types";
 import { importFields, importLabels, inputErrors, nextBoqCode, reviewedItem, type ImportField, type ImportValues } from "@/lib/projects/boq-input";
-import { StartProjectNote } from "./project-forms";
+import { DiaryIcon } from "./diary-icon";
 import { useActionConfirmation } from "./action-confirmation";
 import { projectAction } from "@/lib/projects/client-actions";
 import { decimal } from "@/lib/costing/decimal";
@@ -15,7 +15,7 @@ import { suppliedDecimal } from "@/lib/projects/boq-input";
 const BoqImporter = dynamic(() => import("./boq-importer"), { loading: () => <p role="status">Opening import…</p>, ssr: false });
 const field = "mt-2 min-h-12 w-full border border-rule bg-[#fffdf9] px-3 py-3 text-base";
 const button = "work-button";
-export function BoqEditor({ projectId, currency, rows, editable }: { projectId: string; currency: string; rows: ProjectDashboard["rows"]; editable: boolean }) {
+export function BoqEditor({ projectId, currency, rows, editable, overview }: { projectId: string; currency: string; rows: ProjectDashboard["rows"]; editable: boolean; overview?: ReactNode }) {
   const router = useRouter(), { confirm, confirmation } = useActionConfirmation();
   const [selected, setSelected] = useState<BoqRow | null>(null), [open, setOpen] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState(""), [message, setMessage] = useState("");
   const [newId, setNewId] = useState(""), [code, setCode] = useState(""), [dirty,setDirty]=useState(false), [details,setDetails]=useState(false), [importing,setImporting]=useState(false);
@@ -40,9 +40,9 @@ export function BoqEditor({ projectId, currency, rows, editable }: { projectId: 
   }
   function errorFor(key: ImportField) {return errors[key]&&<span id={`boq-${key}-error`} className="mt-2 block text-sm leading-6 text-red-800">{errors[key]}</span>;}
   function input(key: ImportField,placeholder?:string) {return <><input className={field} name={key} id={`boq-${key}`} aria-label={key==="rate"?`Rate per unit (${currency})`:importLabels[key]} maxLength={key==="rate"?50:200} inputMode={key==="rate"||key==="boq_quantity"?"decimal":undefined} required={key!=="item_code"&&key!=="section"} placeholder={placeholder} defaultValue={selected?.[key]??(key==="item_code"?code:key==="section"?"General":"")} aria-invalid={Boolean(errors[key])} aria-describedby={errors[key]?`boq-${key}-error`:undefined}/>{errorFor(key)}</>;}
-  return <section className="my-8">{confirmation}
-    {editable && !open && !importing && !message && <div className="flex flex-wrap gap-3"><button type="button" className={button+" work-button-primary"} disabled={busy} onClick={() => edit(null)} data-tour="boq-add">+ Add item</button><button type="button" className={button} onClick={()=>{setImporting(true);setMessage("");}} data-tour="boq-upload">Upload BoQ</button></div>}
-    {message && <div className="my-5 border-l-4 border-accent pl-4"><p role="status" className="leading-7">{message}</p>{editable&&<div className="mt-4 flex flex-wrap gap-3"><StartProjectNote id={projectId}/><button type="button" className={button} onClick={()=>edit(null)}>Add another item</button><button type="button" className={button} onClick={()=>{setImporting(true);setMessage("");}}>Import CSV / XLSX</button></div>}</div>}
+  return <section className="stitch-boq-editor">{confirmation}
+    {editable && !open && !importing && <div className="stitch-two-actions"><button type="button" className="stitch-button" data-primary onClick={()=>{setImporting(true);setMessage("");}} data-tour="boq-upload"><DiaryIcon name="upload" size={20}/>+ Upload BoQ File</button><button type="button" className="stitch-button" data-white disabled={busy} onClick={() => edit(null)} data-tour="boq-add"><DiaryIcon name="plus" size={20}/>+ Add item</button></div>}
+    {message && <p className="stitch-card" role="status">{message}</p>}
     {importing&&editable&&<BoqImporter projectId={projectId} currency={currency} existing={rows} close={()=>setImporting(false)} saved={message=>{setMessage(message);setImporting(false);}}/>}
     {open && editable && <form key={selected?.id ?? newId} onSubmit={save} noValidate onChange={event=>{setDirty(true);const values=new FormData(event.currentTarget),qty=suppliedDecimal(String(values.get("boq_quantity")??"")),rate=suppliedDecimal(String(values.get("rate")??""));setLineTotal(qty&&rate?formatMoney(decimal(qty,"quantity").times(rate).toFixed(),currency):null);}} data-unsaved={dirty||undefined} className="my-7 max-w-3xl diary-panel"><h2 className="font-serif text-2xl">{selected ? "Edit BoQ item" : "Add a work item"}</h2><div className="grid gap-x-6 sm:grid-cols-2">
       <label className="mt-5 block sm:col-span-2" htmlFor="boq-description">Work description{input("description","e.g. 225 mm blockwork")}</label>
@@ -52,6 +52,19 @@ export function BoqEditor({ projectId, currency, rows, editable }: { projectId: 
       {lineTotal&&<p className="mt-4 font-semibold" aria-live="polite">Line total {lineTotal}</p>}
     </div><details className="mt-6 border-t border-rule pt-4" open={details} onToggle={event=>setDetails(event.currentTarget.open)}><summary className="min-h-12 cursor-pointer">Optional details · code and section</summary><div className="grid gap-x-6 sm:grid-cols-2"><label className="mt-4 block" htmlFor="boq-item_code">Item code{input("item_code")}</label><label className="mt-4 block" htmlFor="boq-section">Section{input("section")}</label></div><p className="mt-3 text-sm leading-6">We generate a reference code and use General unless you choose your own.</p></details>
       {error && <p role="alert" className="my-5 border-l-4 border-amber-700 p-4 text-amber-900">{error}</p>}<div className="mt-6 flex flex-wrap gap-3"><button className={button + " work-button-primary"} disabled={busy}>{busy ? "Saving…" : "Review and save"}</button><button type="button" className={button} disabled={busy} onClick={async()=>{if(await discard()){setOpen(false);setDirty(false);}}}>Cancel editing</button>{selected&&<button type="button" className="text-link" disabled={busy} onClick={()=>void retire(selected)}>Remove item</button>}</div></form>}
-    {!rows.length ? <p className="my-7 leading-7">No BoQ items yet. Site notes can still be recorded while rates are prepared.</p> : <div className="mt-7" role="region" aria-label="Supplied BoQ price list" data-tour="boq-progress"><table className="ledger-table boq-table"><thead><tr><th scope="col">Work item</th><th scope="col">Rate ({currency})</th><th scope="col">Work complete</th>{editable && <th scope="col">Action</th>}</tr></thead><tbody>{rows.map(row => <tr key={row.id}><th scope="row"><span className="font-semibold">{row.description}</span><span className="eyebrow mt-1 block">{row.section} / {row.item_code}</span></th><td data-label="Rate">{formatMoney(row.rate, currency)} / {displayUnit(row.unit)}</td><td data-label="Work complete"><div><span>{row.progress.cumulative_quantity} / {row.boq_quantity} {displayUnit(row.unit)} · {displayRatio(row.progress.percentage_complete)}%</span><progress max={100} value={Math.min(100,Number(row.progress.percentage_complete))} aria-label={`Progress for ${row.description}`} data-overrun={row.progress.is_overrun||undefined}/>{row.progress.is_overrun&&<p className="report-variance">Quantity overrun</p>}</div></td>{editable && <td><button type="button" className={button} disabled={busy||importing} onClick={() => edit(row)} aria-label={`Edit ${row.item_code}`}>Edit item</button></td>}</tr>)}</tbody></table></div>}
+    {overview}
+    <div className="stitch-title-row"><h2 className="stitch-section-title">Contract Schedule Items</h2><span className="stitch-kicker">Sorted by trade</span></div>
+    {!rows.length ? <p className="stitch-card">No BoQ items yet. Site notes can still be recorded while rates are prepared.</p> : <ul className="stitch-boq-items" aria-label="Supplied BoQ price list" data-tour="boq-progress">{rows.map((row,index) => <li key={row.id} className="stitch-card">
+      <div className="stitch-title-row"><span className="stitch-kicker">Item {String(index+1).padStart(2,"0")} · {row.section}</span>{row.progress.is_overrun&&<span className="stitch-kicker stitch-chip" data-tone="red">Overrun</span>}</div>
+      <h3>{row.description}</h3>
+      <dl className="stitch-boq-values">
+        <div><dt>Scope qty</dt><dd>{row.boq_quantity} {displayUnit(row.unit)}</dd></div>
+        <div><dt>Unit rate</dt><dd>{formatMoney(row.rate,currency)}</dd></div>
+        <div><dt>Line total</dt><dd>{formatMoney(decimal(row.rate,"rate").times(row.boq_quantity).toFixed(),currency)}</dd></div>
+      </dl>
+      <div className="stitch-title-row"><small>Measured progress</small><strong>{row.progress.cumulative_quantity} {displayUnit(row.unit)} · {displayRatio(row.progress.percentage_complete)}%</strong></div>
+      <progress max={100} value={Math.min(100, Number(row.progress.percentage_complete))} aria-label={`Progress for ${row.description}`}/>
+      {editable && <button type="button" className="stitch-button mt-3" disabled={busy||importing} onClick={() => edit(row)} aria-label={`Edit ${row.item_code}`}>Adjust item</button>}
+    </li>)}</ul>}
   </section>;
 }

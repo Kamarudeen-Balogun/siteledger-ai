@@ -10,6 +10,8 @@ import { WorkspaceHeader } from "./workspace-header";
 import { DiaryNotice } from "./diary-notice";
 import { WorkFlow, WorkDisclosure } from "./work-flow";
 import { DiaryIcon } from "./diary-icon";
+import { MockProjectControl } from "./mock-project";
+import { useActionConfirmation } from "./action-confirmation";
 
 const button="min-h-12 border border-rule px-4 py-3 text-base disabled:opacity-50";
 type TodaySummary = {
@@ -28,6 +30,8 @@ function Preview({blob,audio=false}:{blob:Blob;audio?:boolean}) {
 export function CaptureDiary() {
   const search = useSearchParams();
   const [capturing,setCapturing]=useState(search.get("capture")==="1");
+  const [person,setPerson]=useState<string|null>(null);
+  const {confirm,confirmation}=useActionConfirmation();
   const [gate,setGate]=useState<"sign-in"|"project"|null>(null);
   const [summary,setSummary]=useState<TodaySummary|null>(null),[summaryError,setSummaryError]=useState(false);
   const [readOnly,setReadOnly]=useState(false);
@@ -42,13 +46,14 @@ export function CaptureDiary() {
   const readyToSend=useRef(false);
   const telegramLaunch=useRef(false);
   const savePending=useRef(false);
+  const recordingCancelled=useRef(false);
   const connecting=useRef(false);
   const refresh=async()=>{const values=await listQueue();if(alive.current)setRows(values.filter(row=>active.current&&belongsToActor(row,active.current)));};
   const send=async()=>{
     if(!readyToSend.current||sending.current||!active.current||!navigator.onLine)return;
     const current=active.current;
     sending.current=true;try{await drainQueue(current,refresh,()=>navigator.onLine&&readyToSend.current&&active.current?.actor_id===current.actor_id&&active.current?.project_id===current.project_id);}catch{if(alive.current)setError("Device storage is unavailable. Your queued note is kept.");}
-    finally{sending.current=false;await refresh().catch(()=>undefined);}
+    finally{sending.current=false;await refresh().catch(()=>undefined);if(alive.current&&active.current?.project_id===current.project_id)void loadSummary(current.project_id);}
   };
   async function connect() {
     if(!navigator.onLine){setOpening(false);readyToSend.current=!!active.current;return;}
@@ -57,7 +62,8 @@ export function CaptureDiary() {
     try {
       const account=await resolveClientAccount();
       if(!alive.current)return;
-      if(!account){setGate("sign-in");setSummary(null);active.current=null;readyToSend.current=false;setContext(null);setError("");return;}
+      if(!account){setGate("sign-in");setPerson(null);setSummary(null);active.current=null;readyToSend.current=false;setContext(null);setError("");return;}
+      setPerson(account.profile_id);
       setGate(null);
       const response=await fetch("/api/web/access",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}",cache:"no-store",signal:AbortSignal.timeout(15000)});
       const data=await response.json();
@@ -128,10 +134,10 @@ export function CaptureDiary() {
       const media=await navigator.mediaDevices.getUserMedia({audio:true});stream.current=media;
       const type=["audio/webm;codecs=opus","audio/ogg;codecs=opus","audio/mp4"].find(value=>MediaRecorder.isTypeSupported(value));
       if(!type){media.getTracks().forEach(track=>track.stop());throw new Error("Recording is unavailable. Choose a saved voice file instead.");}
-      const record=new MediaRecorder(media,{mimeType:type,audioBitsPerSecond:64000}),chunks:Blob[]=[];recorder.current=record;
+      const record=new MediaRecorder(media,{mimeType:type,audioBitsPerSecond:64000}),chunks:Blob[]=[];recorder.current=record;recordingCancelled.current=false;
       record.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
       record.onstop=()=>{if(timer.current)clearInterval(timer.current);media.getTracks().forEach(track=>track.stop());if(!alive.current)return;
-        const blob=new Blob(chunks,{type:type.split(";")[0]});try{audioType(blob);setAudio(blob);}catch(e){setError((e as Error).message);}setRecording(false);};
+        if(!recordingCancelled.current){const blob=new Blob(chunks,{type:type.split(";")[0]});try{audioType(blob);setAudio(blob);}catch(e){setError((e as Error).message);}}setRecording(false);};
       record.start();setSeconds(0);setRecording(true);const began=Date.now();
       timer.current=setInterval(()=>{const value=Math.floor((Date.now()-began)/1000);setSeconds(value);if(value>=90&&record.state==="recording")record.stop();},500);
     }catch(e){setError(e instanceof Error ? e.message:"Microphone access is unavailable. Choose a saved voice file instead.");}finally{setStarting(false);}
@@ -145,7 +151,7 @@ export function CaptureDiary() {
     setPreparing(true);setError("");bindCapture();try{const converted:Blob[]=[];for(const file of files)converted.push(await photoForUpload(file));setPhotos(current=>[...current,...converted]);}
     catch(e){setError(e instanceof Error ? e.message:"A photo could not be prepared. Your other files are kept.");}finally{setPreparing(false);}
   }
-  async function save() {
+  async function save(finishLater=false) {
     if(savePending.current||(!audio&&!photos.length)||!scope.current)return;
     savePending.current=true;const capturedContext=scope.current,capturedAt=captured.current;
     setSaving(true);setError("");
@@ -153,29 +159,39 @@ export function CaptureDiary() {
       const files=[...(audio?[audio]:[]),...photos],manifest={id:crypto.randomUUID(),project_id:capturedContext.project_id,captured_at:capturedAt,timezone:capturedContext.timezone,assets:await describeFiles(files)};
       if(!validManifest(manifest))throw new Error("Check the saved voice note and photos.");
       await enqueue({manifest,context:capturedContext,files,status:"queued",message:"Queued — will send when data returns."});
-      setFocusedId(manifest.id);
+      if(finishLater){setFocusedId(null);setCapturing(false);window.scrollTo(0,0);}
+      else setFocusedId(manifest.id);
       if(active.current?.project_id!==capturedContext.project_id||active.current?.actor_id!==capturedContext.actor_id)setError("This note is queued for its original project and account. Reopen that authorized diary to send it.");
       setAudio(null);setPhotos([]);scope.current=null;setCaptureProject(null);captured.current="";await refresh();void send();
     }catch(e){setError(e instanceof Error ? e.message:"Could not queue this note. Your files are still on this page.");}finally{savePending.current=false;setSaving(false);}
+  }
+  async function closeCapture() {
+    if ((audio||photos.length||recording)&&!await confirm({title:"Leave this recording?",description:"Save a draft to keep these attachments, or discard them to return to Today.",confirmLabel:"Discard attachments",danger:true})) return;
+    recordingCancelled.current=true;
+    if(recorder.current?.state==="recording")recorder.current.stop();
+    setAudio(null);setPhotos([]);setCapturing(false);setError("");scope.current=null;setCaptureProject(null);captured.current="";
+    window.scrollTo(0,0);
   }
   const visible=rows.filter(row=>context&&belongsToActor(row,context)).sort((a,b)=>b.manifest.captured_at.localeCompare(a.manifest.captured_at));
   const currentSummary=summary?.projectId===context?.project_id?summary:null;
   const pending=visible.filter(row=>row.status!=="sent");
   const localReviews=visible.filter(row=>row.status==="sent"&&row.manifest.project_id===context?.project_id&&!currentSummary?.notes.some(note=>note.id===row.manifest.id)).slice(0,5);
-  const drafts=currentSummary?.notes.filter(note=>note.stage!=="approved")??[];
+  const drafts=currentSummary?.notes.filter(note=>note.amount==null)??[];
   const lastLocked=currentSummary?.notes.find(note=>note.stage==="approved");
-  const daily=currentSummary?.notes.filter(note=>note.today&&note.amount).toReversed()??[];
+  const daily=currentSummary?.notes.filter(note=>note.today).toReversed()??[];
   const focused=visible.find(row=>row.manifest.id===focusedId);
   useEffect(()=>{if(focusedId){receipt.current?.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth",block:"start"});receipt.current?.focus({preventScroll:true});}},[focusedId,focused?.manifest.id]);
   const busy=opening||saving||preparing||starting||!context||context.expires<=now/1000;
   const project=(captureProject??context)?.project_name;
   const date= context&&now ? new Intl.DateTimeFormat("en-GB",{weekday:"long",day:"numeric",month:"short",year:"numeric",timeZone:context.timezone}).format(now):"";
-  return <main className="mx-auto min-h-svh max-w-7xl px-5 py-7 text-base sm:px-10 today-workspace">
-    <WorkspaceHeader current="today" title={capturing?"Add today’s work":undefined} project={capturing?project:undefined}/>
+  return <main className="mx-auto min-h-svh max-w-7xl px-5 py-7 sm:px-10 today-workspace stitch-today">
+    <WorkspaceHeader current="today" title={capturing?"Add Today's Work":undefined} project={project} projectId={context?.project_id} detail={capturing} hideProfile={capturing} onBack={capturing?()=>void closeCapture():undefined}/>
+    {confirmation}
     {opening?<DiaryNotice busy title="Opening your diary…"/>:gate&&!context?<section className="diary-panel diary-gate">
       <h1>{gate==="sign-in"?"Sign in to open your diary":"Choose a project"}</h1>
       <p>{gate==="sign-in"?"Open your account to record work and review your site notes.":"Open a project to record work or check its reports."}</p>
       <Link href={gate==="sign-in"?"/account":"/projects"} className="work-button work-button-primary">{gate==="sign-in"?"Sign in":"Your projects"}</Link>
+      {person&&<MockProjectControl person={person} explore/>}
     </section>:<>
       {!online&&<DiaryNotice tone="warning" title="You’re offline">{context?"Saved notes stay on this device and will send when data returns.":"Reconnect once to open the project diary on this device."}</DiaryNotice>}
       {context&&context.expires<=now/1000&&<DiaryNotice tone="warning" title="Your session expired">Sign in and select the original project. Queued files are kept.</DiaryNotice>}
@@ -189,28 +205,41 @@ export function CaptureDiary() {
           <button type="button" className="work-button" onClick={()=>{setFocusedId(null);setCapturing(false);void loadSummary(context.project_id);}}>Back to Today</button>
         </section>:capturing?<section aria-label="New site note" data-unsaved={!!(audio||photos.length||recording)&&!saving} className="diary-record">
           <WorkFlow step="capture"/>
-          <div className="diary-capture-options">
-            <button type="button" disabled={busy&&!recording} onClick={()=>void startRecording()} className="diary-capture-option" data-tour="record"><span><DiaryIcon name="mic" size={28}/></span><strong>{recording?`Stop recording · ${seconds}s`:"Record voice note"}</strong><small>Pidgin is fine</small></button>
-            <label className="diary-capture-option diary-capture-photo" data-tour="photos"><span><DiaryIcon name="camera" size={28}/></span><strong>{preparing?"Preparing photos…":"Add photos"}</strong><small>Up to five site photos</small><input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy} onChange={event=>void choosePhotos(event)}/></label>
-          </div>
-          <p className="diary-capture-hint">Add a voice note, photos, or both.</p>
-          <label className="text-link justify-center cursor-pointer">Choose a saved voice file<input className="sr-only" type="file" accept="audio/ogg,audio/mpeg,audio/mp4,audio/webm,audio/wav,.m4a,.mp3,.ogg,.webm,.wav" disabled={busy||recording} onChange={event=>void chooseAudio(event)}/></label>
+          {recording ? <div className="stitch-card stitch-recording" role="status">
+            <p className="stitch-kicker"><i/>Recording — speak now</p><strong>{Math.floor(seconds/60)}:{String(seconds%60).padStart(2,"0")}</strong>
+            <div className="stitch-wave" aria-hidden="true">{[14,25,18,32,24,38,16,26,19,31,13,23].map((height,index)=><i key={index} style={{height,animationDelay:`${index*45}ms`}}/>)}</div>
+            <p>Mention work items, quantities, materials and delays.</p>
+            <div className="stitch-two-actions"><button type="button" className="stitch-button" onClick={()=>{recordingCancelled.current=true;recorder.current?.stop();}}>Cancel</button><button type="button" className="stitch-button" data-primary onClick={()=>recorder.current?.stop()}><DiaryIcon name="stop"/>Stop</button></div>
+          </div> : <div className="diary-capture-options">
+            <button type="button" disabled={busy} onClick={()=>void startRecording()} className="diary-capture-option" data-tour="record"><span><DiaryIcon name="mic" size={30}/></span><strong>Record voice note</strong><small>Tap to talk — Pidgin is fine</small></button>
+            <label className="diary-capture-option diary-capture-photo" data-tour="photos"><span><DiaryIcon name="camera" size={30}/></span><strong>{preparing?"Preparing photos…":"Add photos"}</strong><small>Tap to add site photos</small><input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy} onChange={event=>void choosePhotos(event)}/></label>
+          </div>}
+          <p className="diary-capture-hint">Add a voice note, photos, or both — either one on its own is enough.</p>
           {audio&&<div className="diary-panel"><div className="diary-panel-heading"><strong>Voice note ready</strong><button type="button" className="diary-icon-button" aria-label="Remove voice note" disabled={saving||recording} onClick={()=>setAudio(null)}><DiaryIcon name="close"/></button></div><Preview blob={audio} audio/></div>}
           {!!photos.length&&<div className="diary-panel"><div className="diary-panel-heading"><strong>Site photos</strong><small>{photos.length} attached</small></div><div className="diary-photo-grid">{photos.map((photo,index)=><div key={index}><Preview blob={photo}/><button className="diary-icon-button" type="button" aria-label={`Remove photo ${index+1}`} disabled={saving} onClick={()=>setPhotos(current=>current.filter((_,i)=>i!==index))}><DiaryIcon name="close" size={17}/></button></div>)}</div></div>}
-          <button type="button" disabled={busy||recording||(!audio&&!photos.length)} onClick={()=>void save()} className="diary-primary"><DiaryIcon name="check"/>{saving?"Saving…":online?"Review & cost it":"Save offline"}</button>
-          {!audio&&!photos.length&&!recording&&<button type="button" className="text-link justify-center" onClick={()=>{setCapturing(false);setError("");scope.current=null;setCaptureProject(null);captured.current="";}}>Back to Today</button>}
+          <button type="button" disabled={busy||recording||(!audio&&!photos.length)} onClick={()=>void save()} className="stitch-button stitch-review-button" data-primary><DiaryIcon name="check" size={20}/>{saving?"Saving…":online?"Review & cost it":"Save offline"}</button>
+          <p className="diary-capture-hint">{!audio&&!photos.length?"Add a voice note or at least one photo to continue.":"You can check quantities and observations before costing."}</p>
+          <button type="button" disabled={busy||recording||(!audio&&!photos.length)} onClick={()=>void save(true)} className="stitch-button"><DiaryIcon name="bookmark" size={20}/>Save draft — finish later</button>
+          <label className="text-link justify-center cursor-pointer">Choose a saved voice file<input className="sr-only" type="file" accept="audio/ogg,audio/mpeg,audio/mp4,audio/webm,audio/wav,.m4a,.mp3,.ogg,.webm,.wav" disabled={busy||recording} onChange={event=>void chooseAudio(event)}/></label>
         </section>:<>
-          <Link className="diary-project-choice" href="/projects?from=today" data-tour="switch-project"><span className="diary-project-icon"><DiaryIcon name="building"/></span><span><small>Active project</small><strong>{context.project_name}</strong></span><DiaryIcon name="switch"/></Link>
-          {!readOnly&&<div className="diary-today-actions"><button type="button" className="diary-primary" onClick={()=>{setCapturing(true);setError("");window.scrollTo(0,0);}} data-tour="add-work"><DiaryIcon name="plus"/>Add today’s work</button><a href="https://t.me/SiteLedgerNGbot" className="diary-row-link"><DiaryIcon name="send"/>Send via Telegram<DiaryIcon name="chevron" size={18}/></a></div>}
-          <section className="diary-panel" aria-labelledby="today-entry"><p className="eyebrow text-accent">Daily site diary</p><h1 id="today-entry">Today</h1><p className="diary-date">{date}</p>
-            <h2 className="diary-subheading" data-tour="drafts">Awaiting review / drafts</h2>
+          <div className="stitch-status"><span className="stitch-kicker"><i/>{pending.length?`${pending.length} waiting to send`:online?"All changes saved":"Offline"}</span><DiaryIcon name="saved" size={18}/></div>
+          {!readOnly&&<div className="diary-today-actions"><button type="button" className="diary-primary" onClick={()=>{setCapturing(true);setError("");window.scrollTo(0,0);}} data-tour="add-work"><DiaryIcon name="plus" size={26}/>Add today&apos;s work</button><a href="https://t.me/SiteLedgerNGbot" className="diary-row-link" target="_blank" rel="noreferrer"><DiaryIcon name="send" size={20}/><strong>Send via Telegram</strong><span className="stitch-chip">@SiteLedgerNGbot</span></a></div>}
+          {person&&<MockProjectControl person={person} explore/>}
+          <section className="stitch-card stitch-drafts" aria-labelledby="today-drafts" data-tour="drafts"><div className="stitch-title-row">
+            <h2 id="today-drafts"><DiaryIcon name="pending" size={20}/>Awaiting review <span className="stitch-chip">{drafts.length+localReviews.length}</span></h2><span className="stitch-kicker">Not costed yet</span></div>
+            <p>Open a draft to check the details, edit quantities, or finish costing it later.</p>
             {summaryError?<div><p>Could not open the daily ledger.</p><button type="button" className="text-link" onClick={()=>void loadSummary(context.project_id)}>Try again</button></div>:!currentSummary&&online?<p role="status">Loading drafts…</p>:!drafts.length&&!localReviews.length?<p>No notes waiting for review.</p>:<ul className="diary-list">
               {drafts.map(note=><li key={note.id}><Link href={note.href} prefetch={false}><span><strong>{note.label}</strong><small>{note.capturedAt?new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeStyle:"short",timeZone:context.timezone}).format(new Date(note.capturedAt)):note.date}</small></span><DiaryIcon name="chevron" size={18}/></Link></li>)}
               {localReviews.map(row=>row.review_url&&<li key={row.manifest.id}><Link href={row.review_url} prefetch={false}><span><strong>Review site note</strong><small>{new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeStyle:"short",timeZone:row.manifest.timezone}).format(new Date(row.manifest.captured_at))}</small></span><DiaryIcon name="chevron" size={18}/></Link></li>)}
             </ul>}
           </section>
-          {!!daily.length&&<section className="diary-panel" data-tour="day-submissions"><div className="diary-panel-heading"><h2>Today’s costed work</h2><strong>{currentSummary?.dayTotal}</strong></div><ul className="diary-list">{daily.map(note=><li key={note.id}><Link href={note.href} prefetch={false}><span><strong>{note.stage==="approved"?"Locked report":"Draft report"}</strong><small>{note.capturedAt?new Intl.DateTimeFormat("en-GB",{timeStyle:"short",timeZone:context.timezone}).format(new Date(note.capturedAt)):note.date}</small>{note.items?.map((item,index)=><small key={index}>{item}</small>)}</span><strong>{note.amount}</strong></Link></li>)}</ul></section>}
-          <section className="diary-panel diary-progress" data-tour="measured-progress"><p className="eyebrow">{currentSummary?.readScope??"Locked reports"}</p><h2>Work Progress — Measured</h2>
+          <section className="stitch-card stitch-drafts" data-tour="day-submissions"><div className="stitch-title-row"><h2><DiaryIcon name="receipt" size={20}/>Today&apos;s submissions</h2></div>
+            <p>{daily.length?"Every note and upload from today, in time order.":"No site notes have been submitted today."}</p>
+            <ul className="diary-list">{daily.map(note=><li key={note.id}><Link href={note.href} prefetch={false}><span><strong>{note.stage==="approved"?"Locked report":note.amount?"Draft report":"Awaiting review"}</strong><small>{note.capturedAt?new Intl.DateTimeFormat("en-GB",{timeStyle:"short",timeZone:context.timezone}).format(new Date(note.capturedAt)):note.date}</small>{note.items?.map((item,index)=><small key={index}>{item}</small>)}</span><strong>{note.amount}</strong></Link></li>)}</ul>
+            <div className="stitch-day-total"><span className="stitch-kicker">Day total (costed so far)</span><strong>{currentSummary?.dayTotal??"—"}</strong></div>
+          </section>
+          <section className="stitch-card stitch-ledger"><span className="stitch-kicker" data-ink="orange">Daily ledger entry</span><h2>Today{date?`, ${date}`:""}</h2>{lastLocked&&<Link href={lastLocked.href} className="stitch-menu-row"><DiaryIcon name="lock"/>Open last locked report<DiaryIcon name="chevron" size={18}/></Link>}</section>
+          <section className="stitch-card diary-progress" data-tour="measured-progress"><div className="stitch-title-row"><h2><DiaryIcon name="progress" size={20}/>Work Progress — Measured</h2></div><p className="stitch-kicker" data-ink="green">{currentSummary?.readScope??"Locked reports"}</p>
             {currentSummary?.percentage==null?<p>{currentSummary?"Add a BoQ with rates to measure project progress.":summaryError?"Measured progress is unavailable.":online?"Loading measured progress…":"Reconnect to see measured progress."}</p>:<>
               <div className="diary-progress-summary"><strong>{currentSummary.percentage}% complete</strong><span>{currentSummary.earned} earned</span></div>
               <progress max={100} value={currentSummary.percentage} aria-label="Measured project progress"/>
@@ -218,7 +247,6 @@ export function CaptureDiary() {
               <Link className="text-link" href={`/projects/${context.project_id}?view=progress`}>View all work progress</Link>
             </>}
           </section>
-          {lastLocked&&<Link href={lastLocked.href} className="diary-row-link"><DiaryIcon name="check"/>Open last locked report<DiaryIcon name="chevron" size={18}/></Link>}
         </>}
         {pending.length>0&&<WorkDisclosure title="Notes on this device" description={`${pending.length} waiting to send`} open>
           {pending.filter(row=>row.manifest.id!==focusedId).map(row=><article key={row.manifest.id} className="diary-queue-entry" data-status={row.status}><strong>{row.context.project_name}</strong><p>{row.manifest.project_id!==context.project_id?"Reopen the original project to send this note.":row.message}</p></article>)}

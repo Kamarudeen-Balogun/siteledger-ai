@@ -2,7 +2,8 @@
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useActionConfirmation } from "./action-confirmation";
-export function AmendmentForm({ id, sheet = false }: { id: string; sheet?:boolean }) {
+import { DiaryIcon } from "./diary-icon";
+export function AmendmentForm({ id, sheet = false, primary = false }: { id: string; sheet?:boolean; primary?:boolean }) {
   const router = useRouter(), requestId = useRef<string | null>(null);
   const { confirm, confirmation } = useActionConfirmation();
   const [saving, setSaving] = useState(false), [error, setError] = useState(""), [saved, setSaved] = useState(false);
@@ -35,5 +36,5 @@ export function AmendmentForm({ id, sheet = false }: { id: string; sheet?:boolea
       <button disabled={saving||saved} className="work-button work-button-primary">{saving ? "Saving amendment…" : "Save amendment"}</button>
     </div></form>;
   if(!sheet)return <>{confirmation}{form}</>;
-  return <>{confirmation}<button type="button" className="work-button" data-tour="amendment" onClick={()=>{dialog.current?.showModal();dialog.current?.querySelector('.action-dialog__body')?.scrollTo(0,0);}}>+ Add amendment</button><dialog ref={dialog} className="action-dialog" aria-label="Add an amendment">{form}</dialog></>;
+  return <>{confirmation}<button type="button" className="stitch-button" data-primary={primary||undefined} data-tour="amendment" onClick={()=>{dialog.current?.showModal();dialog.current?.querySelector('.action-dialog__body')?.scrollTo(0,0);}}><DiaryIcon name="amendment" size={19}/>{primary?"+ Add Amendment to Locked Record":"+ Add Amendment"}</button><dialog ref={dialog} className="action-dialog stitch-sheet" aria-label="Add an amendment">{form}</dialog></>;
 }

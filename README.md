@@ -192,7 +192,7 @@ npm run telegram:configure-menu
 npm run setup:verify
 ```
 
-Menu setup verifies the bot, webhook, account page and database functions before publishing all seven commands in default/private-chat and English scopes. The main Mini App opens the landing page; active sessions see Open your projects. It preserves pending updates and prints no credentials. The workspace's `supabase_siteledger` MCP connection is scoped separately from unrelated projects.
+Menu setup verifies the bot, webhook, account page and database functions before publishing the commands in default/private-chat and English scopes. The project Team page issues a 10-minute code. Open it in Telegram or send it with `/link`, then confirm on the website. Regenerating invalidates the previous code. Use `/projects` to choose an authorized project in chat or `/project CODE` to switch directly.
 
 ### Offline use
 

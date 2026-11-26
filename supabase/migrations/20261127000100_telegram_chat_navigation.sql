@@ -1,0 +1,91 @@
+begin;
+
+create function public.telegram_project_choices(p_telegram bigint) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare ctx jsonb;
+begin
+  ctx:=public.account_bot_context(p_telegram);
+  if ctx is null or ctx->>'name_confirmed_at' is null then return null; end if;
+  return (
+    select coalesce(jsonb_agg(jsonb_build_object('name',name,'code',project_code,'selected',selected)
+      order by selected desc,name),'[]'::jsonb)
+    from (
+      select p.name,p.project_code,coalesce(p.id=(ctx->>'project_id')::uuid,false) selected
+      from public.projects p join public.account_projects a on a.project_id=p.id
+      where a.archived_at is null and p.project_code ~ '^[A-Z0-9-]{1,60}$'
+        and exists(select 1 from public.account_memberships m where m.project_id=p.id and m.active
+          and public.account_person(m.profile_id)=(ctx->>'profile_id')::uuid)
+      order by selected desc,p.name,p.id limit 10
+    ) allowed
+  );
+end; $$;
+
+create function public.telegram_recent_reports(p_telegram bigint) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare ctx jsonb;
+begin
+  ctx:=public.account_bot_context(p_telegram);
+  if ctx is null or ctx->>'project_id' is null or ctx->>'name_confirmed_at' is null then return null; end if;
+  return jsonb_build_object('project',ctx->>'project_name','notes',(
+    select coalesce(jsonb_agg(jsonb_build_object('id',id,'date',site_date,'label',label) order by created_at desc,id),'[]'::jsonb)
+    from (
+      select s.id,coalesce(sp.site_date,s.site_date) site_date,s.created_at,
+        case r.status when 'locked' then 'Locked report' when 'draft' then 'Draft report' else 'Awaiting review' end label
+      from public.submissions s
+      left join public.account_submission_people sp on sp.submission_id=s.id
+      left join public.account_legacy_actors l on l.telegram_id=s.telegram_id
+      left join public.reports r on r.submission_id=s.id
+      where s.project_id=(ctx->>'project_id')::uuid
+        and ((r.status='locked' and public.account_has_project_permission(ctx,'view_reports'))
+          or (public.account_has_project_permission(ctx,'record_notes')
+            and (public.account_has_project_permission(ctx,'approve_lock')
+              or public.account_person(coalesce(sp.profile_id,l.profile_id))=(ctx->>'profile_id')::uuid)))
+      order by s.created_at desc,s.id limit 8
+    ) visible
+  ));
+end; $$;
+
+create or replace function public.telegram_review_ticket(p_telegram bigint,p_submission uuid,p_action text,p_payload jsonb default null) returns uuid
+language plpgsql security definer set search_path='' as $$
+declare ctx jsonb; ticket uuid;
+begin
+  ctx:=public.account_bot_context(p_telegram);
+  if ctx is null or ctx->>'project_id' is null
+    or not exists(select 1 from public.submissions where id=p_submission and project_id=(ctx->>'project_id')::uuid)
+    or (p_action='review' and not (public.account_has_project_permission(ctx,'record_notes') or public.account_has_project_permission(ctx,'view_reports')))
+    or (p_action in ('confirm','edit') and not public.account_has_project_permission(ctx,'record_notes'))
+    or (p_action in ('share','lock') and not (public.account_has_project_permission(ctx,'approve_lock') and public.account_has_project_permission(ctx,'view_reports'))) then return null; end if;
+  if not public.account_limit('bot-review-ticket:'||p_telegram,100,600) then return null; end if;
+  delete from public.telegram_review_actions where telegram_id=p_telegram and expires_at<clock_timestamp();
+  insert into public.telegram_review_actions(telegram_id,submission_id,action,payload) values(p_telegram,p_submission,p_action,p_payload) returning id into ticket;
+  return ticket;
+end; $$;
+
+create or replace function public.telegram_use_review_ticket(p_telegram bigint,p_ticket uuid,p_hash text,p_edit boolean default false) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare t public.telegram_review_actions%rowtype; ctx jsonb; link_id uuid; actor jsonb;
+begin
+  if not public.account_limit('bot-review-action:'||p_telegram,50,600) then return null; end if;
+  select * into t from public.telegram_review_actions where id=p_ticket and telegram_id=p_telegram and used_at is null and expires_at>clock_timestamp() for update;
+  if not found or (p_edit and t.action<>'edit') then return null; end if;
+  ctx:=public.account_bot_context(p_telegram);
+  if ctx is null or ctx->>'project_id' is null or not exists(select 1 from public.submissions where id=t.submission_id and project_id=(ctx->>'project_id')::uuid) then return null; end if;
+  select id into link_id from public.account_telegram_links where telegram_id=p_telegram and active and public.account_person(profile_id)=(ctx->>'profile_id')::uuid;
+  if link_id is null then return null; end if;
+  insert into public.account_sessions(secret_hash,profile_id,source,telegram_link_id,expires_at,active_project_id)
+    values(p_hash,(ctx->>'profile_id')::uuid,'telegram',link_id,clock_timestamp()+interval '2 minutes',(ctx->>'project_id')::uuid);
+  actor:=public.account_record_access(p_hash,t.submission_id);
+  if actor is null or (t.action in ('confirm','edit') and not (actor->>'can_review')::boolean)
+    or (t.action='review' and not ((actor->>'can_review')::boolean or (actor->>'can_view_report')::boolean))
+    or (t.action in ('lock','share') and not (public.account_has_project_permission(actor,'approve_lock') and public.account_has_project_permission(actor,'view_reports'))) then
+    delete from public.account_sessions where secret_hash=p_hash;
+    return null;
+  end if;
+  if t.action<>'edit' or p_edit then update public.telegram_review_actions set used_at=clock_timestamp() where id=t.id; end if;
+  return jsonb_build_object('action',t.action,'id',t.submission_id,'payload',t.payload,'can_approve',public.account_has_project_permission(actor,'approve_lock'));
+end; $$;
+
+revoke all on function public.telegram_project_choices(bigint),public.telegram_recent_reports(bigint) from public,anon,authenticated;
+grant execute on function public.telegram_project_choices(bigint),public.telegram_recent_reports(bigint) to service_role;
+notify pgrst,'reload schema';
+commit;

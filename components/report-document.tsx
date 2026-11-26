@@ -1,22 +1,31 @@
 import Image from "next/image";
 import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, lockDate, moneyDisplayNote, type ReportView } from "@/lib/reports/model";
 import { formatMoney } from "@/lib/costing/format-money";
+import type { ReactNode } from "react";
+import { DiaryIcon } from "./diary-icon";
 
-export function ReportDocument({ report, trial = false, guestOriginal = false, sharedPath, demoPhotos = false }: { report: ReportView; trial?: boolean; guestOriginal?: boolean; sharedPath?: string; demoPhotos?: boolean }) {
+export function ReportDocument({ report, trial = false, guestOriginal = false, sharedPath, demoPhotos = false, actions }: { report: ReportView; trial?: boolean; guestOriginal?: boolean; sharedPath?: string; demoPhotos?: boolean; actions?:ReactNode }) {
   const { document: doc } = report, source = doc.source;
   const money = (amount: string) => formatMoney(amount, doc.currency);
   const prices = new Map(source.price_list.map(price => [price.id, price]));
-  return <article className="report-document" aria-label="Daily site report">
-    <header className="report-header">
-      <p className="report-eyebrow">Daily site record / {doc.currency}</p>
-      <p className="report-firm">{doc.firm_name}</p>
-      {report.status === "locked" && <div className="report-stamp">LOCKED<span>{lockDate(report)}</span></div>}
-      <h1>Daily site report</h1>
-      <dl className="report-meta">{[["Project", source.project.name], ["Client", source.project.client], ["Location", source.project.location],
-        ["Date", displayDate(source.date)], ...(source.received_at?[["Recorded",displayTimestamp(source.received_at,source.project.timezone)]]:[]), ...(source.boq_version?[["BoQ",`Version ${source.boq_version}`]]:[]), ["Weather", doc.weather || "Not recorded"]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
-      <p className="report-reference">{report.status === "locked" ? "Approved and locked" : "Draft — awaiting approval"}</p>
+  return <article className="report-document stitch-report" aria-label="Daily site report">
+    <header className="stitch-report-intro" data-locked={report.status==="locked"||undefined}>
+      <p className="stitch-kicker" data-ink="orange">{report.status==="locked"?"Legal construction record":"Draft construction record"}</p>
+      <h1>Daily Site Ledger Entry</h1>
+      <p>{report.status === "locked" ? "This report is permanently sealed into the dispute log." : "Check the costed work before approving and locking the record."}</p>
+      {report.status === "locked" && <><DiaryIcon name="lock" size={98}/><div className="report-stamp"><DiaryIcon name="seal" size={18}/><div>Locked · {lockDate(report)}<small>{report.approved_by ? "Approved · Sealed record" : "Sealed record"}</small></div></div></>}
     </header>
-    <section className="report-total" data-tour="report-total"><div><h2>Value of work today</h2><p>Confirmed quantities × BoQ rates</p></div><strong>{money(doc.costing.total_cost)}</strong></section>
+    <div className="stitch-card stitch-report-site">
+      <p className="stitch-kicker">Contractor &amp; engineering firm</p><h2>{doc.firm_name}</h2>
+      <dl>
+        <div><dt><DiaryIcon name="calendar" size={16}/>Date</dt><dd>{displayDate(source.date)}</dd></div>
+        <div><dt><DiaryIcon name="location" size={16}/>Location</dt><dd>{source.project.location}</dd></div>
+        <div><dt><DiaryIcon name="weather" size={16}/>Weather &amp; conditions</dt><dd>{doc.weather || "Not recorded"}</dd></div>
+        <div><dt><DiaryIcon name="boq" size={16}/>BoQ basis</dt><dd>{source.boq_version ? `Contract BoQ · Version ${source.boq_version}` : "Costed from the contract BoQ"}</dd></div>
+      </dl>
+    </div>
+    {actions}
+    <section className="report-total stitch-report-total" data-tour="report-total"><div><span className="stitch-kicker">Confirmed quantities × BoQ rates</span><h2>Value of work today</h2></div><strong>{money(doc.costing.total_cost)}</strong></section>
     <section><h2>Work done and BoQ value</h2>
       <div className="report-table-scroll" tabIndex={0} role="region" aria-label="Work done and BoQ costs">
         <table className="report-table"><caption className="sr-only">Confirmed quantities, BoQ rates, costs and cumulative progress</caption>
@@ -55,6 +64,7 @@ export function ReportDocument({ report, trial = false, guestOriginal = false, s
     <section className="report-signatures"><div><h2>{trial || guestOriginal ? "Guest trial / unverified" : source.submitted_role === "pm" ? "Site record / PM" : "Site foreman / site engineer"}</h2><p>Recorded by {source.submitted_by}</p><p className="report-signature-line">Signature / date</p></div>
       <div><h2>Project manager / QS</h2><p>{report.approved_by || "Awaiting approval"}</p><p className="report-signature-line">Signature / date</p></div></section>
     <footer>{source.confirmed_by && <p>Quantities confirmed by {source.confirmed_by}{source.confirmed_role ? ` / ${source.confirmed_role === "pm" ? "PM" : "Foreman"}` : ""}{source.confirmed_at ? ` · ${displayTimestamp(source.confirmed_at, source.project.timezone)}` : ""}</p>}
+      <p>{source.project.name} · {source.project.client}</p>
       {report.locked_at && <p>Locked {displayTimestamp(report.locked_at, source.project.timezone)}</p>}
       <p>{moneyDisplayNote(doc.currency)}</p>
       {source.project.is_demo && <p>Demo project and illustrative rates — verify before real use.</p>}

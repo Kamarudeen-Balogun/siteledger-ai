@@ -1,10 +1,15 @@
 import Link from "next/link";
+import { Suspense, type ComponentProps } from "react";
 import { InformationPage } from "@/components/public-site";
 import { ReplayTour } from "@/components/diary-tour";
+import { WorkspaceHeader } from "@/components/workspace-header";
+import { DiaryIcon } from "@/components/diary-icon";
+import { MockProjectControl } from "@/components/mock-project";
+import { currentAccount } from "@/lib/auth/session";
 export const metadata={title:"Help & FAQ — SiteLedger AI",description:"Get started with accounts, Telegram commands, site voice notes, human confirmation, reports and offline uploads."};
 const questions=[
   ["How do I start?","Create an email/password account, enter the full code sent to your email and confirm your professional name. Create a project or accept an invitation addressed to your verified email. New projects start with an empty BoQ. A PM opens Manage BoQ and rates to enter the supplied quantities and rates in the project's currency."],
-  ["How do I use Telegram?","Open @SiteLedgerNGbot, send /start and tap Open SiteLedger. Use the secure account form to sign in and connect your Telegram identity. Type / for the command menu: /start, /account, /projects, /today, /reports, /help and /logout. Keep passwords out of chat messages."],
+  ["How do I use Telegram?","Open @SiteLedgerNGbot and send /start, or reveal a one-time code on your project’s Team page and send it with /link. Return to SiteLedger to confirm the connection. Use /projects to pick a project, /project with its code to switch directly, /today for your latest note and /reports for recent records. Enter passwords only on the SiteLedger sign-in form."],
   ["How do I add email/password access to my existing Telegram user?","In that Telegram account, send /account and tap Open SiteLedger. Create an account and confirm its email code, or sign in to an existing website account. Then choose Connect this Telegram account and confirm that both identities are yours. Original project records and permissions are preserved. Use separate emails to keep two test users separate; a website account supports one active Telegram connection."],
   ["What should I include in a voice note?","Say the work item, location, quantity, unit and crew. Mention materials, delays and issues separately. Record up to 90 seconds in the web diary and attach up to five site photos. Review the extraction even when it looks correct."],
   ["Do I need both a voice note and photos?","Regular site notes accept a voice note, one to five photos, or both. Add at least one attachment, then save the note and open its review button. For a photo-only note, enter the work quantities yourself; images never supply quantities or prices. The private trial requires one voice note and allows zero to three photos."],
@@ -16,9 +21,39 @@ const questions=[
   ["Can I explore without signing up?","Yes. Start a private 24-hour trial with a bot check: one voice note, up to three photos, human review and draft costing with illustrative NGN rates. Save it to a verified account while the same browser session is active. Approval and team access require a verified account. The fictional sample report and dispute log also remain public."],
   ["How do I recover access?","Choose Forgot your password on the account page. Request a recovery email code, then enter it with your new password. If the bot check fails, use Retry bot check or open an up-to-date regular browser. Record history stays preserved."],
 ] as const;
-export default function Help(){return <InformationPage current="/help" label="A practical field guide" title="From your first note to an approved record." intro={<p>Choose the right project, record the work, check the quantities and approve only when the daily record is ready.</p>}>
+function PublicHelp(){return <InformationPage current="/help" label="A practical field guide" title="From your first note to an approved record." intro={<p>Choose the right project, record the work, check the quantities and approve only when the daily record is ready.</p>}>
   <section><h2>Start in the channel that suits you</h2><div className="flex flex-wrap gap-3"><Link href="/account" className="public-button bg-accent font-semibold text-white">Open your account</Link><a href="https://t.me/SiteLedgerNGbot" className="public-button border border-ink" target="_blank" rel="noreferrer">Open the Telegram bot</a><Link className="text-link" href="/reports/demo">View the sample report</Link></div></section>
   <section aria-labelledby="faq-title"><h2 id="faq-title">Common questions</h2><div className="faq-list">{questions.map(([title,text])=><details key={title}><summary>{title}</summary><p>{text}</p></details>)}</div></section>
   <section><h2>SiteLedger walkthrough</h2><ReplayTour/></section>
   <section><h2>Need another hand?</h2><Link href="/contact" className="text-link">Contact the builder</Link></section>
   </InformationPage>;}
+
+const topics: { id: string; icon: ComponentProps<typeof DiaryIcon>["name"]; title: string; subtitle: string; text: string }[] = [
+  {id:"guide",icon:"guide",title:"How it works",subtitle:"The full guide: record, confirm, cost, lock, share",text:"Choose an active project. Record a voice note or attach site photos. Check the quantities, materials and observations, then confirm and cost the note against its BoQ. A project manager can approve the report. Open the locked report to share it or download its PDF."},
+  {id:"record",icon:"mic",title:"How do I record today’s work?",subtitle:"Voice notes and photos, either one or both",text:questions[4][1]},
+  {id:"cost",icon:"boq",title:"How do I cost a submission?",subtitle:"Checking a draft and pricing it from the BoQ",text:questions[6][1]},
+  {id:"lock",icon:"lock",title:"How do I lock a report?",subtitle:"Sealing a report so nobody can edit it",text:"Open a costed draft from Reports & Log. Review its quantities, costs and observations. If you have approval permission, check the confirmation and choose Approve and lock report. Use the dispute log to add a correction later."},
+  {id:"invite",icon:"invite",title:"How do I invite a team member?",subtitle:"Email invitations, roles and permissions",text:"Open Projects & Team and select Invite. Enter the person's email address and project role. They can accept by signing in with that verified address and entering the invitation code they receive."},
+  {id:"versions",icon:"history",title:"How do BoQ versions work?",subtitle:"Why locked reports keep their rates",text:"Adjust an item in BoQ & Rates to save a new version. Future drafts use the current supplied rates. Open Previous versions to see when the BoQ changed. Locked reports keep the rates that were used at approval."},
+  {id:"warning",icon:"warning",title:"What does an action warning mean?",subtitle:"Review missing information or an ambiguous rate",text:"Open the warning and check the field it points to. Compare flagged quantities and rates with the supplied BoQ. If the draft changed after confirmation, review the note and rebuild it before approval."},
+];
+async function HelpContent({searchParams}:{searchParams:Promise<{topic?:string}>}) {
+  const [account,query]=await Promise.all([currentAccount().catch(()=>null),searchParams]);
+  if(!account)return <PublicHelp/>;
+  const selected=topics.find(topic=>topic.id===query.topic);
+  return <main className="mx-auto min-h-svh max-w-5xl px-5 py-7 stitch-help">
+    <WorkspaceHeader current="account" title={selected?.title??"Help & Support"} hideProfile/>
+    {selected?<section className="stitch-card"><h1 className="stitch-section-title">{selected.title}</h1><p className="mt-3">{selected.text}</p><Link href="/help" className="text-link">Back to Help</Link></section>:<>
+      <p>Plain answers, one topic per page. For anything about money or a locked report, check the report itself.</p>
+      <p className="stitch-help-device"><DiaryIcon name="phone" size={18}/>Works on iPhone and Android.</p>
+      <div className="stitch-menu-list"><ReplayTour help/><Link href="/projects/mock" className="stitch-menu-row"><DiaryIcon name="flask"/><span><strong>The mock project — demo data</strong><small>Open the fictional project, or restore it from settings.</small></span><DiaryIcon name="chevron"/></Link>
+        {topics.map(topic=><Link href={`/help?topic=${topic.id}`} key={topic.id} className="stitch-menu-row"><DiaryIcon name={topic.icon}/><span><strong>{topic.title}</strong><small>{topic.subtitle}</small></span><DiaryIcon name="chevron" size={18}/></Link>)}
+        <Link href="/contact" className="stitch-menu-row"><DiaryIcon name="email"/><span><strong>Contact</strong><small>Telegram, email and GitHub</small></span><DiaryIcon name="chevron" size={18}/></Link>
+      </div>
+      <MockProjectControl person={account.profile_id} restore/>
+    </>}
+  </main>;
+}
+export default function Help(props:{searchParams:Promise<{topic?:string}>}) {
+  return <Suspense fallback={null}><HelpContent {...props}/></Suspense>;
+}

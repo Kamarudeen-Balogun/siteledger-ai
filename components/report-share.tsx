@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useActionConfirmation } from "./action-confirmation";
 import { DiaryIcon } from "./diary-icon";
 
-export function ReportShare({ id }: { id: string }) {
+export function ReportShare({ id, primary = false }: { id: string; primary?:boolean }) {
   const [path, setPath] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -44,7 +44,7 @@ export function ReportShare({ id }: { id: string }) {
   }
 
   return <div className="report-share" data-tour="share">{confirmation}
-    <button type="button" className="work-button" disabled={busy} onClick={() => void share()}><DiaryIcon name="send" size={18}/>Share</button>
+    <button type="button" className="stitch-button" data-primary={primary||undefined} disabled={busy} onClick={() => void share()}><DiaryIcon name="share" size={18}/>Share Report Link</button>
     {path && <div className="report-share-details"><label>Client link<input className="my-2 min-h-12 w-full border border-rule bg-background px-3" readOnly value={new URL(path, location.origin).href} onFocus={event => event.currentTarget.select()} /></label><button type="button" className="text-link" disabled={busy} onClick={() => void revoke()}>Turn off link</button></div>}
     {message && <p role="status">{message}</p>}{error && <p role="alert">{error}</p>}
   </div>;

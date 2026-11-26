@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { type PrivateProject } from "@/lib/projects/types";
 import type { ProjectTeam } from "@/lib/projects/data";
 import { displayTimestamp } from "@/lib/reports/model";
@@ -9,6 +9,7 @@ import { formatMoney } from "@/lib/costing/format-money";
 import { useActionConfirmation } from "./action-confirmation";
 import { projectAction } from "@/lib/projects/client-actions";
 import { permissionKeys, permissionLabels, projectRoles } from "@/lib/projects/permissions";
+import { DiaryIcon } from "./diary-icon";
 export { projectAction } from "@/lib/projects/client-actions";
 const field = "mt-2 min-h-12 w-full border border-rule bg-[#fffdf9] px-3 py-3 text-base";
 const button = "min-h-12 border border-ink px-5 py-3 text-base disabled:opacity-50";
@@ -50,9 +51,9 @@ export function ProjectSelection({projects,active,returnToToday=false}:{projects
   const router=useRouter(),[error,setError]=useState(""),[busy,setBusy]=useState(""),[archived,setArchived]=useState(false);
   const available=projects.filter(project=>Boolean(project.archived_at)===archived), archivedCount=projects.filter(project=>project.archived_at).length;
   async function open(project:string){setBusy(project);setError("");try{await projectAction("select",{project_id:project});router.push(returnToToday?"/today":`/projects/${project}`);}catch(error){setError(error instanceof Error?error.message:"Could not open this project.");}finally{setBusy("");}}
-  return <section className="project-list" aria-labelledby="project-list-title"><div className="project-list-heading"><div><h1 id="project-list-title" className="font-serif text-3xl">Your projects</h1><p className="mt-2 leading-7">Open a site to continue its work.</p></div><Link href="/projects?view=create" prefetch={false} className="work-button work-button-primary">New project</Link></div>
+  return <section className="stitch-project-list" aria-labelledby="project-list-title"><div className="stitch-title-row"><h1 id="project-list-title" className="stitch-section-title">Your projects</h1><Link href="/projects?view=create" prefetch={false} className="stitch-button" data-primary><DiaryIcon name="plus" size={18}/>New project</Link></div>
     {archivedCount>0&&<div className="record-filters" role="group" aria-label="Project status"><button type="button" aria-pressed={!archived} onClick={()=>setArchived(false)}>Active <span>{projects.length-archivedCount}</span></button><button type="button" aria-pressed={archived} onClick={()=>setArchived(true)}>Archived <span>{archivedCount}</span></button></div>}
-    {!available.length?<div className="project-empty"><h3 className="font-serif text-xl">{archived?"No archived projects":projects.length?"Your projects are archived":"Start your first project"}</h3><p className="mt-3 leading-7">{projects.length?"Open the Archived view to read previous work, or create a new project.":"Create a private site project, or accept an invitation from its owner."}</p></div>:<ul className="project-picker mt-6">{available.map(project=><li key={project.id} data-project-id={project.id}><div><p className="eyebrow">{project.role==="pm"?"PM":"Foreman"}{project.owner?" · Owner":""}{active===project.id?" · Current project":""}{project.archived_at?" · Archived":""}</p><h3 className="mt-3 font-serif text-2xl">{project.name}</h3><p className="mt-2 text-sm leading-6">{project.client} · {project.location}</p></div><button type="button" className="work-button" disabled={Boolean(busy)} onClick={()=>void open(project.id)}>{busy===project.id?"Opening…":"Open project"}<span aria-hidden="true">→</span></button></li>)}</ul>}
+    {!available.length?<div className="stitch-card"><h2>{archived?"No archived projects":projects.length?"Your projects are archived":"Start your first project"}</h2><p>{projects.length?"Open the Archived view to read previous work, or create a new project.":"Create a private site project, or accept an invitation from its owner."}</p></div>:<ul className="stitch-menu-list">{available.map(project=><li key={project.id} data-project-id={project.id}><button type="button" className="stitch-menu-row" disabled={Boolean(busy)} onClick={()=>void open(project.id)}><DiaryIcon name="building"/><span><strong>{project.name}</strong><small>{project.client} · {project.location}</small><small>{project.role_label??(project.role==="pm"?"PM/QS":"Foreman")}{active===project.id?" · Current project":""}</small></span>{busy===project.id?"Opening…":<DiaryIcon name="chevron"/>}</button></li>)}</ul>}
     <Feedback error={error}/></section>;
 }
 export function StartProjectNote({ id, secondary=false }: { id: string; secondary?: boolean }) {
@@ -64,6 +65,8 @@ export { CreateProject } from "./create-project";
 export function TeamManagement({project,team,section="members"}:{project:PrivateProject;team:ProjectTeam;section?:"members"|"invitations"|"settings"}) {
   const { confirm, confirmation } = useActionConfirmation();
   const router=useRouter(),[error,setError]=useState(""),[busy,setBusy]=useState(false),[message,setMessage]=useState(""),[inviting,setInviting]=useState(false);
+  const inviteSheet=useRef<HTMLDialogElement>(null);
+  const mayInvite=(project.owner||project.permissions?.invite_members)&&!project.archived_at;
   const roles=[...projectRoles,...(team.roles??[])];
   async function run(action:string,input:Record<string,unknown>={}) {
     const person=team.members.find(member=>member.profile_id===input.profile_id)?.name??"this person";
@@ -81,15 +84,24 @@ export function TeamManagement({project,team,section="members"}:{project:Private
     const prompt=prompts[action];
     if(prompt&&!await confirm({...prompt,detail:<p className="font-semibold">{project.name}</p>}))return;
     setBusy(true);setError("");setMessage("");
-    try{await projectAction(action,{project_id:project.id,...input});if(action==="invite"||action==="resend_invite"){setMessage("Invitation sent.");setInviting(false);}else if(action==="start_transfer")setMessage("Ownership request sent. The selected member can accept it in the project.");else setMessage("Project access updated.");router.refresh();}
+    try{await projectAction(action,{project_id:project.id,...input});if(action==="invite"||action==="resend_invite"){setMessage("Invitation sent.");setInviting(false);inviteSheet.current?.close();}else if(action==="start_transfer")setMessage("Ownership request sent. The selected member can accept it in the project.");else setMessage("Project access updated.");router.refresh();}
     catch(error){setError(error instanceof Error?error.message:"Could not save team access.");}finally{setBusy(false);}
   }
   function inviteMember(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);void run("invite",{email:form.get("email"),role:form.get("role")});}
   return <>{confirmation}<Feedback error={error} message={message}/>
-    {section==="members"&&<section className="diary-panel" data-tour="team-members">
-      <div className="diary-panel-heading"><h2>Site team</h2>{(project.owner||project.permissions?.invite_members)&&!project.archived_at&&<Link href={`/projects/${project.id}/team?section=invitations`} className="work-button" data-tour="invite">Invite a person</Link>}</div>
+    {section==="members"&&<section className="stitch-team-members" data-tour="team-members">
+      <div className="stitch-title-row"><div><h2 className="stitch-section-title">Site Team &amp; Access</h2><p>Who can see and change things on this project</p></div>{mayInvite&&<button type="button" className="stitch-button" data-tour="invite" onClick={()=>{setError("");inviteSheet.current?.showModal();}}><DiaryIcon name="invite" size={18}/>Invite</button>}</div>
+      <p className="stitch-menu-row mt-3"><DiaryIcon name="verified" size={18}/><span><strong>Shared with the project team</strong><small>Members can open approved records according to their project permissions.</small></span></p>
+      {mayInvite&&<dialog ref={inviteSheet} className="action-dialog stitch-sheet" aria-label="Invite a person"><form onSubmit={inviteMember}>
+        <div className="action-dialog__body"><h2>Invite a person</h2><p>They’ll receive an email with their invitation code.</p>
+          <label>Recipient email<input className={field} name="email" type="email" required maxLength={254} autoComplete="email" spellCheck={false}/></label>
+          <label>Project role<select className={field} name="role" defaultValue="Foreman">{roles.map(role=><option key={role}>{role}</option>)}</select></label>
+          {error&&<p role="alert">{error}</p>}
+        </div>
+        <div className="action-dialog__actions stitch-sheet-actions"><button type="button" className="stitch-button" disabled={busy} onClick={()=>inviteSheet.current?.close()}>Cancel</button><button className="stitch-button" data-primary disabled={busy}>Send invitation</button></div>
+      </form></dialog>}
       <ul className="mt-4">{team.members.map(member=><li key={member.profile_id} className="border-b border-rule py-5">
-        <p className="font-semibold">{member.name??"Name pending"}</p><p className="my-2">{member.owner?"Owner":member.role_label??(member.role==="pm"?"PM/QS":"Foreman")}</p>
+        <div className="stitch-menu-row"><DiaryIcon name="profile"/><span><strong>{member.name??"Name pending"}</strong><small>{member.owner?"Owner":member.role_label??(member.role==="pm"?"PM/QS":"Foreman")}</small></span></div>
         {!member.owner&&project.owner&&<details className="work-disclosure" data-tour="permissions"><summary>Edit role and permissions</summary><div className="p-4">
           {!project.archived_at&&<form onSubmit={event=>{event.preventDefault();const form=new FormData(event.currentTarget);void run("member_permissions",{profile_id:member.profile_id,role:form.get("role"),permissions:Object.fromEntries(permissionKeys.map(key=>[key,form.has(key)]))});}}>
             <label className="block">Project role<select name="role" className={field} defaultValue={member.role_label??(member.role==="pm"?"PM/QS":"Foreman")}>{roles.map(role=><option key={role}>{role}</option>)}</select></label>
@@ -99,6 +111,7 @@ export function TeamManagement({project,team,section="members"}:{project:Private
           <button className="text-link mt-3" disabled={busy} onClick={()=>void run("remove_member",{profile_id:member.profile_id})}>Remove access</button>
         </div></details>}
       </li>)}</ul>
+      {mayInvite&&<Link href={`/projects/${project.id}/team?section=invitations`} className="text-link">Manage pending invitations</Link>}
       {project.owner&&!project.archived_at&&<details className="work-disclosure"><summary>Add a custom role</summary><form className="p-4" onSubmit={event=>{event.preventDefault();const form=new FormData(event.currentTarget);void run("add_role",{role:String(form.get("role")??"").trim()});}}><label className="block">Role name<input className={field} name="role" required maxLength={40}/></label><button className="work-button mt-4" disabled={busy}>Save role</button></form></details>}
     </section>}
     {section==="invitations"&&<>

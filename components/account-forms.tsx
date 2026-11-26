@@ -2,7 +2,7 @@
 import Link from "next/link";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Turnstile } from "./turnstile";
 import { useActionConfirmation } from "./action-confirmation";
 import type { Account } from "@/lib/auth/types";
@@ -10,6 +10,7 @@ import { clearCachedContext } from "@/lib/web/queue";
 import { EMAIL_CODE_MIN_LENGTH, EMAIL_CODE_MAX_LENGTH, EMAIL_CODE_PATTERN } from "@/lib/auth/email-code";
 import { WorkDisclosure } from "./work-flow";
 import { resolveClientAccount } from "@/lib/auth/client-session";
+import { DiaryIcon } from "./diary-icon";
 
 const field = "mt-2 min-h-12 w-full border border-rule bg-[#fffdf9] px-3 py-3 text-base";
 const button = "min-h-12 border border-ink px-5 py-3 text-base disabled:opacity-50";
@@ -148,31 +149,109 @@ export function AccountSignOut({ account }: { account: Account }) {
   }
   return <div className="settings-signout">{confirmation}<Feedback error={error}/><button type="button" className={button} onClick={logout} disabled={busy}>{busy?"Signing out…":"Sign out"}</button></div>;
 }
-export function TelegramLink({ siteKey, account }: { siteKey: string; account: Account }) {
+export function TelegramLink({ siteKey, account, project }: { siteKey: string; account: Account; project?: { id: string; name: string } }) {
+  const router = useRouter();
   const { confirm, confirmation } = useActionConfirmation();
-  const router = useRouter(), [error, setError] = useState(""), [busy, setBusy] = useState(false), [token, setToken] = useState(""), [reset, setReset] = useState(0);
-  const [link, setLink] = useState<{ id: string; url: string; expires_at: string } | null>(null), [status, setStatus] = useState<{ proved: boolean; combining_profiles: boolean; other_browser_proof_required: boolean } | null>(null);
-  const [revealed,setRevealed]=useState(false);
-  const [message, setMessage] = useState("");
+  const [token, setToken] = useState(""), [reset, setReset] = useState(0);
+  const [busy, setBusy] = useState(false), [needsPassword, setNeedsPassword] = useState(false);
+  const [error, setError] = useState(""), [message, setMessage] = useState("");
+  const [link, setLink] = useState<{ id: string; url: string; code: string; expires_at: string } | null>(null);
+  const [status, setStatus] = useState<{ proved: boolean; combining_profiles: boolean; other_browser_proof_required: boolean } | null>(null);
+  const [seconds, setSeconds] = useState(0), [expired, setExpired] = useState(false);
+
+  useEffect(() => {
+    if (!link) return;
+    const timer = window.setInterval(() => {
+      const left = Math.max(0, Math.ceil((Date.parse(link.expires_at) - Date.now()) / 1000));
+      setSeconds(left);
+      if (left === 0) { setLink(null); setStatus(null); setExpired(true); setMessage(""); }
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [link]);
+
   async function run(action: string, input: Record<string, unknown> = {}) {
-    if ((action === "link_finish" || action === "unlink_telegram") && !await confirm({title:action === "unlink_telegram" ? "Disconnect Telegram access?" : "Confirm this account connection?",description:action === "unlink_telegram" ? "Telegram sessions will stop working immediately. Your website account and all original records remain preserved." : "Connect the identities you have proved. Existing records and permissions are retained; historical attribution stays unchanged.",confirmLabel:action === "unlink_telegram" ? "Disconnect Telegram" : "Confirm connection",danger:action === "unlink_telegram",detail:<p>{account.professional_name ?? account.email}</p>})) return;
+    if (action === "link_finish" || action === "unlink_telegram") {
+      const disconnect = action === "unlink_telegram";
+      if (!await confirm({
+        title: disconnect ? "Disconnect Telegram?" : "Confirm this Telegram connection?",
+        description: disconnect ? "You’ll need to reconnect before sending work in Telegram again." : project ? `New site notes in Telegram will go to ${project.name}.` : "SiteLedger will use this Telegram identity for your account.",
+        confirmLabel: disconnect ? "Disconnect Telegram" : "Confirm connection",
+        danger: disconnect, detail: <p>{account.professional_name ?? account.email}</p>,
+      })) return;
+    }
     setBusy(true); setError(""); setMessage("");
-    try { const data = await accountAction(action, input); if (action === "link_create") { setLink(data); setStatus(null);setRevealed(false); }
-      else if (action === "link_status") setStatus(data);
-      else { setLink(null); setStatus(null); setMessage(action === "unlink_telegram" ? "Telegram disconnected. Old access sessions are revoked." : action === "reauthenticate" ? "Password confirmed. You can continue." : "Telegram connected. Earlier records and permissions are preserved."); router.refresh(); }
-    } catch (error) { setError(error instanceof Error ? error.message : "Could not connect Telegram."); }
-    finally { setBusy(false); setReset(value => value + 1); }
+    try {
+      const data = await accountAction(action, input);
+      if (action === "link_create") {
+        setLink(data); setSeconds(Math.max(0, Math.ceil((Date.parse(data.expires_at) - Date.now()) / 1000)));
+        setStatus(null); setExpired(false);
+      } else if (action === "link_status") {
+        setStatus(data);
+        if (!data.proved) setMessage("Waiting for Telegram. Send the code to @SiteLedgerNGbot, then check again.");
+      } else if (action === "reauthenticate") {
+        setNeedsPassword(false);
+        setMessage("Password confirmed. You can continue.");
+      } else {
+        setLink(null); setStatus(null); setExpired(false);
+        setMessage(action === "unlink_telegram" ? "Telegram disconnected." : project ? `Telegram connected to ${project.name}.` : "Telegram connected.");
+        router.refresh();
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "Could not connect Telegram.";
+      if (action === "link_status" && reason.includes("expired or was replaced")) {
+        setLink(null); setStatus(null); setExpired(true);
+      } else {
+        if (reason.includes("Confirm your password again") || (action === "unlink_telegram" && reason.includes("Sign in again"))) setNeedsPassword(true);
+        setError(reason);
+      }
+    } finally {
+      setBusy(false);
+      if (input.captcha_token) { setToken(""); setReset(value => value + 1); }
+    }
   }
-  function reauthenticate(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); void run("reauthenticate", { password: form.get("password"), captcha_token: token }); }
-  function finish(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); void run("link_finish", { id: link?.id, combine_profiles: form.get("combine_profiles") === "yes", ...(status?.other_browser_proof_required ? { other_email: form.get("other_email"), other_password: form.get("other_password"), captcha_token: token } : {}) }); }
-  return <section className="settings-panel">{confirmation}<h2 className="font-serif text-2xl">Telegram connection</h2><p className="my-4 leading-7">{account.telegram_linked ? "Connected. Your website and Telegram use the same account." : "Connect Telegram to keep your chat and website records together."}</p><WorkDisclosure title={account.telegram_linked?"Manage Telegram connection":"Connect your Telegram account"} description="Confirm your password, open the link in Telegram, then return here." open={!account.telegram_linked}>
-    <form onSubmit={reauthenticate} className="max-w-md"><Label title="Confirm your current password before changing connections"><input className={field} name="password" type="password" minLength={12} maxLength={128} required autoComplete="current-password" /></Label><Turnstile siteKey={siteKey} onToken={setToken} reset={reset} /><button className={button} disabled={busy || !token}>Confirm password</button></form>
-    <div className="my-5 flex flex-wrap gap-3"><button type="button" className={primary} disabled={busy} onClick={() => void run("link_create")}>Start a Telegram link</button>{account.telegram_linked && <button type="button" className={button} disabled={busy} onClick={() => void run("unlink_telegram")}>Disconnect Telegram</button>}</div>
-    {link && <div className="border-t border-rule py-5"><p>Connection code · {revealed?<a href={link.url} className="text-link" target="_blank" rel="noreferrer">Open in Telegram</a>:<span aria-label="Hidden">••••••••</span>}</p><p className="my-3 leading-7">Expires at {new Intl.DateTimeFormat(undefined,{timeStyle:"short"}).format(new Date(link.expires_at))}. Return here after the bot acknowledges it.</p><div className="flex flex-wrap gap-2"><button type="button" className="work-button" disabled={busy} onClick={()=>setRevealed(value=>!value)}>{revealed?"Hide":"Reveal"}</button><button type="button" className="work-button" disabled={busy} onClick={()=>void run("link_create")}>Regenerate</button><button type="button" className={button} disabled={busy} onClick={() => void run("link_status", { id: link.id })}>Check connection</button></div></div>}
-    {link && status?.proved && <form onSubmit={finish} className="max-w-md"><p className="my-4 leading-7">Telegram responded. Confirm this is your account.</p><label className="my-4 flex min-h-12 items-center gap-3"><input type="checkbox" name="combine_profiles" value="yes" required className="h-6 w-6 shrink-0" />Connect this Telegram identity{status.combining_profiles ? " and combine its existing profile with this account, preserving records and permissions" : " to my account"}.</label>
-      {status.other_browser_proof_required && <><p className="leading-7">The Telegram profile already has a website login. Prove that login too.</p><Label title="Other website email"><input className={field} name="other_email" type="email" required autoComplete="email" /></Label><Label title="Other website password"><input className={field} name="other_password" type="password" required minLength={12} maxLength={128} autoComplete="current-password" /></Label></>}
-      <button className={primary} disabled={busy || (status.other_browser_proof_required && !token)}>Confirm connection</button></form>}
-    <Feedback error={error} message={message} /></WorkDisclosure>
+
+  function generate() { void run("link_create", project ? { project_id: project.id } : {}); }
+  async function copyCode() {
+    if (!link || Date.now() >= Date.parse(link.expires_at)) return;
+    try {
+      await navigator.clipboard.writeText(link.code);
+      setMessage("Code copied. Paste it into your chat with @SiteLedgerNGbot.");
+    } catch { setMessage("Select and copy the code, or use Open in Telegram."); }
+  }
+  function reauthenticate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    void run("reauthenticate", { password: form.get("password"), captcha_token: token });
+  }
+  function finish(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    void run("link_finish", { id: link?.id, combine_profiles: form.get("combine_profiles") === "yes",
+      ...(status?.other_browser_proof_required ? { other_email: form.get("other_email"), other_password: form.get("other_password"), captcha_token: token } : {}) });
+  }
+
+  const countdown = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  return <section className="stitch-card stitch-team-telegram" data-tour="team-telegram">{confirmation}
+    <div className="stitch-telegram-heading">
+      <span className="stitch-telegram-icon"><DiaryIcon name="telegram"/></span>
+      <div><h2>{project || !account.telegram_linked ? "Connect Telegram" : "Telegram connection"}</h2><p>{project ? "Link your Telegram so site notes sync to this project. Keep this code private." : account.telegram_linked ? "Your website and Telegram use the same account." : "Connect Telegram to keep your chat and website records together."}</p></div>
+      {!status?.proved && <button type="button" className="stitch-button" data-white disabled={busy || needsPassword} onClick={link ? () => void copyCode() : generate}><DiaryIcon name="copy" size={16}/>{link ? "Copy" : "Reveal"}</button>}
+    </div>
+    <div className="stitch-telegram-code">
+      <code>{expired ? "Expired — regenerate" : link && !status?.proved ? link.code : "•••• •••• ••••"}</code>
+      <span className="stitch-kicker">{expired ? "Code expired" : link ? `${status?.proved ? "Received · " : ""}Expires in ${countdown}` : "Hidden — tap Reveal"}</span>
+    </div>
+    {(link || expired) && <div className="stitch-telegram-actions">
+      {link && !status?.proved && <><a href={link.url} className="stitch-button" data-primary target="_blank" rel="noreferrer">Open in Telegram</a><button type="button" className="stitch-button" disabled={busy} onClick={() => void run("link_status", { id: link.id })}>Check connection</button></>}
+      <button type="button" className="stitch-button" disabled={busy || needsPassword} onClick={generate}>Regenerate</button>
+    </div>}
+    {link && !status?.proved && <p className="mt-3">Open Telegram or paste the code in your chat with @SiteLedgerNGbot. Return here after the bot acknowledges it.</p>}
+    {needsPassword && <form onSubmit={reauthenticate}><Label title="Confirm your current password"><input className={field} name="password" type="password" minLength={12} maxLength={128} required autoComplete="current-password"/></Label><Turnstile siteKey={siteKey} onToken={setToken} reset={reset}/><button className="stitch-button" disabled={busy || !token}>Confirm password</button></form>}
+    {link && status?.proved && <form onSubmit={finish} className="max-w-md"><p className="my-4">Confirm after you receive the acknowledgment from @SiteLedgerNGbot.</p><label className="my-4 flex min-h-12 items-center gap-3"><input type="checkbox" name="combine_profiles" value="yes" required className="h-6 w-6 shrink-0"/>{status.combining_profiles ? "Connect Telegram and combine its existing profile with this account." : "Connect this Telegram identity to my account."}</label>
+      {status.other_browser_proof_required && <><Label title="Other website email"><input className={field} name="other_email" type="email" required autoComplete="email"/></Label><Label title="Other website password"><input className={field} name="other_password" type="password" required minLength={12} maxLength={128} autoComplete="current-password"/></Label>{!needsPassword && <Turnstile siteKey={siteKey} onToken={setToken} reset={reset}/>}</>}
+      <button className="stitch-button" data-primary disabled={busy || needsPassword || (status.other_browser_proof_required && !token)}>Confirm connection</button></form>}
+    {!project && account.telegram_linked && <button type="button" className="stitch-button mt-3" disabled={busy || needsPassword} onClick={() => void run("unlink_telegram")}>Disconnect Telegram</button>}
+    <Feedback error={error} message={message}/>
   </section>;
 }
 export function EmailProof({ siteKey, account }: { siteKey: string; account: Account }) {

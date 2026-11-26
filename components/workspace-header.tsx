@@ -1,21 +1,27 @@
 import Link from "next/link";
 import Image from "next/image";
-import { WorkspaceNavigation, WorkspaceProfile } from "./app-navigation";
+import { WorkspaceBack, WorkspaceNavigation, WorkspaceProfile, WorkspaceProjectPicker, WorkspaceSignedIn } from "./app-navigation";
 import { ThemeSwitch } from "./diary-theme";
 
 export type WorkspaceArea = "today" | "account" | "projects" | "reports" | "boq";
 const labels: Record<WorkspaceArea, string> = { today: "Today", account: "Account", projects: "Projects & team", reports: "Reports & log", boq: "BoQ & rates" };
 
-export function WorkspaceHeader({ current, title, project, publicView = false }: {
-  current: WorkspaceArea; title?: string; project?: string; publicView?: boolean;
+export function WorkspaceHeader({ current, title, project, projectId, publicView = false, detail = false, hideProfile = false, onBack }: {
+  current: WorkspaceArea; title?: string; project?: string; projectId?: string; publicView?: boolean; detail?: boolean; hideProfile?: boolean; onBack?: () => void;
 }) {
-  return <header className="workspace-header print:hidden">
-    <div className="diary-header-title">
-      <Image src="/stitch-siteledger-mark.png" alt="" width={32} height={32} className="diary-header-logo"/>
-      <div><span className="diary-header-name">{current==="today"&&!title?"SiteLedger AI":title ?? labels[current]}</span><span className="diary-header-project">{project ?? (current==="today"?"Today":"SiteLedger AI")}</span></div>
+  const isDetail = detail || current === "account" || publicView;
+  return <header className="workspace-header stitch-header print:hidden" data-detail={isDetail || undefined}>
+    <div className="stitch-header-row">
+      <div className="diary-header-title">
+        {isDetail ? <WorkspaceBack onBack={onBack}/> : <Image src="/stitch-siteledger-mark.png" alt="" width={32} height={32} className="diary-header-logo"/>}
+        <div><span className="diary-header-name">{isDetail ? title ?? "My Profile" : "SiteLedger AI"}</span>
+          {(!isDetail || project) && <span className="diary-header-project">{isDetail ? project : title ?? labels[current]}</span>}
+        </div>
+      </div>
+      <Link href="/" className="site-brand diary-desktop-brand" aria-label="SiteLedger AI home"><Image src="/stitch-siteledger-mark.png" alt="" width={32} height={32}/>SiteLedger AI</Link>
+      <div className="diary-header-actions"><ThemeSwitch/>{!hideProfile && (current==="account" ? <WorkspaceSignedIn/> : <WorkspaceProfile/>)}</div>
     </div>
-    <Link href="/" className="site-brand diary-desktop-brand" aria-label="SiteLedger AI home"><span aria-hidden="true" className="brand-mark">SL</span>SiteLedger AI</Link>
-    <div className="diary-header-actions"><ThemeSwitch/><WorkspaceProfile/></div>
+    {!isDetail && <WorkspaceProjectPicker current={current} project={project} projectId={projectId}/>}
     {!publicView && <WorkspaceNavigation current={current}/>}
   </header>;
 }

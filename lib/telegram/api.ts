@@ -4,6 +4,19 @@ export class TelegramUnavailableError extends Error {
   constructor() { super("Telegram is temporarily unavailable."); }
 }
 
+export async function sendTelegramPdf(chatId: number, bytes: ArrayBuffer, caption: string) {
+  const token=process.env.TELEGRAM_BOT_TOKEN;
+  if(!token)throw new TelegramUnavailableError();
+  const form=new FormData();
+  form.set("chat_id",String(chatId));
+  form.set("caption",caption);
+  form.set("document",new Blob([bytes],{type:"application/pdf"}),"SiteLedger-report.pdf");
+  try {
+    const response=await fetch(`https://api.telegram.org/bot${token}/sendDocument`,{method:"POST",body:form,cache:"no-store",redirect:"error",signal:AbortSignal.timeout(20_000)});
+    if(!response.ok || (await response.json()).ok!==true)throw new TelegramUnavailableError();
+  } catch { throw new TelegramUnavailableError(); }
+}
+
 export async function telegramCall<T>(method: "getFile" | "sendMessage" | "answerCallbackQuery" | "sendChatAction", body: Record<string, unknown>): Promise<T> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) throw new TelegramUnavailableError();

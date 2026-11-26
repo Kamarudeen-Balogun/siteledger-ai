@@ -36,7 +36,7 @@ const label = (theme: Theme) => theme.charAt(0).toUpperCase() + theme.slice(1);
 export function ThemeSwitch() {
   const theme = useSyncExternalStore(subscribe, getTheme, () => "light" as const);
   const next = themes[(themes.indexOf(theme) + 1) % themes.length];
-  return <button type="button" className="diary-icon-button" title={`Theme: ${label(theme)}. Switch to ${label(next)}`} aria-label={`Theme: ${label(theme)}. Switch to ${label(next)}`} onClick={() => select(next)} data-tour="theme"><DiaryIcon name={theme === "dark" ? "moon" : theme === "system" ? "theme" : "sun"}/></button>;
+  return <button type="button" className="diary-icon-button" title={`Theme: ${label(theme)}. Switch to ${label(next)}`} aria-label={`Theme: ${label(theme)}. Switch to ${label(next)}`} onClick={() => select(next)} data-tour="theme"><DiaryIcon name={theme === "dark" ? "moon" : theme === "system" ? "theme" : "sun"} size={18}/></button>;
 }
 
 export function ThemeSettings() {

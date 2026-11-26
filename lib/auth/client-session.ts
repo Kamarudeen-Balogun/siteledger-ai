@@ -6,7 +6,7 @@ import type { Account } from "./types";
 let pending: Promise<Account | null> | null = null;
 export function resolveClientAccount(): Promise<Account | null> {
   pending ??= (async () => {
-    const response = await fetch("/api/account", { cache: "no-store", credentials: "same-origin", signal: AbortSignal.timeout(10000) });
+    const response = await fetch(new URL("/api/account", window.location.origin), { cache: "no-store", credentials: "same-origin", signal: AbortSignal.timeout(10000) });
     if (!response.ok) throw new Error("Account access is temporarily unavailable. Try again.");
     const existing = (await response.json()).account as Account | null;
     if (existing?.profile_id) return existing;

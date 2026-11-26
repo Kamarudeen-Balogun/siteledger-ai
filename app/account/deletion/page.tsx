@@ -23,5 +23,5 @@ async function Content({searchParams}:{searchParams:Promise<{view?:string}>}) {
   return <RequestDeletion email={account.email} pending={Boolean(state?.requested)}/>;
 }
 export default function Page(props:{searchParams:Promise<{view?:string}>}) {
-  return <main className="mx-auto max-w-5xl px-5 py-7"><WorkspaceHeader current="account" title="Account deletion"/><Suspense fallback={<DiaryNotice busy title="Opening account deletion…"/>}><Content {...props}/></Suspense></main>;
+  return <main className="mx-auto max-w-5xl px-5 py-7"><WorkspaceHeader current="account" title="Account deletion" hideProfile/><Suspense fallback={<DiaryNotice busy title="Opening account deletion…"/>}><Content {...props}/></Suspense></main>;
 }

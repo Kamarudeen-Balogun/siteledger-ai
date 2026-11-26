@@ -3,7 +3,9 @@ nextEnv.loadEnvConfig(process.cwd());
 const commands = [
   { command: "start", description: "Get started or see your active project" },
   { command: "account", description: "Sign in, recover access or connect your account" },
+  { command: "link", description: "Pair Telegram using a one-time SiteLedger code" },
   { command: "projects", description: "Choose an authorized project" },
+  { command: "project", description: "Switch to an authorized project by code" },
   { command: "today", description: "Review today's latest note and costed progress" },
   { command: "reports", description: "Open your saved project records" },
   { command: "help", description: "See the steps for voice notes and site photos" },
@@ -43,7 +45,7 @@ try {
   for (const scope of commandScopes) {
     if (JSON.stringify(await call("getMyCommands",scope)) !== JSON.stringify(commands)) throw new Error("Settings not saved");
   }
-  console.log("Seven slash suggestions verified in default/private-chat and English menus; landing-page Mini App verified.");
+  console.log(`${commands.length} slash suggestions verified in default/private-chat and English menus. Landing-page Mini App verified.`);
 } catch (error) {
   const known=["App origin","Bot configuration","Unexpected bot","Menu page unavailable","Webhook does not match this app","Database configuration","Account bot schema unavailable","Settings not saved","Telegram request"];
   const reason=error instanceof Error&&known.includes(error.message)?error.message:"Network or unexpected response";

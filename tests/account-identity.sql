@@ -25,7 +25,10 @@ begin
   insert into public.account_profiles(professional_name,name_confirmed_at) values('Ayọ',now()) returning id into tg_person;
   insert into public.account_telegram_links(telegram_id,profile_id) values(810001,tg_person);
   perform public.account_verified_email(repeat('a',64),'81000000-0000-4000-8000-000000000001','81000000-0000-4000-8000-000000000011');
-  challenge := (public.account_start_link(repeat('a',64),repeat('c',64))->>'id')::uuid;
+  other_challenge := (public.account_start_project_link(repeat('a',64),repeat('5',64),null)->>'id')::uuid;
+  challenge := (public.account_start_project_link(repeat('a',64),repeat('c',64),null)->>'id')::uuid;
+  perform pg_temp.check_true(public.account_link_status(repeat('a',64),other_challenge) is null and public.account_prove_telegram(repeat('5',64),810001)->>'error'='unavailable','Regenerating immediately invalidates the old code');
+  perform pg_temp.check_true((select expires_at between clock_timestamp()+interval '9 minutes 59 seconds' and clock_timestamp()+interval '10 minutes' from public.account_link_challenges where id=challenge),'Code expires in ten minutes');
   perform pg_temp.check_true(public.account_finish_link(repeat('a',64),challenge,true)->>'error'='unavailable','Browser cannot finish without Telegram proof');
   perform pg_temp.check_true((public.account_prove_telegram(repeat('c',64),810001)->>'proved')::boolean,'Signed Telegram boundary can prove challenge');
   perform pg_temp.check_true(public.account_prove_telegram(repeat('c',64),810001)->>'error'='unavailable','Telegram proof replay denied');

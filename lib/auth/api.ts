@@ -1,4 +1,5 @@
 import "server-only";
+import { randomBytes } from "node:crypto";
 import { intakeRpc } from "../telegram/storage";
 import { verifyTelegramAccess } from "../confirm/telegram-access";
 import { UUID } from "../confirm/access";
@@ -17,7 +18,7 @@ const shapes: Record<string, string[]> = {
   telegram: ["init_data"], profile: ["name", "confirm_name"], logout: ["all"],
   reauthenticate: ["password", "captcha_token"], request_email_proof: ["captcha_token"], verify_email: ["token"],
   recover: ["email", "captcha_token"], reset_password: ["email", "token", "password"],
-  link_create: [], link_status: ["id"], link_finish: ["id", "combine_profiles", "other_email", "other_password", "captcha_token"],
+  link_create: ["project_id"], link_status: ["id"], link_finish: ["id", "combine_profiles", "other_email", "other_password", "captcha_token"],
   unlink_telegram: [], connect_telegram: ["init_data", "combine_profiles", "other_email", "other_password", "captcha_token"],
 };
 function captcha(input: Record<string, unknown>) {
@@ -35,6 +36,7 @@ function checked<T>(result: T | null): T {
       other_browser_proof_required: ["This Telegram profile already has website access. Sign in to that website account as well before combining.", 409],
       changed: ["The account connection changed. Start a fresh link.", 409],
       verify_email: ["Verify your account email before connecting Telegram.", 403],
+      project_unavailable: ["This project is no longer available for Telegram linking. Choose an active project you can access.", 409],
       launch_used: ["This Telegram launch was already used. Close the Mini App and reopen it for a fresh connection.", 409],
     };
     const [message, status] = messages[String(result.error)] ?? ["This request expired or is unavailable. Start again.", 400];
@@ -50,7 +52,7 @@ async function limited(request: Request, action: string, identity = "") {
   if (!await attempt(`auth-ip:${action}:${secretHash(ip)}`, 20, 600)
     || (identity && !await attempt(`auth-person:${action}:${secretHash(identity)}`, 10, 600))) throw new AccountError("Too many attempts. Wait a little and try again.", 429);
 }
-async function actor(hash: string, recent = false): Promise<Account> { return checked(await accountForHash(hash, recent)); }
+async function actor(hash: string): Promise<Account> { return checked(await accountForHash(hash)); }
 function signedIn(account: Account, token: string) {
   return Response.json({ account }, { headers: { ...privateHeaders, "Set-Cookie": accountCookie(token) } });
 }
@@ -158,8 +160,11 @@ export async function accountApi(request: Request, action: string): Promise<Resp
       await authRequest("logout?scope=global", {}, native.access_token).catch(() => undefined);
       return Response.json({ message: "Password changed. Sign in with your new password." }, { headers: { ...privateHeaders, "Set-Cookie": accountCookie("", true) } });
     }
-    const current = await actor(hash, ["link_create", "link_status", "link_finish", "unlink_telegram", "connect_telegram"].includes(action));
+    const current = await actor(hash);
     await limited(request, action, current.profile_id);
+    if (action === "connect_telegram" || action === "unlink_telegram" || action === "link_create") {
+      if (!await accountForHash(hash, true)) throw new AccountError("Confirm your password again before this action.", 401);
+    }
     if (action === "profile") {
       const name = professionalName(input.name);
       if (!name || input.confirm_name !== true) throw new AccountError("Type and confirm your professional name, up to 120 characters.", 422);
@@ -181,9 +186,11 @@ export async function accountApi(request: Request, action: string): Promise<Resp
       return Response.json({ account: checked(await intakeRpc("account_verified_email", { p_hash: hash, p_user: native.user.id, p_auth_session: native.auth_session_id })) }, { headers: privateHeaders });
     }
     if (action === "link_create") {
-      const secret = sessionToken(), url = await botLink(secret);
-      const result = checked(await intakeRpc<Record<string, unknown>>("account_start_link", { p_hash: hash, p_secret_hash: secretHash(secret) }));
-      return Response.json({ ...result, url }, { headers: privateHeaders });
+      const project = input.project_id;
+      if (project !== undefined && (typeof project !== "string" || !UUID.test(project))) throw new AccountError("Select a project before creating a code.", 422);
+      const secret = randomBytes(18).toString("base64url"), url = await botLink(secret);
+      const result = checked(await intakeRpc<Record<string, unknown>>("account_start_project_link", { p_hash: hash, p_secret_hash: secretHash(secret), p_project: project ?? null }));
+      return Response.json({ ...result, code: `TG-${secret}`, url }, { headers: privateHeaders });
     }
     if (action === "connect_telegram") {
       if (typeof input.init_data !== "string" || input.combine_profiles !== true) throw new AccountError("Confirm the Telegram connection from the Mini App.", 422);
@@ -201,7 +208,11 @@ export async function accountApi(request: Request, action: string): Promise<Resp
     }
     if (action === "unlink_telegram") return Response.json({ account: checked(await intakeRpc("account_unlink_telegram", { p_hash: hash })) }, { headers: privateHeaders });
     if (typeof input.id !== "string" || !UUID.test(input.id)) throw new AccountError("Start a fresh Telegram link.", 422);
-    if (action === "link_status") return Response.json(checked(await intakeRpc("account_link_status", { p_hash: hash, p_id: input.id })), { headers: privateHeaders });
+    if (action === "link_status") {
+      const status = await intakeRpc("account_link_status", { p_hash: hash, p_id: input.id });
+      if (!status) throw new AccountError("This code expired or was replaced. Generate a fresh code.", 409);
+      return Response.json(status, { headers: privateHeaders });
+    }
     if (action === "link_finish") {
       let other: Awaited<ReturnType<typeof nativeSession>> | undefined;
       if (input.other_email || input.other_password) {

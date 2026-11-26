@@ -6,7 +6,7 @@ import { MAX_PHOTO_BYTES, MAX_VOICE_BYTES, parseTelegramUpdate, type IntakePaylo
 import { reportFromInput, displayRatio, type ReportInput } from "../reports/model";
 import { formatMoney } from "../costing/format-money";
 import { decimal } from "../costing/decimal";
-import { handleChatReview, parseChatReview, telegramReviewButton } from "./chat-review";
+import { handleChatReview, parseChatReview, sendTelegramProjectList, sendTelegramReports, telegramReviewButton } from "./chat-review";
 
 export type IntakeDependencies = {
   prepare: (id: number, payload: IntakePayload, owner: string) => Promise<IntakeReceipt | { busy: true }>;
@@ -26,10 +26,10 @@ export const intakeDependencies: IntakeDependencies = {
   upload: uploadEvidence,
   finishMedia: (id, owner) => intakeRpc("account_finish_telegram_media", { p_update_id: id, p_owner: owner }),
   sendReply: async (chatId, text, reviewLink) => {
-    const id=reviewLink&&/\/confirm\/([a-f0-9-]{36})$/.exec(reviewLink)?.[1];
-    const chatButton=id?await telegramReviewButton(chatId,id).catch(()=>null):null;
+    const id=reviewLink&&/\/(confirm|reports)\/([a-f0-9-]{36})$/.exec(reviewLink);
+    const chatButton=id?await telegramReviewButton(chatId,id[2]).catch(()=>null):null;
     await telegramCall("sendMessage", { chat_id: chatId, text,
-      ...(reviewLink ? { reply_markup: { inline_keyboard: [[...(chatButton?[chatButton]:[]),{ text:id?"Open full review":"Open SiteLedger", web_app: { url: reviewLink } }]] } } : {}) });
+      ...(reviewLink ? { reply_markup: { inline_keyboard: [...(chatButton?[ [{...chatButton,text:id?.[1]==="reports"?"View in Telegram":chatButton.text}] ]:[]),[{ text:id?.[1]==="confirm"?"Open full review":id?"Open full report":"Open SiteLedger", web_app: { url: reviewLink } }]] } } : {}) });
   },
   finishReply: (id, owner, sent) => intakeRpc("finish_telegram_reply", { p_update_id: id, p_owner: owner, p_sent: sent }),
   reviewSubmission: payload => intakeRpc("account_bot_latest", { p_telegram: payload.user_id }),
@@ -83,6 +83,7 @@ export async function handleTelegramWebhook(request: Request, dependencies: Inta
     const input:unknown=JSON.parse(raw),chat=parseChatReview(input);
     if(chat&&dependencies===intakeDependencies){await handleChatReview(chat);return Response.json({ok:true});}
     parsed = parseTelegramUpdate(input);
+    if(parsed?.callbackId&&dependencies===intakeDependencies) await telegramCall("answerCallbackQuery",{callback_query_id:parsed.callbackId}).catch(()=>undefined);
   }
   catch { return Response.json({ error: "Invalid update." }, { status: 400 }); }
   if (!parsed) return Response.json({ ok: true });
@@ -124,9 +125,15 @@ export async function handleTelegramWebhook(request: Request, dependencies: Inta
     const landingStart=receipt.payload.kind==="start"&&!receipt.payload.link_hash&&!receipt.payload.project_code&&receipt.reply_path!=="/today";
     try {const origin=new URL(process.env.SITELEDGER_APP_URL??"");const path=landingStart?"/":summary?.path??receipt.reply_path??(reviewId?`/confirm/${reviewId}`:"/account");
       if(origin.protocol==="https:" && path.startsWith("/") && !path.startsWith("//"))link=new URL(path,origin.origin).toString();}catch{ /* Saved receipt can be retried when the origin is configured. */ }
-    await dependencies.sendReply(receipt.payload.chat_id,
-      (summary?.text ?? receipt.reply_text) + (resumed ? "\nA saved media file has resumed. Use /today again if more photos are still queued." : ""),
-      link ?? undefined);
+    const inChat=dependencies===intakeDependencies&&receipt.status!=="blocked"&&(
+      receipt.payload.kind==="projects" ? await sendTelegramProjectList(receipt.payload.chat_id).catch(()=>false) :
+      receipt.payload.kind==="reports" ? await sendTelegramReports(receipt.payload.chat_id).catch(()=>false) : false);
+    const howToLink = receipt.payload.link_help ? "In SiteLedger, open your project’s Team page and tap Reveal under Connect Telegram. Send /link followed by the code here, then return to that page to confirm." : null;
+    const chatOnly = (receipt.payload.project_code && receipt.reply_text.startsWith("Active project:"))
+      || (receipt.payload.link_hash && receipt.reply_text.startsWith("Telegram ownership proved."));
+    if(!inChat)await dependencies.sendReply(receipt.payload.chat_id,
+      (howToLink ?? summary?.text ?? receipt.reply_text) + (resumed ? "\nA saved media file has resumed. Use /today again if more photos are still queued." : ""),
+      chatOnly ? undefined : link);
     if (receipt.status !== "blocked") await dependencies.finishReply(parsed.updateId, owner, true);
     if (receipt.submission_id) onSubmissionSaved?.(receipt.submission_id);
     return Response.json({ ok: true });

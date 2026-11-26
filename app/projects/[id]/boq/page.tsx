@@ -7,19 +7,55 @@ import { BoqHistory } from "@/components/boq-history";
 import { BoqEditor } from "@/components/boq-editor";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { DiaryNotice } from "@/components/diary-notice";
-import { ProjectNavigation } from "@/components/project-navigation";
+import { DiaryIcon } from "@/components/diary-icon";
 import { displayDate } from "@/lib/reports/model";
+import { formatMoney } from "@/lib/costing/format-money";
+import { decimal } from "@/lib/costing/decimal";
+import { costReport } from "@/lib/costing/cost-report";
+
 export const metadata = { title: "Project BoQ and rates — SiteLedger AI", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
+
 async function Content({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params; if (!UUID.test(id)) notFound(); const data = await privateDashboard(id); if (!data) notFound();
+  const { id } = await params;
+  if (!UUID.test(id)) notFound();
+  const data = await privateDashboard(id);
+  if (!data) notFound();
   const canEdit = data.access.permissions?.edit_boq ?? data.access.role === "pm";
-  const [changes,versions]=await Promise.all([canEdit?privateBoqHistory(id):null,privateBoqVersions(id).catch(()=>null)]);
-  return <><Link href={`/projects/${id}`} className="project-breadcrumb">← {data.project.name}</Link><p className="eyebrow mt-5">{data.access.currency} / {data.access.role === "pm" ? "PM" : "Foreman"}</p><h1 className="mt-3 font-serif text-3xl">BoQ & rates</h1><ProjectNavigation id={id} current="boq" owner={data.access.owner}/>
-    <p className="mt-5 max-w-3xl leading-7">Add the work items, quantities and rates supplied by your QS. These are the prices used to cost new reports.</p>
-    {data.project.is_demo && <p className="mt-5 border-l-4 border-accent pl-4 leading-7">Demo rates — verify before real use. Illustrative quantities and prices are not live market rates.</p>}
-    {(data.access.archived_at || !canEdit) && <p role="status" className="mt-5 border-l-4 border-rule pl-4 leading-7">{data.access.archived_at ? "Archived project. Its BoQ remains available to read." : "You have read-only access to the BoQ."}</p>}
-    <BoqEditor projectId={id} currency={data.access.currency} rows={data.rows} editable={canEdit && !data.access.archived_at} />
-    <details className="work-disclosure" data-tour="boq-history"><summary>BoQ version history</summary><div className="work-disclosure-body">{versions?.length?<ul>{versions.map(item=><li key={item.version} className="border-b border-rule py-3">Version {item.version} · {displayDate(item.effective_date)}</li>)}</ul>:<p>No BoQ versions have been saved yet.</p>}</div></details>
-    {changes&&<BoqHistory changes={changes} timezone={data.access.timezone}/>}</>;
+  const [changes,versions] = await Promise.all([canEdit ? privateBoqHistory(id) : null,privateBoqVersions(id).catch(()=>null)]);
+  const currency = data.access.currency;
+  const money = (value: string) => formatMoney(value,currency);
+  const rows = data.rows;
+  const allocation = costReport(rows.map(row=>({boq_item_id:row.id,unit:row.unit,quantity_done:row.boq_quantity,confirmed_by:data.access.professional_name})),
+    data.boq.map(row=>({...row,cumulative_locked_quantity:"0"}))).total_cost;
+  const scope = decimal(allocation,"BoQ allocation");
+  const earnedPercent = scope.gt(0) ? decimal(data.earned,"earned value").times(100).div(scope).toNumber() : 0;
+  const difference = decimal(data.project.contract_sum,"contract sum").minus(scope);
+  return <>
+    <WorkspaceHeader current="boq" project={data.project.name} projectId={id}/>
+    <div className="stitch-title-row stitch-boq-heading"><h1 className="stitch-kicker"><DiaryIcon name="seal" size={17}/>BoQ — current version</h1>
+      <span className="stitch-kicker stitch-chip" data-tone="green">{data.access.archived_at?"Archived":"Active schedule"}</span></div>
+    {data.project.is_demo && <p className="stitch-card">Demo rates are illustrative. Verify them before real use.</p>}
+    {(data.access.archived_at || !canEdit) && <p role="status" className="stitch-card">{data.access.archived_at ? "Archived project. Its BoQ remains available to read." : "You have read-only access to the BoQ."}</p>}
+    <BoqEditor projectId={id} currency={currency} rows={rows} editable={canEdit && !data.access.archived_at} overview={<>
+      <div className="stitch-title-row">
+        <details className="stitch-compact-disclosure" data-tour="boq-history"><summary><DiaryIcon name="history" size={16}/>Previous versions<DiaryIcon name="chevron" size={16}/></summary>
+          {versions?.length ? <ul>{versions.map(item=><li key={item.version}>Version {item.version} · {displayDate(item.effective_date)}</li>)}</ul> : <p>No BoQ versions have been saved yet.</p>}
+        </details><span className="stitch-kicker">{rows.length} contract {rows.length===1?"item":"items"}</span>
+      </div>
+      <section className="stitch-card stitch-boq-allocation">
+        <div className="stitch-title-row"><h2 className="stitch-kicker" data-ink="orange">Contract ledger allocation</h2><span className="stitch-kicker stitch-chip" data-tone="green">{earnedPercent.toFixed(1)}% earned</span></div>
+        <div className="stitch-title-row"><strong>{money(allocation)}</strong><small>{money(data.earned)} to date</small></div>
+        <progress max={100} value={Math.min(100,earnedPercent)} aria-label="Contract ledger progress"/>
+        <dl className="stitch-boq-values"><div><dt>Total contract sum</dt><dd>{money(data.project.contract_sum)}</dd></div><div><dt>{difference.lt(0)?"Above contract sum":"Unallocated contingency"}</dt><dd>{money(difference.abs().toFixed())}</dd></div></dl>
+      </section>
+    </>}/>
+    {changes && <BoqHistory changes={changes} timezone={data.access.timezone}/>}
+    <Link href={`/projects/${id}`} className="text-link">Project overview</Link>
+  </>;
 }
-export default function BoqPage(props: { params: Promise<{ id: string }> }) { return <main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><WorkspaceHeader current="boq" /><Suspense fallback={<DiaryNotice busy title="Opening the project BoQ…"/>}><Content {...props} /></Suspense></main>; }
+
+export default function BoqPage(props: { params: Promise<{ id: string }> }) {
+  return <main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10">
+    <Suspense fallback={<><WorkspaceHeader current="boq"/><DiaryNotice busy title="Opening the project BoQ…"/></>}><Content {...props}/></Suspense>
+  </main>;
+}

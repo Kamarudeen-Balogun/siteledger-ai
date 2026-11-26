@@ -3,7 +3,7 @@ create function pg_temp.check_true(value boolean,label text) returns void langua
 begin if value is distinct from true then raise exception 'FAIL: %',label; end if; end; $$;
 insert into auth.users(id,email,created_at,updated_at,aud,role,is_anonymous) values('84000000-0000-4000-8000-000000000001','bot-fixture@example.test',now(),now(),'authenticated','authenticated',false);
 insert into auth.sessions(id,user_id,created_at,updated_at) values('84000000-0000-4000-8000-000000000011','84000000-0000-4000-8000-000000000001',now(),now());
-do $$ declare account jsonb; person uuid; project uuid; receipt jsonb; note uuid; replay jsonb; ctx jsonb; payload jsonb; count_before integer;
+do $$ declare account jsonb; person uuid; project uuid; second_project uuid; receipt jsonb; note uuid; replay jsonb; ctx jsonb; payload jsonb; count_before integer; ticket uuid;
 begin
   select count(*) into count_before from public.account_profiles;
   receipt:=public.account_prepare_telegram(840001,jsonb_build_object('user_id',840001,'chat_id',840001,'display_name','Metadata only','sent_at',extract(epoch from now())::bigint,'kind','note','text','Do not persist this unlinked message'),'84000000-0000-4000-8000-000000000021');
@@ -16,9 +16,14 @@ begin
   project:=(public.account_create_project(repeat('a',64),'Bot fixture','Fixture client','Fixture site','0','NGN','Africa/Lagos')->>'id')::uuid;
   ctx:=public.account_bot_context(840001);
   perform pg_temp.check_true(ctx->>'professional_name'='Professional Name' and (ctx->>'project_id')::uuid=project,'Bot uses shared professional identity and selected project');
+  perform pg_temp.check_true(jsonb_array_length(public.telegram_project_choices(840001))=1 and (public.telegram_project_choices(840001)->0->>'selected')::boolean,'Chat project picker shows the authorized active project');
   payload:=jsonb_build_object('user_id',840001,'chat_id',840001,'display_name','Never the recorded name','sent_at',extract(epoch from now())::bigint,'kind','voice','file_id','fixture-voice','content_type','audio/ogg');
   receipt:=public.account_prepare_telegram(840002,payload,'84000000-0000-4000-8000-000000000021');note:=(receipt->>'submission_id')::uuid;
   perform pg_temp.check_true(receipt->>'status'='pending' and note is not null,'Authorized voice reserves one private submission');
+  perform pg_temp.check_true(public.telegram_recent_reports(840001)->'notes'->0->>'id'=note::text,'Chat reports lists the current project submission');
+  ticket:=public.telegram_review_ticket(840001,note,'review');
+  perform pg_temp.check_true(public.telegram_use_review_ticket(840001,ticket,repeat('f',64))->>'id'=note::text,'Chat review authorizes the selected record');
+  perform pg_temp.check_true(public.telegram_use_review_ticket(840001,ticket,repeat('e',64)) is null,'Telegram review button cannot be replayed');
   perform pg_temp.check_true((select submitted_by='Professional Name' from public.submissions where id=note),'Telegram display metadata is never professional attribution');
   perform pg_temp.check_true((select role='pm' and profile_id=person from public.account_submission_people where submission_id=note),'Solo PM intake is honestly snapshotted');
   replay:=public.account_prepare_telegram(840002,payload,'84000000-0000-4000-8000-000000000021');
@@ -41,6 +46,24 @@ begin
   perform pg_temp.check_true(not (receipt->'payload' ? 'file_id'),'Rejected media is not downloaded or saved');
   receipt:=public.account_prepare_telegram(840005,jsonb_build_object('user_id',840001,'chat_id',840001,'display_name','Metadata','sent_at',extract(epoch from now())::bigint,'kind','logout'),'84000000-0000-4000-8000-000000000021');
   perform pg_temp.check_true(public.account_bot_context(840001) is null,'Bot logout revokes Telegram access');
+  perform pg_temp.check_true(public.telegram_project_choices(840001) is null and public.telegram_recent_reports(840001) is null,'Chat menus stop after unlinking');
   perform pg_temp.check_true((select count(*)=1 from public.submissions where id=note),'Logout preserves original evidence');
+  perform pg_temp.check_true(public.account_start_project_link(repeat('a',64),repeat('4',64),project)->>'error'='project_unavailable','Cannot link an archived project');
+  perform pg_temp.check_true(public.account_start_project_link(repeat('a',64),repeat('4',64),'00000000-0000-0000-0000-000000000001')->>'error'='project_unavailable','Arbitrary project ID cannot grant access');
+  perform public.account_archive_project(repeat('a',64),project,false);
+  second_project:=(public.account_create_project(repeat('a',64),'Other bot fixture','Fixture client','Fixture site','0','NGN','Africa/Lagos')->>'id')::uuid;
+  ticket:=(public.account_start_project_link(repeat('a',64),repeat('5',64),project)->>'id')::uuid;
+  receipt:=public.account_prepare_telegram(840006,jsonb_build_object('user_id',840001,'chat_id',840001,'display_name','Metadata','sent_at',extract(epoch from now())::bigint,'kind','start','link_hash',repeat('5',64)),'84000000-0000-4000-8000-000000000021');
+  perform pg_temp.check_true(receipt->>'reply_text' like 'Telegram ownership proved%' and public.account_bot_context(840001) is null,'Chat proof waits for explicit confirmation in the browser');
+  perform public.account_archive_project(repeat('a',64),project,true);
+  perform pg_temp.check_true(public.account_finish_link(repeat('a',64),ticket,true)->>'error'='project_unavailable','Browser confirmation rechecks whether the project is available');
+  perform public.account_archive_project(repeat('a',64),project,false);
+  perform pg_temp.check_true(public.account_finish_link(repeat('a',64),ticket,true)->>'telegram_linked'='true','Authorized browser confirms connection');
+  perform pg_temp.check_true(public.account_bot_context(840001)->>'project_id'=project::text,'Connection selects the project that issued the code');
+  perform pg_temp.check_true(public.account_finish_link(repeat('a',64),ticket,true)->>'error'='unavailable','Consumed code cannot be reused');
+  receipt:=public.account_prepare_telegram(840007,jsonb_build_object('user_id',840001,'chat_id',840001,'display_name','Metadata','sent_at',extract(epoch from now())::bigint,'kind','start','project_code',(select project_code from public.projects where id=second_project)),'84000000-0000-4000-8000-000000000021');
+  perform pg_temp.check_true(receipt->>'reply_text' like 'Active project:%' and public.account_bot_context(840001)->>'project_id'=second_project::text,'Project command switches to another authorized project');
+  receipt:=public.account_prepare_telegram(840008,jsonb_build_object('user_id',840001,'chat_id',840001,'display_name','Metadata','sent_at',extract(epoch from now())::bigint,'kind','start','project_code','LEKKI-DEMO-01'),'84000000-0000-4000-8000-000000000021');
+  perform pg_temp.check_true(receipt->>'reply_text' like '%unavailable%' and public.account_bot_context(840001)->>'project_id'=second_project::text,'Knowing a project code never grants access');
 end $$;
 rollback;
