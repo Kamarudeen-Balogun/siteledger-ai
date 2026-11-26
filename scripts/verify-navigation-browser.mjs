@@ -1,4 +1,4 @@
-// Local navigation/UI checks; the SDK stub supplies no authenticated identity.
+// Local navigation checks use an anonymous Telegram launch and a fixture account response.
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { chromium } from "@playwright/test";
@@ -16,12 +16,15 @@ try {
       onClick(callback){window.navigationBackCallbacks.add(callback)},offClick(callback){window.navigationBackCallbacks.delete(callback)}
     }}};` }));
   await context.route("https://challenges.cloudflare.com/turnstile/**", route => route.fulfill({ contentType: "application/javascript", body: "window.turnstile={render(){return 'navigation-only'},remove(){},reset(){}};" }));
+  let signedIn = false;
+  await context.route("**/api/account", route => route.fulfill({ json: { account: signedIn ? { profile_id: "navigation-fixture" } : null } }));
+  await context.route("**/api/projects/private", route => route.fulfill({ json: { active_project_id: null } }));
   const page = await context.newPage(), errors = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto(origin + "/reports/demo?source=navigation-test");
   await page.waitForFunction(() => window.navigationBackVisible && window.navigationBackCallbacks?.size === 1);
   const mobileNavigation = page.getByRole("navigation", { name: "Mobile workspace navigation" });
-  await mobileNavigation.waitFor();assert.equal(await mobileNavigation.getByRole("link").count(),4);
+  assert.equal(await mobileNavigation.count(),0);
   await page.getByRole("link", { name: "Open demo dispute log", exact: true }).click();
   await page.waitForURL(origin + "/log/demo");
   await page.waitForFunction(() => window.navigationBackCallbacks?.size === 1);
@@ -29,14 +32,14 @@ try {
   await page.waitForURL(origin + "/reports/demo?source=navigation-test");
   await page.getByRole("link", { name: "Open demo dispute log", exact: true }).click();
   await page.waitForURL(origin + "/log/demo");
-  await page.getByRole("button", { name: "Back", exact: true }).click();
+  await page.goBack();
   await page.waitForURL(origin + "/reports/demo?source=navigation-test");
   await page.goForward(); await page.waitForURL(origin + "/log/demo");
   assert.deepEqual(Object.keys(await page.evaluate(() => window.history.state.siteledgerNavigation)), ["depth"]);
   await page.getByRole("link", { name: "Open locked report", exact: true }).first().click();
   await page.waitForURL(origin + "/reports/demo");
-  await page.getByRole("button", { name: "Back", exact: true }).click(); await page.waitForURL(origin + "/log/demo");
-  await mobileNavigation.getByRole("link", { name: "Account", exact: true }).click();
+  await page.goBack(); await page.waitForURL(origin + "/log/demo");
+  await page.getByRole("link", { name: "Account", exact: true }).click();
   await page.waitForURL(origin + "/account");
   await page.getByRole("link", { name: "Forgot your password?", exact: true }).click();
   await page.waitForURL(origin + "/account/recover");
@@ -46,17 +49,22 @@ try {
   await code.fill("01234567"); assert.equal(await code.inputValue(), "01234567");
   assert.equal(await code.evaluate(node => node.checkValidity()), true);
   await code.fill("12345"); assert.equal(await code.evaluate(node => node.checkValidity()), false);
-  await page.getByRole("button", { name: "Back", exact: true }).click(); await page.waitForURL(origin + "/account");
+  await page.goBack(); await page.waitForURL(origin + "/account");
   const direct = await context.newPage(); await direct.goto(origin + "/account/confirm");
   await direct.locator('[name="token"]').fill("01234567");
   assert.equal(await direct.locator('[name="token"]').inputValue(), "01234567");
-  await direct.getByRole("button", { name: "Back", exact: true }).click(); await direct.waitForURL(origin + "/account");
+  await direct.waitForFunction(() => window.navigationBackVisible && window.navigationBackCallbacks?.size === 1);
+  await direct.evaluate(() => [...window.navigationBackCallbacks][0]()); await direct.waitForURL(origin + "/account");
+  signedIn = true;
   for (const width of [390, 768, 1440]) {
-    await page.setViewportSize({ width, height: 1000 }); await page.goto(origin + "/reports/demo");
+    await page.setViewportSize({ width, height: 1000 }); await page.goto(origin + "/log/demo");
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    assert.ok(await page.getByRole("button", { name: "Back", exact: true }).evaluate(node => node.getBoundingClientRect().height >= 48));
-    if (width < 1024) assert.equal(await mobileNavigation.isVisible(), true);
-    else { assert.equal(await mobileNavigation.isVisible(), false); assert.equal(await page.getByRole("navigation", { name: "Workspace navigation" }).isVisible(), true); }
+    if (width < 1024) { await mobileNavigation.waitFor(); assert.equal(await mobileNavigation.getByRole("link").count(),4); }
+    else {
+      assert.equal(await mobileNavigation.isVisible(), false);
+      assert.equal(await page.getByRole("navigation", { name: "Workspace navigation" }).isVisible(), true);
+      assert.ok(await page.getByRole("button", { name: "Back", exact: true }).evaluate(node => node.getBoundingClientRect().height >= 48));
+    }
     await page.screenshot({ path: `${out}/workspace-${width}.png`, fullPage: false });
   }
   assert.deepEqual(errors, []);
