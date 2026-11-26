@@ -37,7 +37,7 @@ begin
  snapshot:=public.account_report_input(repeat('a',64),note)->'report'->'document';
  solo:=pg_temp.lock_fixture(repeat('a',64),a,(item->>'id')::uuid,owner_id,2);
  perform public.account_approve(repeat('a',64),solo,public.account_report_input(repeat('a',64),solo)->'report'->'document');
- read:=public.account_dashboard_input(repeat('c',64),a); perform pg_temp.check_true(read->>'locked_count'='1' and jsonb_array_length(read->'locked_items')=1,'Foreman sees only own approved quantities');
+ read:=public.account_dashboard_input(repeat('c',64),a); perform pg_temp.check_true(read->>'locked_count'='2' and jsonb_array_length(read->'locked_items')=2,'Project members with report access see approved quantities for their project');
  perform pg_temp.check_true(public.account_dashboard_input(repeat('a',64),a)->>'locked_count'='2','PM sees both approved reports');
  changed:=item||jsonb_build_object('revision',before_item->>'revision','rate','11800','boq_quantity','1'); perform public.account_boq_save(repeat('a',64),a,changed);
  perform pg_temp.check_true(public.account_report_input(repeat('a',64),note)->'report'->'document'=snapshot,'Rate and BoQ changes preserve exact locked snapshot');

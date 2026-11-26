@@ -50,9 +50,9 @@ export async function renderReportPdf(report: ReportView, photos: string[] = [])
       <Text style={styles.title}>Daily site report</Text>
       <View style={styles.rule}>
         {[['Project', source.project.name], ['Client', source.project.client], ['Location', source.project.location],
-          ['Date', displayDate(source.date)], ['Weather', doc.weather || 'Not recorded']].map(([label, value]) =>
+          ['Date', displayDate(source.date)], ...(source.boq_version?[["BoQ",`Version ${source.boq_version}`]]:[]), ['Weather', doc.weather || 'Not recorded']].map(([label, value]) =>
           <View key={label} style={styles.meta}><Text style={styles.label}>{label}</Text><Text style={styles.value}>{value}</Text></View>)}
-        <Text style={[styles.small, { marginTop: 8 }]}>Record {report.id} · {report.status === "locked" ? "Approved and locked" : "Draft — awaiting approval"}</Text>
+        <Text style={[styles.small, { marginTop: 8 }]}>{report.status === "locked" ? "Approved and locked" : "Draft — awaiting approval"}</Text>
       </View>
       <View style={styles.total} wrap={false}><View><Text>Value of work today</Text><Text style={styles.small}>Confirmed quantities × BoQ rates</Text></View><Text style={styles.amount}>{money(doc.costing.total_cost)}</Text></View>
       <Text style={styles.section}>Work done and BoQ value</Text>

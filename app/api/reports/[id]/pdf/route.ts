@@ -6,8 +6,11 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   try {
     const { id } = await context.params;
     const hash=requestSessionHash(request);
+    const actor=await recordActor(id,hash);
+    if (!actor || actor.permissions?.view_reports===false) return new Response("Report unavailable.",{status:404,headers:{"Cache-Control":"private, no-store"}});
     const response=await pdfResponse(await getReport(id,hash));
-    if (!await recordActor(id,hash)) return new Response("Report unavailable.",{status:404,headers:{"Cache-Control":"private, no-store"}});
+    const current=await recordActor(id,hash);
+    if (!current || current.permissions?.view_reports===false) return new Response("Report unavailable.",{status:404,headers:{"Cache-Control":"private, no-store"}});
     return response;
   } catch (error) { return pdfError(error); }
 }

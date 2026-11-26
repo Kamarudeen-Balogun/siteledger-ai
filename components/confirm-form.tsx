@@ -11,44 +11,47 @@ import { PhotoObservations } from "@/components/photo-observations";
 import { WorkspaceHeader } from "./workspace-header";
 import { DiaryNotice } from "./diary-notice";
 import { WorkFlow, WorkDisclosure } from "./work-flow";
+import type { ReviewDraft } from "@/lib/confirm/draft";
 
 const empty: SiteExtraction = { work_items: [], materials: [], delays: [], issues: [], raw_language_notes: "" };
 const inputClass = "min-h-12 w-full rounded-none border border-rule bg-[#fffdf9] px-3 py-2 text-base outline-offset-2 focus:outline-accent";
 const unit = (value: string | null) => value === "m²" ? "m2" : value === "m³" ? "m3" : value;
 const unitLabel = (value: string) => ({ m2: "m²", m3: "m³" }[unit(value)!] ?? value);
 const unitMeaning = (value: string) => ({ m2: "Square metres — area", m3: "Cubic metres — volume", tonne: "Tonnes — weight", point: "Points — individual fixtures", day: "Days of work" }[unit(value)!] ?? value);
-function Field({ label, name, value, number, required = false, low = false }: {
-  label: string; name: string; value: string | number | null; number?: boolean; required?: boolean; low?: boolean;
+function Field({ label, name, value, number, required = false, low = false, initial }: {
+  label: string; name: string; value: string | number | null; number?: boolean; required?: boolean; low?: boolean; initial?: string;
 }) {
   return <label className="block text-base"><span className="mb-2 block">{label}{required ? " *" : ""}</span>
     <input className={low ? inputClass.replace("border-rule bg-[#fffdf9]", "border-amber-700 bg-amber-50") : inputClass} name={name}
       type={number ? "number" : "text"} inputMode={number ? "decimal" : undefined} step={number ? "any" : undefined}
       min={number ? 0 : undefined} maxLength={number ? undefined : 20000} required={required}
-      defaultValue={low ? "" : value ?? ""} aria-describedby={low ? name + "-check" : undefined} />
+      defaultValue={initial ?? (low ? "" : value ?? "")} aria-describedby={low ? name + "-check" : undefined} />
     {low && <span id={name + "-check"} className="sr-only">Check this one — enter the value.</span>}
   </label>;
 }
 function Score({ name, value }: { name: string; value: number }) {
-  return <label className="block">AI confidence (0–1)<input className={inputClass + " mt-2"} aria-label="Confidence (0–1)"
-    name={name} type="number" min="0" max="1" step="0.001" defaultValue={value} required />
-    <span className="mt-2 block text-base leading-6">1 means very certain. You still check the value.</span></label>;
+  return <input type="hidden" name={name} value={value} />;
 }
 function Section({ title, children }: { title: string; children: ReactNode }) {
-  return <section className="border-t border-rule py-7"><h2 className="mb-5 font-serif text-2xl">{title}</h2>{children}</section>;
+  return <section className="diary-panel"><h2 className="mb-4">{title}</h2>{children}</section>;
 }
-export function ConfirmForm({ record, trial = false, banner, children }: { record: ReviewRecord; trial?: boolean; banner?: ReactNode; children?: ReactNode }) {
+export function ConfirmForm({ record, draft, trial = false, banner, children }: { record: ReviewRecord; draft?: ReviewDraft | null; trial?: boolean; banner?: ReactNode; children?: ReactNode }) {
   const router = useRouter();
   const source = record.confirmed_extraction ?? record.trial_values ?? record.extraction ?? empty;
   const previouslyChecked = Boolean(record.confirmed_extraction || record.trial_values);
-  const [work, setWork] = useState(() => source.work_items.map((value, i) => ({ key: "work-" + i, value,
-    unitValue: !previouslyChecked && value.confidence < 0.6 ? "" : unit(value.unit) ?? "",
-    boqId: !previouslyChecked && value.confidence < 0.6 ? "" : (record.confirmed_boq_ids ?? record.trial_boq_ids)?.[i] ?? record.boq.find(item => item.description.toLowerCase() === value.matched_boq_hint?.toLowerCase())?.id ?? "" })));
-  const [materials, setMaterials] = useState(() => source.materials.map((value, i) => ({ key: "material-" + i, value })));
-  const [delays, setDelays] = useState(() => source.delays.map((value, i) => ({ key: "delay-" + i, value })));
+  const fields = draft?.fields ?? {};
+  const [work, setWork] = useState(() => Array.from({ length: draft?.work ?? source.work_items.length }, (_, i) => {
+    const value = draft ? { description: fields[`w${i}.description`] ?? "", quantity: null, unit: null, crew: null, confidence: Number(fields[`w${i}.confidence`] ?? 1), matched_boq_hint: fields[`w${i}.hint`] ?? null } : source.work_items[i];
+    return { key: `work-${i}`, value,
+      unitValue: draft ? fields[`w${i}.unit`] ?? "" : !previouslyChecked && value.confidence < 0.6 ? "" : unit(value.unit) ?? "",
+      boqId: draft ? fields[`w${i}.boq`] ?? "" : !previouslyChecked && value.confidence < 0.6 ? "" : (record.confirmed_boq_ids ?? record.trial_boq_ids)?.[i] ?? record.boq.find(item => item.description.toLowerCase() === value.matched_boq_hint?.toLowerCase())?.id ?? "" };
+  }));
+  const [materials, setMaterials] = useState(() => Array.from({ length: draft?.materials ?? source.materials.length }, (_, i) => ({ key: `material-${i}`, value: draft ? { name: "", quantity: null, unit: null, action: null, confidence: Number(fields[`m${i}.confidence`] ?? 1) } : source.materials[i] })));
+  const [delays, setDelays] = useState(() => Array.from({ length: draft?.delays ?? source.delays.length }, (_, i) => ({ key: `delay-${i}`, value: draft ? { reason: "", hours: null, confidence: Number(fields[`d${i}.confidence`] ?? 1) } : source.delays[i] })));
   const [saving, setSaving] = useState(false), [error, setError] = useState("");
   const [costing, setCosting] = useState(false);
   const [saved, setSaved] = useState<{ by: string; at: string } | null>(() => record.confirmed_at ? { by: record.confirmed_by!, at: record.confirmed_at } : null);
-  const [dirty, setDirty] = useState(false);
+  const [dirty, setDirty] = useState(false), [savingDraft,setSavingDraft]=useState(false), [draftNotice,setDraftNotice]=useState(Boolean(draft));
   const feedback = useRef<HTMLDivElement>(null), focusFeedback = useRef(false);
   const listening = ["queued", "processing"].includes(record.job_status ?? "");
   const locked = record.status === "locked";
@@ -66,6 +69,18 @@ export function ConfirmForm({ record, trial = false, banner, children }: { recor
     focusFeedback.current = false;
   }, [saved, error, saving]);
   const mediaUrl = (id: string) => trial ? `/api/trial/media/${id}` : `/api/confirm/${record.id}/media/${id}`;
+  async function saveDraft(form: HTMLFormElement | null) {
+    if (!form || savingDraft) return;
+    setSavingDraft(true); setError("");
+    try {
+      const fields = Object.fromEntries([...new FormData(form)].map(([name,value]) => [name,String(value)]));
+      const response = await fetch(`/api/confirm/${record.id}/draft`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ work: work.length, materials: materials.length, delays: delays.length, fields }), signal: AbortSignal.timeout(15000) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+      setDirty(false); setDraftNotice(true);
+    } catch (error) { setError(error instanceof Error ? error.message : "Could not save this draft. Try again."); focusFeedback.current = true; }
+    finally { setSavingDraft(false); }
+  }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     focusFeedback.current = true;
@@ -106,7 +121,7 @@ export function ConfirmForm({ record, trial = false, banner, children }: { recor
   const date = new Intl.DateTimeFormat("en-NG", { dateStyle: "long", timeStyle: "short", timeZone: record.timezone ?? "Africa/Lagos" }).format(new Date(record.created_at));
   return <main className="mx-auto max-w-7xl px-5 pb-12 pt-7 sm:px-10">
     <TelegramFrame />
-    <WorkspaceHeader current="reports" />{banner}
+    <WorkspaceHeader current="reports" title="Confirm" project={record.project_name}/>{banner}
     <header className="border-b border-rule pb-5"><p className="eyebrow">Human review</p>
       <h1 className="mt-4 font-serif text-3xl">Review your site note</h1><p className="mt-3 leading-7">{record.project_name}</p>
       <p className="mt-2 text-sm">Recorded by {record.submitted_by}</p><details className="log-reference"><summary>Capture details</summary><p className="mt-2 font-mono text-sm">{date} · {record.timezone ?? "Africa/Lagos"}</p></details>
@@ -134,15 +149,15 @@ export function ConfirmForm({ record, trial = false, banner, children }: { recor
       : <form onSubmit={submit} onChange={() => setDirty(true)} data-unsaved={dirty&&!locked&&!archived&&!saving}>
       {record.job_status === "manual_entry" && <DiaryNotice tone="warning" title="Enter the site details">We couldn’t read this note reliably. Your audio and photos are saved. Enter what happened below.</DiaryNotice>}
       <fieldset disabled={locked || archived || saving}>
-      <Section title="Work done">
+      <Section title="Work items">
         <p className="mb-5 leading-7">Choose the agreed BoQ item and check the work quantity.</p>
         {!work.length && <p className="mb-5">No work items were picked up. Add an item if work was done.</p>}
         <table className="w-full table-fixed border-collapse text-left"><caption className="sr-only">Editable work quantities and BoQ choices</caption>
           <thead className="sr-only"><tr><th scope="col">Work item</th><th scope="col">Quantity</th></tr></thead>
           <tbody>{work.map(({ key, value, boqId, unitValue }, i) => <tr key={key} className="review-row border-b border-rule" data-confidence={low(value.confidence) ? "low" : undefined}><td colSpan={2} className="py-5">
             {low(value.confidence) && <p className="mb-3 text-amber-900">Check this one — this item needs your input.</p>}
-            <div className="review-work-fields"><div><Field label="Description" name={`w${i}.description`} value={value.description} required low={low(value.confidence)} /></div>
-              <Field label={unitValue ? `Quantity (${unitLabel(unitValue)})` : "Quantity"} name={`w${i}.quantity`} value={value.quantity} number required low={low(value.confidence) || value.quantity === null} /></div>
+            <div className="review-work-fields" data-tour={i===0?"work-items":undefined}><div><Field label="Description" name={`w${i}.description`} value={value.description} initial={fields[`w${i}.description`]} required low={low(value.confidence)} /></div>
+              <Field label={unitValue ? `Quantity (${unitLabel(unitValue)})` : "Quantity"} name={`w${i}.quantity`} value={value.quantity} initial={fields[`w${i}.quantity`]} number required low={low(value.confidence) || value.quantity === null} /></div>
             <label className="mt-4 block">BoQ item *<select className={inputClass + " mt-2"} name={`w${i}.boq`} value={boqId} onChange={event => {
               const selected = event.target.value; const chosen = record.boq.find(item => item.id === selected);
               setWork(rows => rows.map(row => row.key === key ? { ...row, boqId: selected, unitValue: chosen?.unit ?? row.unitValue } : row));
@@ -153,48 +168,46 @@ export function ConfirmForm({ record, trial = false, banner, children }: { recor
               <input className={inputClass + " mt-2"} name={`w${i}.unit`} value={unitValue} required onChange={event => {
                 const next = event.target.value; setWork(rows => rows.map(row => row.key === key ? { ...row, unitValue: next } : row));
               }} /><span className="mt-1 block text-sm">m2 = m² · m3 = m³</span></label>
-              <Field label="Crew count" name={`w${i}.crew`} value={value.crew} number required={low(value.confidence) && value.crew !== null} low={low(value.confidence)} />
-              </div><WorkDisclosure title="AI extraction details"><div className="grid gap-5 sm:grid-cols-2 pt-5"><Score name={`w${i}.confidence`} value={value.confidence} /><Field label="BoQ suggestion" name={`w${i}.hint`} value={value.matched_boq_hint} low={low(value.confidence)} /></div></WorkDisclosure>
+              <Field label="Crew count" name={`w${i}.crew`} value={value.crew} initial={fields[`w${i}.crew`]} number required={low(value.confidence) && value.crew !== null} low={low(value.confidence)} />
+              </div><Score name={`w${i}.confidence`} value={value.confidence} /><input type="hidden" name={`w${i}.hint`} value={value.matched_boq_hint ?? ""}/>
             <button type="button" className="mt-3 min-h-12 underline underline-offset-4" onClick={() => { setDirty(true); setWork(rows => rows.filter(row => row.key !== key)); }}>Remove work item {i + 1}</button>
           </td></tr>)}</tbody></table>
         <button type="button" className="mt-4 min-h-12 border border-rule px-4" onClick={() => { setDirty(true); setWork(rows => [...rows, { key: crypto.randomUUID(), boqId: "", unitValue: "", value: {
           description: "", matched_boq_hint: null, quantity: null, unit: null, crew: null, confidence: 1,
         } as WorkItem }]); }}>Add work item</button>
       </Section>
-      <WorkDisclosure title="Materials & delays" description={materials.length||delays.length?`${materials.length} materials · ${delays.length} delays to review`:"Optional deliveries, materials used and delays"} open={materials.length>0||delays.length>0}>
-      <WorkDisclosure title="Materials" description={materials.length?`${materials.length} mentioned in this note`:"Add deliveries or materials used, if needed"} open={materials.length>0}>
+      <div data-tour="materials"><WorkDisclosure title="Materials recorded" description="Deliveries and materials used stay separate from costs" open={materials.length>0}>
         {!materials.length && <p>No materials were mentioned.</p>}
         {materials.map(({ key, value }, i) => <div key={key} className="border-b border-rule py-5">
-          <div className="grid grid-cols-2 gap-4"><Field label="Material" name={`m${i}.name`} value={value.name} required low={low(value.confidence)} />
-            <Field label={value.unit ? `Quantity (${value.unit})` : "Quantity"} name={`m${i}.quantity`} value={value.quantity} number required low={low(value.confidence) || value.quantity === null} /></div>
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3"><Field label="Unit" name={`m${i}.unit`} value={value.unit} required low={low(value.confidence)} />
-            <label className="block">Action *<select className={inputClass + " mt-2"} name={`m${i}.action`} defaultValue={low(value.confidence) ? "" : value.action ?? ""} required>
+          <div className="grid grid-cols-2 gap-4"><Field label="Material" name={`m${i}.name`} value={value.name} initial={fields[`m${i}.name`]} required low={low(value.confidence)} />
+            <Field label="Quantity" name={`m${i}.quantity`} value={value.quantity} initial={fields[`m${i}.quantity`]} number required low={low(value.confidence) || value.quantity === null} /></div>
+          <div className="mt-4 grid grid-cols-2 gap-4"><Field label="Count label" name={`m${i}.unit`} value={value.unit} initial={fields[`m${i}.unit`]} required low={low(value.confidence)} />
+            <label className="block">Action *<select className={inputClass + " mt-2"} name={`m${i}.action`} defaultValue={fields[`m${i}.action`] ?? (low(value.confidence) ? "" : value.action ?? "")} required>
               <option value="">Choose action</option><option value="delivered">Delivered</option><option value="used">Used</option></select></label><Score name={`m${i}.confidence`} value={value.confidence} /></div>
           <button type="button" className="mt-3 min-h-12 underline" onClick={() => { setDirty(true); setMaterials(rows => rows.filter(row => row.key !== key)); }}>Remove material {i + 1}</button>
         </div>)}
         <button type="button" className="mt-4 min-h-12 border border-rule px-4" onClick={() => { setDirty(true); setMaterials(rows => [...rows, { key: crypto.randomUUID(), value: { name: "", quantity: null, unit: null, action: null, confidence: 1 } }]); }}>Add material</button>
-      </WorkDisclosure>
+      </WorkDisclosure></div>
       <WorkDisclosure title="Delays" description={delays.length?`${delays.length} mentioned in this note`:"Add a delay, if needed"} open={delays.length>0}>
         {!delays.length && <p>No delays were mentioned.</p>}
         {delays.map(({ key, value }, i) => <div key={key} className="border-b border-rule py-5">
-          <div className="grid grid-cols-2 gap-4"><Field label="Reason" name={`d${i}.reason`} value={value.reason} required low={low(value.confidence)} />
-            <Field label="Hours" name={`d${i}.hours`} value={value.hours} number required low={low(value.confidence) || value.hours === null} /></div>
+          <div className="grid grid-cols-2 gap-4"><Field label="Reason" name={`d${i}.reason`} value={value.reason} initial={fields[`d${i}.reason`]} required low={low(value.confidence)} />
+            <Field label="Hours" name={`d${i}.hours`} value={value.hours} initial={fields[`d${i}.hours`]} number required low={low(value.confidence) || value.hours === null} /></div>
           <div className="mt-4 max-w-xs"><Score name={`d${i}.confidence`} value={value.confidence} /></div>
           <button type="button" className="mt-3 min-h-12 underline" onClick={() => { setDirty(true); setDelays(rows => rows.filter(row => row.key !== key)); }}>Remove delay {i + 1}</button>
         </div>)}
         <button type="button" className="mt-4 min-h-12 border border-rule px-4" onClick={() => { setDirty(true); setDelays(rows => [...rows, { key: crypto.randomUUID(), value: { reason: "", hours: null, confidence: 1 } }]); }}>Add delay</button>
       </WorkDisclosure>
-      </WorkDisclosure>
       <Section title="Photos">
         {!record.photos.length && <p>{trial ? "No photos are attached to this trial note." : "No photos are attached to this note. You can send them in the same Telegram chat."}</p>}
         <div className="grid gap-7 sm:grid-cols-2">{record.photos.map((photo, i) => <div key={photo.id}>
           <Image src={mediaUrl(photo.id)} alt={`Site evidence photo ${i + 1}`} width={800} height={600} unoptimized className="h-auto w-full border border-rule" />
-          <PhotoObservations photo={photo} number={i + 1} onEdit={() => setDirty(true)} />
+          <PhotoObservations photo={photo} number={i + 1} initial={fields[`photo.${photo.id}`]} onEdit={() => setDirty(true)} />
         </div>)}</div>
       </Section>
       <WorkDisclosure title="Issues and language notes" description="Optional details and the original language notes" open={source.issues.length>0}>
-        <label className="block">Issues — one per line<textarea className={inputClass + " mt-2 min-h-28"} name="issues" defaultValue={source.issues.join("\n")} maxLength={20000} /></label>
-        <label className="mt-5 block">Language notes<textarea className={inputClass + " mt-2 min-h-24"} name="language_notes" defaultValue={source.raw_language_notes} maxLength={20000} /></label>
+        <label className="block">Issues — one per line<textarea className={inputClass + " mt-2 min-h-28"} name="issues" defaultValue={fields.issues ?? source.issues.join("\n")} maxLength={20000} /></label>
+        <label className="mt-5 block">Language notes<textarea className={inputClass + " mt-2 min-h-24"} name="language_notes" defaultValue={fields.language_notes ?? source.raw_language_notes} maxLength={20000} /></label>
       </WorkDisclosure>
       </fieldset>
       {record.pending_media && <p role="status" className="mb-4 border-l-4 border-amber-700 p-4">A photo is still saving. You can review the fields now; wait before confirming.</p>}
@@ -202,8 +215,10 @@ export function ConfirmForm({ record, trial = false, banner, children }: { recor
       {saved && !dirty && !error && <p className="mb-4 border-l-4 border-[#657055] bg-[#EEF0E7] p-4 font-semibold">Site note confirmed. Your changes are saved.</p>}
       <p className="mb-4">By confirming, you confirm that these are the quantities and observations from your site.</p>
       {!record.audio_url&&!record.photos.length&&!locked&&<p role="status" className="my-4">Add a voice note or photo in the same Telegram chat before confirming.</p>}
-      <button type="submit" disabled={saving || locked || archived || record.pending_media || record.pending_photo_analysis || (!record.audio_url&&!record.photos.length) || (!!saved && !dirty)} className="min-h-14 w-full bg-accent px-6 py-4 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
-        {saving ? costing ? "Costing against the BoQ…" : "Saving your confirmation…" : saved ? dirty ? "Confirm changes and rebuild report" : "Confirmed — saved" : "Confirm and cost it"}</button>
+      {draftNotice&&!dirty&&<p role="status" className="mb-3">Draft saved. <Link href="/today" className="text-link">Return to Today</Link></p>}
+      {!locked&&!archived&&<div className="diary-confirm-actions"><button type="submit" disabled={saving || savingDraft || record.pending_media || record.pending_photo_analysis || (!record.audio_url&&!record.photos.length) || (!!saved && !dirty && !draftNotice)} className="diary-primary">
+        {saving ? costing ? "Costing against the BoQ…" : "Saving your confirmation…" : saved ? "Confirm changes and rebuild report" : "Confirm and cost it"}</button>
+        {!trial&&<button type="button" data-tour="save-draft" className="work-button" disabled={saving||savingDraft} onClick={event=>void saveDraft(event.currentTarget.form)}>{savingDraft?"Saving draft…":"Save draft — finish later"}</button>}</div>}
       </form>}{children}
   </main>;
 }

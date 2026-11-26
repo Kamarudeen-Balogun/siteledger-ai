@@ -12,6 +12,7 @@ export const privateHeaders = { "Cache-Control": "private, no-store", "Referrer-
 const shapes: Record<string, string[]> = {
   signup: ["email", "password", "name", "confirm_name", "captcha_token", "link_existing"],
   verify_signup: ["email", "token", "name", "confirm_name", "link_existing"],
+  resend_signup: ["email"],
   signin: ["email", "password", "captcha_token", "link_existing", "combine_profiles"],
   telegram: ["init_data"], profile: ["name", "confirm_name"], logout: ["all"],
   reauthenticate: ["password", "captcha_token"], request_email_proof: ["captcha_token"], verify_email: ["token"],
@@ -113,6 +114,14 @@ export async function accountApi(request: Request, action: string): Promise<Resp
     const hash = requestSessionHash(request);
     if (action === "signup" || action === "signin") return await browserLogin(request, input, hash, action === "signup");
     if (action === "verify_signup") return await confirmSignup(request, input, hash);
+    if (action === "resend_signup") {
+      const email=emailAddress(input.email);
+      if(!email)throw new AccountError("Enter the email you used to sign up.",422);
+      await limited(request,action,email);
+      try {await authRequest("resend",{type:"signup",email});}
+      catch(error){if(!(error instanceof AccountError)||![400,404].includes(error.status))throw error;}
+      return Response.json({message:"If this signup can receive email, a fresh code is on its way."},{headers:privateHeaders});
+    }
     if (action === "telegram") {
       if (typeof input.init_data !== "string") throw new AccountError("Open SiteLedger from the Telegram bot.", 401);
       const id = verifyTelegramAccess(input.init_data, process.env.TELEGRAM_BOT_TOKEN ?? "");

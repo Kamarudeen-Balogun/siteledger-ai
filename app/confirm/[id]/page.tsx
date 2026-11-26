@@ -10,6 +10,9 @@ import Link from "next/link";
 import { TelegramAccountEntry } from "@/components/account-forms";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { DiaryNotice } from "@/components/diary-notice";
+import { currentSessionHash } from "@/lib/auth/session";
+import { intakeRpc } from "@/lib/telegram/storage";
+import type { ReviewDraft } from "@/lib/confirm/draft";
 
 export const maxDuration = 300;
 
@@ -32,7 +35,8 @@ async function Review(props: Props) {
   ]);});
   // Start editable fields from the completed extraction after a listening refresh.
   // Photo-only refreshes retain the form so they cannot discard someone's edits.
-  return <ConfirmForm key={`${record.id}:${record.job_status}`} record={record} />;
+  const draft = record.status === "locked" ? null : await intakeRpc<{ draft: ReviewDraft | null } | null>("account_review_draft", { p_hash: await currentSessionHash(), p_id: id, p_payload: null }).catch(() => null);
+  return <ConfirmForm key={`${record.id}:${record.job_status}`} record={record} draft={draft?.draft} />;
 }
 export default function Page(props: Props) {
   return <Suspense fallback={<main className="mx-auto max-w-5xl px-5 py-7 sm:px-10"><WorkspaceHeader current="reports"/><DiaryNotice busy title="Opening your site note…">Loading your voice note and photos.</DiaryNotice></main>}><Review {...props} /></Suspense>;

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { InformationPage } from "@/components/public-site";
+import { ReplayTour } from "@/components/diary-tour";
 export const metadata={title:"Help & FAQ — SiteLedger AI",description:"Get started with accounts, Telegram commands, site voice notes, human confirmation, reports and offline uploads."};
 const questions=[
   ["How do I start?","Create an email/password account, enter the full code sent to your email and confirm your professional name. Create a project or accept an invitation addressed to your verified email. New projects start with an empty BoQ. A PM opens Manage BoQ and rates to enter the supplied quantities and rates in the project's currency."],
@@ -18,5 +19,6 @@ const questions=[
 export default function Help(){return <InformationPage current="/help" label="A practical field guide" title="From your first note to an approved record." intro={<p>Choose the right project, record the work, check the quantities and approve only when the daily record is ready.</p>}>
   <section><h2>Start in the channel that suits you</h2><div className="flex flex-wrap gap-3"><Link href="/account" className="public-button bg-accent font-semibold text-white">Open your account</Link><a href="https://t.me/SiteLedgerNGbot" className="public-button border border-ink" target="_blank" rel="noreferrer">Open the Telegram bot</a><Link className="text-link" href="/reports/demo">View the sample report</Link></div></section>
   <section aria-labelledby="faq-title"><h2 id="faq-title">Common questions</h2><div className="faq-list">{questions.map(([title,text])=><details key={title}><summary>{title}</summary><p>{text}</p></details>)}</div></section>
-  <section><h2>Need another hand?</h2><p>Use the creator links on the contact page for product questions. Keep passwords, email codes and private project records out of public posts.</p><Link href="/contact" className="text-link">Contact the builder</Link></section>
+  <section><h2>SiteLedger walkthrough</h2><ReplayTour/></section>
+  <section><h2>Need another hand?</h2><Link href="/contact" className="text-link">Contact the builder</Link></section>
   </InformationPage>;}

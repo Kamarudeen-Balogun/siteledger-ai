@@ -13,6 +13,8 @@ export async function authRequest(path: string, body?: Record<string, unknown>, 
   if (!response.ok) {
     if (response.status === 429) throw new AccountError("Too many attempts. Wait a little and try again.", 429);
     if (String(data.error_code ?? data.code).includes("captcha")) throw new AccountError("Complete a new bot check and try again.", 422);
+    if (path === "verify" && body?.type === "signup" && data.error_code === "otp_expired") throw new AccountError("That code is invalid or expired. Request a fresh code and use the latest email.", 400);
+    if (path === "signup" && [data.message,data.msg,data.error_description].includes("This email cannot be used for 30 days after account deletion.")) throw new AccountError("This email cannot be used for 30 days after account deletion.",403);
     throw new AccountError("Could not complete this account request. Check your details or try again later.", response.status >= 500 ? 503 : 400);
   }
   return data;

@@ -161,9 +161,10 @@ test("existing evidence is never overwritten; other upload errors remain retryab
       assert.equal((init?.headers as Record<string, string>).Authorization, undefined);
       return Response.json({ error: "Duplicate", statusCode: "409" }, { status: 400 });
     };
-    await uploadEvidence("project/submission/1.ogg", new Uint8Array([1]), "audio/ogg");
+    const voice = new TextEncoder().encode("OggS\0\0\0\0\0\0\0\0");
+    await uploadEvidence("project/submission/1.ogg", voice, "audio/ogg");
     globalThis.fetch = async () => Response.json({ error: "InvalidJwt" }, { status: 401 });
-    await assert.rejects(uploadEvidence("project/submission/1.ogg", new Uint8Array([1]), "audio/ogg"), /storage is temporarily unavailable/);
+    await assert.rejects(uploadEvidence("project/submission/1.ogg", voice, "audio/ogg"), /storage is temporarily unavailable/);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL; else process.env.NEXT_PUBLIC_SUPABASE_URL = originalUrl;

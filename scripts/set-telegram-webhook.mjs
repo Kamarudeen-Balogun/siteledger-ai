@@ -28,9 +28,10 @@ try {
   });
   if (probe.status !== 401) throw new Error("Webhook secret check failed.");
   await call("setWebhook", { url: webhookUrl, secret_token: secret,
-    allowed_updates: ["message"], max_connections: 1, drop_pending_updates: false });
+    allowed_updates: ["message","callback_query"], max_connections: 1, drop_pending_updates: false });
   const info = await call("getWebhookInfo");
-  if (info.url !== webhookUrl) throw new Error("Webhook URL was not saved.");
+  if (info.url !== webhookUrl || !["message","callback_query"].every(update=>info.allowed_updates?.includes(update)))
+    throw new Error("Webhook URL or update types were not saved.");
   console.log(`Webhook registered for @${bot.username}: ${webhookUrl}`);
   console.log(`Pending updates preserved: ${info.pending_update_count}`);
 } catch {

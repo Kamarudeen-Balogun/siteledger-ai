@@ -4,7 +4,7 @@ export function WorkFlow({ step }: { step: "capture" | "review" | "report" }) {
   const stages = ["capture", "review", "report"] as const;
   return <nav aria-label="Site report steps" className="work-flow"><ol>{stages.map((stage, index) =>
     <li key={stage} aria-current={stage === step ? "step" : undefined} data-passed={stages.indexOf(step) > index || undefined}>
-      <span aria-hidden="true">{index + 1}</span><strong>{["Save a note", "Review details", "Costed report"][index]}</strong>
+      <span aria-hidden="true">{index + 1}</span><strong>{["Add work", "Check details", "Cost & lock"][index]}</strong>
     </li>)}</ol></nav>;
 }
 

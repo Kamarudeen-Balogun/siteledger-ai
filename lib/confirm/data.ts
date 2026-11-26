@@ -23,7 +23,7 @@ export async function getReview(id: string, hash?: string): Promise<ReviewRecord
   return intakeRpc("account_review", { p_id: id, p_hash: access });
 }
 export async function readEvidence(path: string, audio: boolean) {
-  if (!/^site-evidence\/[a-f0-9-]{36}\/[a-f0-9-]{36}\/\d+\.(ogg|mp3|m4a|webm|wav|jpg)$/.test(path)) throw new Error("Evidence unavailable.");
+  if (!/^site-evidence\/[a-f0-9-]{36}\/[a-f0-9-]{36}\/(?:\d+|[a-f0-9-]{36})\.(ogg|mp3|m4a|webm|wav|jpg)$/.test(path)) throw new Error("Evidence unavailable.");
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY, base = Reflect.get(process.env, "NEXT_PUBLIC_SUPABASE_URL") as string | undefined;
   if (!key || !base) throw new Error("Evidence unavailable.");
   const limit = (audio ? 20 : 1) * 1024 * 1024;

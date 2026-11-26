@@ -4,7 +4,7 @@ export class TelegramUnavailableError extends Error {
   constructor() { super("Telegram is temporarily unavailable."); }
 }
 
-export async function telegramCall<T>(method: "getFile" | "sendMessage", body: Record<string, unknown>): Promise<T> {
+export async function telegramCall<T>(method: "getFile" | "sendMessage" | "answerCallbackQuery" | "sendChatAction", body: Record<string, unknown>): Promise<T> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) throw new TelegramUnavailableError();
   try {

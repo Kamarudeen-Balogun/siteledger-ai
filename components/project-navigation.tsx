@@ -6,5 +6,5 @@ export function ProjectNavigation({ id, current, owner }: { id: string; current:
     { key: "boq", label: "BoQ", href: `/projects/${id}/boq` },
     { key: "progress", label: "Progress", href: `/projects/${id}?view=progress` },
   ];
-  return <div className="project-navigation"><nav aria-label="Project sections" className="work-tabs project-tabs">{links.map(link => <Link key={link.key} href={link.href} prefetch={false} aria-current={current === link.key ? "page" : undefined}>{link.label}</Link>)}</nav>{owner && <Link href={`/projects/${id}/team`} prefetch={false} className="project-manage-link" aria-current={current === "team" ? "page" : undefined}>Manage project <span aria-hidden="true">↗</span></Link>}</div>;
+  return <div className="project-navigation"><nav aria-label="Project sections" className="work-tabs project-tabs">{links.map(link => <Link key={link.key} href={link.href} prefetch={false} aria-current={current === link.key ? "page" : undefined}>{link.label}</Link>)}</nav><Link href={`/projects/${id}/team`} prefetch={false} className="project-manage-link" aria-current={current === "team" ? "page" : undefined}>{owner?"Manage project":"Project team"} <span aria-hidden="true">↗</span></Link></div>;
 }

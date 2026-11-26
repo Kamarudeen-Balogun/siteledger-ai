@@ -6,6 +6,7 @@ import { MAX_PHOTO_BYTES, MAX_VOICE_BYTES, parseTelegramUpdate, type IntakePaylo
 import { reportFromInput, displayRatio, type ReportInput } from "../reports/model";
 import { formatMoney } from "../costing/format-money";
 import { decimal } from "../costing/decimal";
+import { handleChatReview, parseChatReview, telegramReviewButton } from "./chat-review";
 
 export type IntakeDependencies = {
   prepare: (id: number, payload: IntakePayload, owner: string) => Promise<IntakeReceipt | { busy: true }>;
@@ -24,8 +25,12 @@ export const intakeDependencies: IntakeDependencies = {
   download: downloadTelegramFile,
   upload: uploadEvidence,
   finishMedia: (id, owner) => intakeRpc("account_finish_telegram_media", { p_update_id: id, p_owner: owner }),
-  sendReply: async (chatId, text, reviewLink) => { await telegramCall("sendMessage", { chat_id: chatId, text,
-    ...(reviewLink ? { reply_markup: { inline_keyboard: [[{ text: reviewLink.includes("/confirm/")?"Review site note":"Open SiteLedger", web_app: { url: reviewLink } }]] } } : {}) }); },
+  sendReply: async (chatId, text, reviewLink) => {
+    const id=reviewLink&&/\/confirm\/([a-f0-9-]{36})$/.exec(reviewLink)?.[1];
+    const chatButton=id?await telegramReviewButton(chatId,id).catch(()=>null):null;
+    await telegramCall("sendMessage", { chat_id: chatId, text,
+      ...(reviewLink ? { reply_markup: { inline_keyboard: [[...(chatButton?[chatButton]:[]),{ text:id?"Open full review":"Open SiteLedger", web_app: { url: reviewLink } }]] } } : {}) });
+  },
   finishReply: (id, owner, sent) => intakeRpc("finish_telegram_reply", { p_update_id: id, p_owner: owner, p_sent: sent }),
   reviewSubmission: payload => intakeRpc("account_bot_latest", { p_telegram: payload.user_id }),
   resumePending: (payload,owner) => intakeRpc("account_resume_telegram", {p_telegram:payload.user_id,p_owner:owner}),
@@ -74,7 +79,11 @@ export async function handleTelegramWebhook(request: Request, dependencies: Inta
     raw = Buffer.concat(chunks).toString("utf8");
   } catch { return Response.json({ error: "Invalid update." }, { status: 400 }); }
   let parsed;
-  try { parsed = parseTelegramUpdate(JSON.parse(raw)); }
+  try {
+    const input:unknown=JSON.parse(raw),chat=parseChatReview(input);
+    if(chat&&dependencies===intakeDependencies){await handleChatReview(chat);return Response.json({ok:true});}
+    parsed = parseTelegramUpdate(input);
+  }
   catch { return Response.json({ error: "Invalid update." }, { status: 400 }); }
   if (!parsed) return Response.json({ ok: true });
   const owner = randomUUID();
@@ -112,7 +121,7 @@ export async function handleTelegramWebhook(request: Request, dependencies: Inta
     const summary = receipt.payload.kind === "today" && receipt.reply_path !== "/account" && receipt.status !== "blocked" ? await dependencies.todaySummary?.(receipt.payload) : null;
     const reviewId = receipt.submission_id ?? (receipt.payload.kind === "today" && !receipt.reply_path ? await dependencies.reviewSubmission?.(receipt.payload) : null);
     let link:string|undefined;
-    const landingStart=receipt.payload.kind==="start"&&!receipt.payload.link_hash&&!receipt.payload.project_code;
+    const landingStart=receipt.payload.kind==="start"&&!receipt.payload.link_hash&&!receipt.payload.project_code&&receipt.reply_path!=="/today";
     try {const origin=new URL(process.env.SITELEDGER_APP_URL??"");const path=landingStart?"/":summary?.path??receipt.reply_path??(reviewId?`/confirm/${reviewId}`:"/account");
       if(origin.protocol==="https:" && path.startsWith("/") && !path.startsWith("//"))link=new URL(path,origin.origin).toString();}catch{ /* Saved receipt can be retried when the origin is configured. */ }
     await dependencies.sendReply(receipt.payload.chat_id,

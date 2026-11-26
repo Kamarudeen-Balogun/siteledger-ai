@@ -4,10 +4,10 @@ import { photoSuggestions, suggestedPhotoNote, validatePhotoAnalysis } from "@/l
 import type { ReviewRecord } from "@/lib/confirm/data";
 
 type Photo = ReviewRecord["photos"][number];
-export function PhotoObservations({ photo, number, onEdit }: { photo: Photo; number: number; onEdit: () => void }) {
+export function PhotoObservations({ photo, number, onEdit, initial }: { photo: Photo; number: number; onEdit: () => void; initial?: string }) {
   const analysis = validatePhotoAnalysis(photo.ai_findings) ? photo.ai_findings : null;
-  const [note, setNote] = useState(() => photo.confirmed_findings?.note ?? (analysis ? suggestedPhotoNote(analysis) : ""));
-  const edited = useRef(photo.confirmed_findings !== null);
+  const [note, setNote] = useState(() => initial ?? photo.confirmed_findings?.note ?? (analysis ? suggestedPhotoNote(analysis) : ""));
+  const edited = useRef(initial !== undefined || photo.confirmed_findings !== null);
   const [dismissed, setDismissed] = useState<string[]>([]);
   const [error, setError] = useState("");
   useEffect(() => {

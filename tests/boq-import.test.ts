@@ -45,7 +45,7 @@ test("spreadsheet formulas, extreme grids and compressed oversized entries are b
   }
   await assert.rejects(parseBoqFile("BoQ.xlsx",forged),/too large/);
   await assert.rejects(parseBoqFile("BoQ.csv",Buffer.from("a,b\n".repeat(1002))),/1,000 rows/);
-  await assert.rejects(parseBoqFile("BoQ.pdf",Buffer.from("document")),/CSV or XLSX/);
+  await assert.rejects(parseBoqFile("BoQ.pdf",Buffer.from("document")),/not a PDF/);
   await assert.rejects(parseBoqFile("BoQ.csv",new Uint8Array(2*1024*1024+1)),/2 MB/);
 });
 process.env.SITELEDGER_APP_URL="https://siteledger.example.test";

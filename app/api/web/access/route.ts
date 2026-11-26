@@ -11,6 +11,7 @@ export async function POST(request:Request){
     const input = await smallJson(request,12000);
     if (Object.keys(input).length) return Response.json({error:"Capture uses your signed-in account and selected project."},{status:422,headers});
     const data=await intakeRpc<CaptureContext & {error?:string}|null>("account_capture_context",{p_hash:hash});
+    if(data?.error==="read_only"&&data.project_id)return Response.json({read_only:true,project_name:data.project_name,project_id:data.project_id,timezone:data.timezone},{headers});
     if(!data || data.error)return Response.json({error:data?.error==="archived"?"This project is archived. Its queued files are kept.":"Select an authorized project before recording. Your saved files are kept."},{status:403,headers});
     // This retry nonce is not a login credential; every send checks the account.
     return Response.json({...data,access:sessionToken()},{headers});

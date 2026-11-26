@@ -28,7 +28,7 @@ function EmailCodeInput() {
 }
 export function AccountLogin({ siteKey, telegramAccount, nextPath, purpose="email" }: { siteKey: string; telegramAccount?: Account; nextPath?: string; purpose?: "email" | "security" }) {
   const router = useRouter(), [signup, setSignup] = useState(false), [error, setError] = useState(""), [busy, setBusy] = useState(false);
-  const [token, setToken] = useState(""), [reset, setReset] = useState(0);
+  const [token, setToken] = useState(""), [reset, setReset] = useState(0), [validation,setValidation]=useState<Record<string,string>>({});
   const [pending, setPending] = useState<{ email: string; name: string } | null>(null);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(""); setBusy(true);
@@ -48,8 +48,8 @@ export function AccountLogin({ siteKey, telegramAccount, nextPath, purpose="emai
     <p className="mt-4 leading-7">{telegramAccount?.browser_linked ? "Your projects are already available. Use your linked website login for email and sensitive account settings." : telegramAccount ? "Use your existing website account, or add email access to this Telegram account." : "Access your private projects and site records."}</p>
     <div className="auth-mode"><button type="button" aria-pressed={!signup} disabled={busy} onClick={() => { setSignup(false); setError(""); }}>Sign in</button>{!telegramAccount?.browser_linked && <button type="button" aria-pressed={signup} disabled={busy} onClick={() => { setSignup(true); setError(""); }}>Create account</button>}</div>
     <form onSubmit={submit}>
-      <Label title="Email address"><input className={field} name="email" type="email" required maxLength={254} autoComplete="email" spellCheck={false}/></Label>
-      <Label title="Password"><input className={field} name="password" type="password" required minLength={12} maxLength={128} autoComplete={signup ? "new-password" : "current-password"} /></Label>
+      <Label title="Email address"><input className={field} name="email" type="email" required maxLength={254} autoComplete="email" spellCheck={false} aria-describedby="auth-email-error" onInvalid={event=>{const message=event.currentTarget.validationMessage;setValidation(value=>({...value,email:message}));}} onChange={()=>setValidation(value=>({...value,email:""}))}/><span id="auth-email-error" className="block text-amber-900" aria-live="polite">{validation.email}</span></Label>
+      <Label title="Password"><input className={field} name="password" type="password" required minLength={12} maxLength={128} autoComplete={signup ? "new-password" : "current-password"} aria-describedby="auth-password-error" onInvalid={event=>{const message=event.currentTarget.validationMessage;setValidation(value=>({...value,password:message}));}} onChange={()=>setValidation(value=>({...value,password:""}))}/><span id="auth-password-error" className="block text-amber-900" aria-live="polite">{validation.password}</span></Label>
       {signup && <p className="text-sm leading-6">Use 12–128 characters.</p>}
       {signup && <><Label title="Professional name for site records"><input className={field} name="name" required maxLength={120} autoComplete="name" defaultValue={telegramAccount?.professional_name ?? ""} /></Label><label className="my-4 flex min-h-12 items-center gap-3"><input type="checkbox" name="confirm_name" value="yes" required className="h-6 w-6 shrink-0" />I confirm this is the name to appear on my records.</label><p className="leading-7">We’ll send an email code before your first login. Enter the full code from the email.</p></>}
       {telegramAccount && !telegramAccount.browser_linked && !signup && <label className="my-4 flex min-h-12 items-center gap-3"><input type="checkbox" name="combine_profiles" value="yes" required className="h-6 w-6 shrink-0" />Connect this Telegram profile and the website account I sign into, keeping their project records.</label>}
@@ -62,6 +62,13 @@ export function AccountLogin({ siteKey, telegramAccount, nextPath, purpose="emai
 }
 export function SignupConfirmation({ pending, telegramAccount, nextPath }: { pending?: { email: string; name: string }; telegramAccount?: Account; nextPath?: string }) {
   const router = useRouter(), [error, setError] = useState(""), [busy, setBusy] = useState(false);
+  const [message,setMessage]=useState("");
+  async function resend(form:HTMLFormElement|null) {
+    if(!form)return;
+    const email=new FormData(form).get("email");setBusy(true);setError("");setMessage("");
+    try{const data=await accountAction("resend_signup",{email});setMessage(data.message);}
+    catch(error){setError(error instanceof Error?error.message:"Could not resend the code.");}finally{setBusy(false);}
+  }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError(""); const form = new FormData(event.currentTarget);
     try {
@@ -75,7 +82,7 @@ export function SignupConfirmation({ pending, telegramAccount, nextPath }: { pen
     <Label title="Signup code"><EmailCodeInput /></Label>
     {pending?<><input name="name" type="hidden" value={pending.name}/><p className="mt-5">Your record name: <strong>{pending.name}</strong></p></>:<Label title="Professional name"><input className={field} name="name" required maxLength={120} defaultValue={telegramAccount?.professional_name ?? ""} autoComplete="name" /></Label>}
     <label className="my-4 flex min-h-12 items-center gap-3"><input name="confirm_name" type="checkbox" value="yes" required className="h-6 w-6 shrink-0" />I confirm this name for site records.</label>
-    <Feedback error={error} /><button className={primary} disabled={busy}>{busy ? "Confirming…" : "Confirm email and continue"}</button></form><Link href="/account" className="mt-5 inline-flex min-h-12 items-center underline">Return to sign in</Link></section>;
+    <Feedback error={error} message={message}/><button className={primary} disabled={busy}>{busy ? "Working…" : "Confirm email and continue"}</button><button type="button" className="text-link mt-3" disabled={busy} onClick={event=>void resend(event.currentTarget.form)}>Resend signup code</button></form><Link href="/account" className="mt-3 inline-flex min-h-12 items-center underline">Return to sign in</Link></section>;
 }
 export function TelegramAccountEntry() {
   const router = useRouter(), [error, setError] = useState("");
@@ -144,12 +151,13 @@ export function AccountSignOut({ account }: { account: Account }) {
 export function TelegramLink({ siteKey, account }: { siteKey: string; account: Account }) {
   const { confirm, confirmation } = useActionConfirmation();
   const router = useRouter(), [error, setError] = useState(""), [busy, setBusy] = useState(false), [token, setToken] = useState(""), [reset, setReset] = useState(0);
-  const [link, setLink] = useState<{ id: string; url: string } | null>(null), [status, setStatus] = useState<{ proved: boolean; combining_profiles: boolean; other_browser_proof_required: boolean; telegram_id: number } | null>(null);
+  const [link, setLink] = useState<{ id: string; url: string; expires_at: string } | null>(null), [status, setStatus] = useState<{ proved: boolean; combining_profiles: boolean; other_browser_proof_required: boolean } | null>(null);
+  const [revealed,setRevealed]=useState(false);
   const [message, setMessage] = useState("");
   async function run(action: string, input: Record<string, unknown> = {}) {
     if ((action === "link_finish" || action === "unlink_telegram") && !await confirm({title:action === "unlink_telegram" ? "Disconnect Telegram access?" : "Confirm this account connection?",description:action === "unlink_telegram" ? "Telegram sessions will stop working immediately. Your website account and all original records remain preserved." : "Connect the identities you have proved. Existing records and permissions are retained; historical attribution stays unchanged.",confirmLabel:action === "unlink_telegram" ? "Disconnect Telegram" : "Confirm connection",danger:action === "unlink_telegram",detail:<p>{account.professional_name ?? account.email}</p>})) return;
     setBusy(true); setError(""); setMessage("");
-    try { const data = await accountAction(action, input); if (action === "link_create") { setLink(data); setStatus(null); }
+    try { const data = await accountAction(action, input); if (action === "link_create") { setLink(data); setStatus(null);setRevealed(false); }
       else if (action === "link_status") setStatus(data);
       else { setLink(null); setStatus(null); setMessage(action === "unlink_telegram" ? "Telegram disconnected. Old access sessions are revoked." : action === "reauthenticate" ? "Password confirmed. You can continue." : "Telegram connected. Earlier records and permissions are preserved."); router.refresh(); }
     } catch (error) { setError(error instanceof Error ? error.message : "Could not connect Telegram."); }
@@ -160,8 +168,8 @@ export function TelegramLink({ siteKey, account }: { siteKey: string; account: A
   return <section className="settings-panel">{confirmation}<h2 className="font-serif text-2xl">Telegram connection</h2><p className="my-4 leading-7">{account.telegram_linked ? "Connected. Your website and Telegram use the same account." : "Connect Telegram to keep your chat and website records together."}</p><WorkDisclosure title={account.telegram_linked?"Manage Telegram connection":"Connect your Telegram account"} description="Confirm your password, open the link in Telegram, then return here." open={!account.telegram_linked}>
     <form onSubmit={reauthenticate} className="max-w-md"><Label title="Confirm your current password before changing connections"><input className={field} name="password" type="password" minLength={12} maxLength={128} required autoComplete="current-password" /></Label><Turnstile siteKey={siteKey} onToken={setToken} reset={reset} /><button className={button} disabled={busy || !token}>Confirm password</button></form>
     <div className="my-5 flex flex-wrap gap-3"><button type="button" className={primary} disabled={busy} onClick={() => void run("link_create")}>Start a Telegram link</button>{account.telegram_linked && <button type="button" className={button} disabled={busy} onClick={() => void run("unlink_telegram")}>Disconnect Telegram</button>}</div>
-    {link && <div className="border-t border-rule py-5"><a href={link.url} className="inline-flex min-h-12 items-center underline" target="_blank" rel="noreferrer">Open this one-use link in Telegram</a><p className="my-3 leading-7">It expires after 10 minutes. Return here after the bot acknowledges it.</p><button type="button" className={button} disabled={busy} onClick={() => void run("link_status", { id: link.id })}>Check Telegram proof</button></div>}
-    {link && status?.proved && <form onSubmit={finish} className="max-w-md"><p className="my-4 leading-7">Telegram account {status.telegram_id} has proved access. Confirm this is your account.</p><label className="my-4 flex min-h-12 items-center gap-3"><input type="checkbox" name="combine_profiles" value="yes" required className="h-6 w-6 shrink-0" />Connect this Telegram identity{status.combining_profiles ? " and combine its existing profile with this account, preserving records and permissions" : " to my account"}.</label>
+    {link && <div className="border-t border-rule py-5"><p>Connection code · {revealed?<a href={link.url} className="text-link" target="_blank" rel="noreferrer">Open in Telegram</a>:<span aria-label="Hidden">••••••••</span>}</p><p className="my-3 leading-7">Expires at {new Intl.DateTimeFormat(undefined,{timeStyle:"short"}).format(new Date(link.expires_at))}. Return here after the bot acknowledges it.</p><div className="flex flex-wrap gap-2"><button type="button" className="work-button" disabled={busy} onClick={()=>setRevealed(value=>!value)}>{revealed?"Hide":"Reveal"}</button><button type="button" className="work-button" disabled={busy} onClick={()=>void run("link_create")}>Regenerate</button><button type="button" className={button} disabled={busy} onClick={() => void run("link_status", { id: link.id })}>Check connection</button></div></div>}
+    {link && status?.proved && <form onSubmit={finish} className="max-w-md"><p className="my-4 leading-7">Telegram responded. Confirm this is your account.</p><label className="my-4 flex min-h-12 items-center gap-3"><input type="checkbox" name="combine_profiles" value="yes" required className="h-6 w-6 shrink-0" />Connect this Telegram identity{status.combining_profiles ? " and combine its existing profile with this account, preserving records and permissions" : " to my account"}.</label>
       {status.other_browser_proof_required && <><p className="leading-7">The Telegram profile already has a website login. Prove that login too.</p><Label title="Other website email"><input className={field} name="other_email" type="email" required autoComplete="email" /></Label><Label title="Other website password"><input className={field} name="other_password" type="password" required minLength={12} maxLength={128} autoComplete="current-password" /></Label></>}
       <button className={primary} disabled={busy || (status.other_browser_proof_required && !token)}>Confirm connection</button></form>}
     <Feedback error={error} message={message} /></WorkDisclosure>

@@ -1,15 +1,20 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import Script from "next/script";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createContext, Suspense, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { isWorkspacePath, navigationFallback } from "@/lib/navigation/routes";
 import { useActionConfirmation } from "./action-confirmation";
 import { resolveClientAccount } from "@/lib/auth/client-session";
+import { DiaryIcon } from "./diary-icon";
+import { AdaHelp } from "./ada-help";
+import { DiaryTour } from "./diary-tour";
+import type { WorkspaceArea } from "./workspace-header";
 
 type TelegramApp = { initData: string; ready: () => void; expand: () => void;
   BackButton: { show: () => void; hide: () => void; onClick: (callback: () => void) => void; offClick: (callback: () => void) => void } };
-const Navigation = createContext<{ back: () => void; active: boolean } | null>(null);
+const Navigation = createContext<{ back: () => void; active: boolean; projectId: string | null; pathname: string; avatar: boolean; avatarVersion: number } | null>(null);
 const marker = "siteledgerNavigation";
 function recordedDepth(state: unknown) {
   const depth = (state as { siteledgerNavigation?: { depth?: unknown } } | null)?.siteledgerNavigation?.depth;
@@ -27,9 +32,32 @@ export function AppNavigation({ children }: { children: ReactNode }) {
   const { confirm, confirmation } = useActionConfirmation();
   const [pathname, setPathname] = useState("/");
   const [active, setActive] = useState(false);
-  const checkAccount = useCallback(() => { void resolveClientAccount().then(account => setActive(Boolean(account))).catch(() => setActive(false)); }, []);
+  const [person, setPerson] = useState<string | null>(null);
+  const [avatar,setAvatar]=useState(false),[avatarVersion,setAvatarVersion]=useState(0);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const accountRequest = useRef(0);
+  const checkAccount = useCallback(() => {
+    const request = ++accountRequest.current;
+    void (async () => {
+      try {
+        const account = await resolveClientAccount();
+        if (request !== accountRequest.current) return;
+        setActive(Boolean(account));
+        setPerson(account?.profile_id ?? null);
+        setAvatar(Boolean(account?.has_photo));
+        if (!account) { setProjectId(null); return; }
+        const launch = (window as Window & { Telegram?: { WebApp?: TelegramApp } }).Telegram?.WebApp;
+        if (account.telegram_linked && launch?.initData && window.location.pathname === "/") router.replace("/today");
+        const response = await fetch("/api/projects/private", { cache: "no-store", signal: AbortSignal.timeout(10000) });
+        const data = response.ok ? await response.json() : null;
+        if (request === accountRequest.current) setProjectId(data?.active_project_id ?? null);
+      } catch { if (request === accountRequest.current && navigator.onLine) { setActive(false); setPerson(null); setProjectId(null); } }
+    })();
+  }, [router]);
   useEffect(() => { checkAccount(); }, [pathname, checkAccount]);
   useEffect(() => { window.addEventListener("siteledger-account-change", checkAccount); return () => window.removeEventListener("siteledger-account-change", checkAccount); }, [checkAccount]);
+  useEffect(() => { window.addEventListener("siteledger-project-change", checkAccount); return () => window.removeEventListener("siteledger-project-change", checkAccount); }, [checkAccount]);
+  useEffect(() => {const refresh=()=>{setAvatarVersion(value=>value+1);checkAccount();};window.addEventListener("siteledger-avatar-change",refresh);return()=>window.removeEventListener("siteledger-avatar-change",refresh);},[checkAccount]);
   const [canBack, setCanBack] = useState(false), [telegram, setTelegram] = useState<TelegramApp | null>(null);
   useEffect(() => {
     function popped(event: PopStateEvent) {
@@ -88,7 +116,7 @@ export function AppNavigation({ children }: { children: ReactNode }) {
     if (canBack || pathname !== "/") telegram.BackButton.show();
     else telegram.BackButton.hide();
   }, [telegram, pathname, canBack]);
-  return <Navigation.Provider value={{ back, active }}>{children}{confirmation}<Suspense fallback={null}><PathChanges changed={changed}/></Suspense>{(isWorkspacePath(pathname)||pathname==="/") &&
+  return <Navigation.Provider value={{ back, active, projectId, pathname, avatar, avatarVersion }}>{children}{confirmation}{isWorkspacePath(pathname)&&<AdaHelp projectId={projectId}/>} {person&&<DiaryTour key={`${person}/${pathname}`} person={person} path={pathname}/>}<Suspense fallback={null}><PathChanges changed={changed}/></Suspense>{(isWorkspacePath(pathname)||pathname==="/") &&
     <Script src="https://telegram.org/js/telegram-web-app.js" onReady={() => {
       const app = (window as Window & { Telegram?: { WebApp?: TelegramApp } }).Telegram?.WebApp;
       if (app?.initData && app.BackButton) { app.ready(); app.expand(); setTelegram(app); }
@@ -96,16 +124,29 @@ export function AppNavigation({ children }: { children: ReactNode }) {
     }} />}</Navigation.Provider>;
 }
 
-export function WorkspaceNavigation({ current }: { current: "today" | "account" | "projects" | "reports" }) {
+export function WorkspaceProfile() {
   const navigation = useContext(Navigation);
-  const links = navigation?.active ? [["/today", "Today"], ["/projects", "Projects"], ["/account", "Account"], ["/help", "Help"]] : [["/", "Home"], ["/account", "Sign in"], ["/help", "Help"]];
+  return <Link href="/account" prefetch={false} className="diary-icon-button diary-profile-button" aria-label={navigation?.active ? "Profile" : "Account"} data-tour="profile">{navigation?.active&&navigation.avatar?<Image src={`/api/account/avatar?v=${navigation.avatarVersion}`} unoptimized alt="" width={48} height={48}/>:<DiaryIcon name="profile" size={19}/>}</Link>;
+}
+
+export function WorkspaceNavigation({ current }: { current: WorkspaceArea }) {
+  const navigation = useContext(Navigation);
+  const path = navigation?.pathname ?? "/";
+  const project = /^\/projects\/([a-f0-9-]{36})(?:\/|$)/.exec(path)?.[1] ?? navigation?.projectId;
+  const projectHref = project ? `/projects/${project}` : null;
+  const links = [
+    { href: "/today", label: "Today", area: "today", icon: "today" },
+    { href: projectHref ? `${projectHref}?view=records` : "/projects", label: "Reports & Log", area: "reports", icon: "reports" },
+    { href: projectHref ? `${projectHref}/boq` : "/projects", label: "BoQ & Rates", area: "boq", icon: "boq" },
+    { href: "/projects", label: "Projects & Team", area: "projects", icon: "team" },
+  ] as const;
   function back() {
     if (navigation) navigation.back();
     else window.location.assign(navigationFallback(window.location.pathname));
   }
   return <div className="workspace-navigation">
-    <button type="button" className="workspace-back" onClick={back}><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m12 5-7 7 7 7M5 12h14" /></svg>Back</button>
-    <nav aria-label="Workspace navigation" className="workspace-desktop-nav">{links.map(([href, label]) => <Link key={href} href={href} aria-current={href === `/${current}` ? "page" : undefined}>{label}</Link>)}</nav>
-    <nav aria-label="Mobile workspace navigation" className="workspace-dock" style={{gridTemplateColumns:`repeat(${links.length}, 1fr)`}}>{links.map(([href, label]) => <Link key={href} href={href} prefetch={false} aria-current={href === `/${current}` ? "page" : undefined}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d={({"/":"M3 10 12 3l9 7v11H3zM9 21v-8h6v8", "/today":"M8 3H5v18h14V3h-3M8 2h8v4H8zM8 11h8M8 15h6", "/projects":"M3 6h7l2 2h9v12H3z", "/account":"M20 21v-2a6 6 0 0 0-12 0v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8", "/help":"M9 9a3 3 0 1 1 5 2c-2 1-2 2-2 3M12 17v1M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20"} as Record<string,string>)[href]} /></svg><span>{label}</span></Link>)}</nav>
+    <button type="button" className="workspace-back" onClick={back}><DiaryIcon name="back" size={18}/>Back</button>
+    <nav aria-label="Workspace navigation" className="workspace-desktop-nav">{(navigation?.active ? [["/today", "Today"], ["/projects", "Projects"], ["/account", "Account"], ["/help", "Help"]] : [["/", "Home"], ["/account", "Sign in"], ["/help", "Help"]]).map(([href,label]) => <Link key={href} href={href} aria-current={href === `/${current}` ? "page" : undefined}>{label}</Link>)}</nav>
+    {navigation?.active && <nav aria-label="Mobile workspace navigation" className="workspace-dock">{links.map(({href,label,area,icon}) => <Link key={area} href={href} prefetch={false} aria-current={area === current ? "page" : undefined}><DiaryIcon name={icon}/><span>{label}</span></Link>)}</nav>}
   </div>;
 }

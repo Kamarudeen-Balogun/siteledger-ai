@@ -2,9 +2,10 @@ import { costReport } from "../costing/cost-report";
 import { decimal } from "../costing/decimal";
 import type { BoqUnit } from "../costing/types";
 import type { BoqRow } from "./boq-types";
+import type { ProjectPermissions } from "./permissions";
 export type DashboardInput = {
   project: { id: string; name: string; client: string; location: string; contract_sum: string; is_demo: boolean };
-  access: { role: "foreman" | "pm"; owner: boolean; currency: string; timezone: string; archived_at: string | null; professional_name: string };
+  access: { role: "foreman" | "pm"; owner: boolean; currency: string; timezone: string; archived_at: string | null; professional_name: string; permissions?: ProjectPermissions };
   as_of: string; boq: BoqRow[]; locked_count: number; draft_count: number;
   locked_items: { id: string; boq_item_id: string; quantity: string; unit: BoqUnit; rate: string; confirmed_by: string; currency: string }[];
 };

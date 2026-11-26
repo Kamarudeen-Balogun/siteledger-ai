@@ -13,15 +13,19 @@ try {
       const response=await page.goto(origin+path);assert.equal(response.status(),200);await page.evaluate(()=>document.fonts.ready);
       assert.equal(await page.locator("h1").count(),1,`${path} needs one main heading`);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${path} overflows at ${width}`);
-      assert.equal(await page.getByRole("contentinfo",{name:"Creator credit"}).count(),1);
       const broken=await page.locator('a[href^="/"]').evaluateAll(links=>links.map(link=>link.getAttribute('href')));
       for(const target of new Set(broken))if(!checkedLinks.has(target)){assert.ok((await page.request.get(origin+target)).ok(),`${target} is unavailable`);checkedLinks.add(target);}
-      if(path==="/"){assert.ok((await page.locator(".sample-total").innerText()).includes("₦551,000"));await page.locator(".site-photo img").scrollIntoViewIfNeeded();await page.waitForFunction(()=>{const img=document.querySelector('.site-photo img');return img.complete&&img.naturalWidth>0;});await page.evaluate(()=>window.scrollTo(0,0));}
-      if(width===390&&path==="/"){await page.getByText("Menu",{exact:true}).click();await page.getByRole("navigation",{name:"Mobile navigation"}).getByRole("link",{name:"About",exact:true}).click();await page.waitForURL(origin+"/about");await page.goto(origin);await page.keyboard.press("Tab");assert.equal(await page.evaluate(()=>document.activeElement.textContent),"Skip to content");await page.keyboard.press("Enter");assert.equal(await page.evaluate(()=>document.activeElement.id),"content");await page.evaluate(()=>document.activeElement.blur());}
+      if(path==="/"){
+        assert.deepEqual(await page.getByRole("navigation",{name:"Main navigation"}).getByRole("link").allTextContents(),["How it works","Sign in"]);
+        assert.equal(await page.getByRole("link",{name:"SiteLedger AI home"}).count(),1);
+        assert.equal(await page.locator('a[href="/reports/demo"],a[href="/log/demo"],.sample-total,.ada-launch').count(),0);
+        await page.getByRole("link",{name:"Try a private site record",exact:true}).waitFor();
+      }
+      if(width===390&&path==="/"){await page.keyboard.press("Tab");assert.equal(await page.evaluate(()=>document.activeElement.textContent),"Skip to content");await page.keyboard.press("Enter");assert.equal(await page.evaluate(()=>document.activeElement.id),"content");await page.evaluate(()=>document.activeElement.blur());}
       if(path==="/help"){const question=page.locator(".faq-list summary").first();await question.focus();await page.keyboard.press("Enter");assert.equal(await question.evaluate(node=>node.parentElement.open),true);}
       await page.screenshot({path:`${out}/${path==="/"?"landing":path.slice(1)}-${width}.png`,fullPage:true});
       if(path==="/"&&width===1440)await page.screenshot({path:`${out}/landing-desktop.png`,fullPage:false});
     }
   }
-  assert.deepEqual(errors,[]);console.log("Six public pages pass at 390/768/1440px, with working links, keyboard menu/FAQ, loaded image and supplied-rate illustration.");
+  assert.deepEqual(errors,[]);console.log("Six public pages pass at 390/768/1440px, with working links, keyboard skip/FAQ, and the private trial on the homepage.");
 }finally{await browser.close();}

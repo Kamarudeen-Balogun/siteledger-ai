@@ -32,7 +32,8 @@ begin
   perform pg_temp.check_true(r->>'role'='foreman','Owner chooses invitee role');
   perform pg_temp.check_true(public.account_accept_invite(repeat('c',64),repeat('e',64))->>'error'='unavailable','Invite replay denied');
   perform pg_temp.check_true(public.account_manage_member(repeat('c',64),p1,foreman,'pm',false)->>'error'='unavailable','Foreman cannot self-promote');
-  perform pg_temp.check_true(public.account_team(repeat('c',64),p1) is null,'Foreman cannot read private team administration');
+  r:=public.account_team(repeat('c',64),p1);
+  perform pg_temp.check_true(jsonb_array_length(r->'members')=2 and r->'invitations'='[]'::jsonb and r->'events'='[]'::jsonb,'Foreman can see the team roster without private invitations or audit events');
   invited := public.account_invite(repeat('a',64),p1,'project-fixture-4@example.test','pm',repeat('f',64));
   perform public.account_cancel_invite(repeat('a',64),p1,(invited->>'id')::uuid);
   perform pg_temp.check_true(public.account_accept_invite(repeat('d',64),repeat('f',64))->>'error'='unavailable','Cancelled invitation denied');
@@ -51,7 +52,7 @@ begin
   perform public.account_manage_member(repeat('a',64),p1,foreman,null,true);
   perform pg_temp.check_true(public.account_project_access(repeat('c',64),p1) is null,'Membership revocation immediately denies old session');
   perform pg_temp.check_true(public.account_list_projects(repeat('c',64))->'projects'='[]'::jsonb,'Removed membership no longer lists project');
-  perform pg_temp.check_true((public.account_list_projects(repeat('c',64))->>'active_project_id')::uuid=p1,'Removal does not silently select another project');
+  perform pg_temp.check_true(public.account_list_projects(repeat('c',64))->>'active_project_id' is null,'Removal clears the visible selection without silently choosing another project');
   perform public.account_manage_member(repeat('a',64),p1,pm,'foreman',false);
   perform pg_temp.check_true(public.account_project_access(repeat('d',64),p1)->>'role'='foreman','Downgrade immediately changes authority');
   perform pg_temp.check_true(public.account_manage_member(repeat('a',64),p1,owner1,'foreman',false)->>'error'='owner_transfer_required','Current owner cannot be downgraded');

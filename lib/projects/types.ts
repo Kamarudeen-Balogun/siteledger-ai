@@ -1,7 +1,8 @@
+import type { ProjectPermissions } from "./permissions";
 export type PrivateProject = {
   id: string; name: string; client: string; location: string; project_code: string;
   contract_sum: string; currency: string; timezone: string; archived_at: string | null;
-  role: "foreman" | "pm"; owner: boolean;
+  role: "foreman" | "pm"; owner: boolean; role_label?: string; permissions?: ProjectPermissions;
 };
 export const projectTimezones = ["UTC", ...Intl.supportedValuesOf("timeZone")];
 export function projectText(value: unknown): string | null {

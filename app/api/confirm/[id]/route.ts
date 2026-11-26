@@ -26,6 +26,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const result = await intakeRpc<{error?:string}>("account_confirm", { p_id: id, p_hash: access,
       p_values: input.values, p_boq_ids: input.boq_ids, p_photo_notes: input.photo_notes });
     if(result.error)return Response.json({error:result.error==="media_required"?"Add a voice note or site photo before confirming this note.":result.error==="archived"?"This project is archived. Its original records are preserved.":"Site note access changed. Your edits are kept; check your project access."},{status:result.error==="media_required"?422:result.error==="archived"?409:403,headers});
+    await intakeRpc("account_clear_review_draft", { p_hash: access, p_id: id }).catch(() => undefined);
     return Response.json(result, { headers });
   } catch(error) { return Response.json({ error: error instanceof AccountError?error.message:"Could not save your confirmation. Your edits are still here; try again." }, { status: error instanceof AccountError?error.status:503, headers }); }
 }

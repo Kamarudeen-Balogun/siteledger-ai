@@ -6,7 +6,7 @@ insert into auth.users(id,email,created_at,updated_at,aud,role,is_anonymous)
   select ('83000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'record-fixture-'||n||'@example.test',now(),now(),'authenticated','authenticated',false from generate_series(1,4) n;
 insert into auth.sessions(id,user_id,created_at,updated_at)
   select ('83000000-0000-4000-8000-'||lpad((n+10)::text,12,'0'))::uuid,('83000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,now(),now() from generate_series(1,4) n;
-do $$ declare a jsonb; b jsonb; c jsonb; d jsonb; p1 uuid; p2 uuid; owner1 uuid; owner2 uuid; foreman uuid; pm uuid;
+do $$ declare a jsonb; b jsonb; c jsonb; d jsonb; p1 uuid; p2 uuid; owner1 uuid; owner2 uuid; foreman uuid; pm uuid; share uuid;
   boq uuid; foreign_boq uuid; note uuid; solo uuid; src jsonb; doc jsonb; extraction jsonb; result jsonb; report uuid; amended jsonb; before_doc jsonb;
 begin
   a := public.account_browser_session('83000000-0000-4000-8000-000000000001','83000000-0000-4000-8000-000000000011',repeat('a',64),'Owner One'); owner1 := (a->>'profile_id')::uuid;
@@ -27,6 +27,8 @@ begin
   perform pg_temp.check_true(public.account_report_input(repeat('b',64),note) is null,'Independent owner cannot read report/PDF input');
   perform pg_temp.check_true(public.account_review(repeat('a',64),note) is not null,'Project PM can review foreman record');
   perform pg_temp.check_true((select count(*)=0 from public.reports where submission_id=note),'No cost/report before human confirmation');
+  perform pg_temp.check_true(public.account_review_draft(repeat('c',64),note,'{"work":1,"materials":0,"delays":0,"fields":{"w0.quantity":"18"}}')->'draft'->'fields'->>'w0.quantity'='18','Review draft stores edits without confirming');
+  perform pg_temp.check_true(public.account_review_draft(repeat('d',64),note,null)->'draft'='null'::jsonb,'Draft edits are private to the editor');
   extraction := jsonb_build_object('work_items',jsonb_build_array(jsonb_build_object('description','Confirmed blockwork','matched_boq_hint',null,'quantity',18,'unit','m2','crew',6,'confidence',1)),
     'materials','[]'::jsonb,'delays','[]'::jsonb,'issues','[]'::jsonb,'raw_language_notes','');
   result := public.account_confirm(repeat('c',64),note,extraction,jsonb_build_array(boq),'[]'::jsonb);
@@ -35,12 +37,28 @@ begin
   doc := jsonb_build_object('source',src,'firm_name','SiteLedger AI','currency','NGN','weather',null,'costing',jsonb_build_object('items',jsonb_build_array(jsonb_build_object('boq_item_id',boq,'unit','m2','quantity_done',18,'rate',14500,'cost_today',261000)),'total_cost',261000));
   report := public.account_save_draft(repeat('c',64),note,src,doc);
   perform pg_temp.check_true((select total_cost=261000 from public.reports where id=report),'Cost uses confirmed quantity times supplied BoQ');
+  perform pg_temp.check_true(public.account_set_member_permissions(repeat('a',64),p1,pm,'Viewer','{"view_reports":true,"record_notes":false,"edit_boq":false,"approve_lock":false,"invite_members":false}') is not null,'Owner configures a report viewer');
+  perform pg_temp.check_true(public.account_report_input(repeat('d',64),note) is null and jsonb_array_length(public.account_project_history(repeat('d',64),p1)->'submissions')=0,'Report viewer cannot open or list an unapproved report');
+  perform pg_temp.check_true(public.account_set_member_permissions(repeat('a',64),p1,pm,'PM/QS','{"view_reports":true,"record_notes":true,"edit_boq":true,"approve_lock":true,"invite_members":false}') is not null,'Owner restores project manager permissions');
   perform pg_temp.check_true(public.account_approve(repeat('c',64),note,doc)->>'error'='forbidden','Foreman cannot approve');
   result := public.account_approve(repeat('d',64),note,doc);
   perform pg_temp.check_true(result->>'status'='locked','PM explicitly approves after separate confirmation');
   perform pg_temp.check_true((select profile_id=foreman and role='foreman' and name='Foreman Original' from public.account_confirmations where submission_id=note),'Confirmation snapshots person/name/role');
   perform pg_temp.check_true((select profile_id=pm and role='pm' and name='Reviewing PM' from public.account_approvals where report_id=report),'Approval snapshots actual PM');
   before_doc := (select content_snapshot from public.reports where id=report);
+  perform pg_temp.check_true(public.account_report_share(repeat('b',64),note,true) is null,'Unrelated owner cannot publish a locked report');
+  share := (public.account_report_share(repeat('a',64),note,true)->>'share_id')::uuid;
+  perform pg_temp.check_true(public.shared_locked_report(share)->'report'->'document'=before_doc,'Shared link serves the original locked document');
+  perform public.account_report_share(repeat('a',64),note,false);
+  perform pg_temp.check_true(public.shared_locked_report(share) is null,'Turning off a link revokes access');
+  result:=public.account_boq_save(repeat('a',64),p1,jsonb_build_object('id',boq,'revision',(select md5(to_jsonb(item_row)::text) from public.boq_items item_row where id=boq),'item_code','BW-225','section','Blockwork','description','Updated blockwork scope','unit','m2','boq_quantity','400','rate','14500'));
+  perform pg_temp.check_true((result->>'id')::uuid=boq and public.account_boq_versions(repeat('a',64),p1)->0->>'version'='1','BoQ change saves a dated version');
+  result:=public.account_retire_boq_item(repeat('a',64),p1,boq,(select md5(to_jsonb(item_row)::text) from public.boq_items item_row where id=boq));
+  perform pg_temp.check_true(result->>'retired'='true' and public.account_boq_versions(repeat('a',64),p1)->0->>'version'='2','Removing a BoQ item creates another version');
+  perform pg_temp.check_true(public.account_report_input(repeat('a',64),note)->'report'->'document'=before_doc,'A BoQ version never rewrites a locked report');
+  perform pg_temp.check_true(public.account_set_member_permissions(repeat('a',64),p1,pm,'Viewer','{"view_reports":true,"record_notes":false,"edit_boq":false,"approve_lock":false,"invite_members":false}') is not null,'Owner configures a report viewer');
+  perform pg_temp.check_true(public.account_report_input(repeat('d',64),note) is not null and public.account_review(repeat('d',64),note) is null and jsonb_array_length(public.account_project_history(repeat('d',64),p1)->'submissions')=1,'Viewer can list and open the locked report without review access');
+  perform pg_temp.check_true(public.account_report_share(repeat('d',64),note,true) is null,'Viewer cannot publish the project report');
   perform public.account_profile_name(repeat('c',64),'Foreman Updated');
   perform public.account_profile_name(repeat('d',64),'PM Updated');
   perform pg_temp.check_true(public.account_report_input(repeat('c',64),note)->'report'->'document'=before_doc,'Profile edits never rename/reprice locked document');

@@ -107,3 +107,15 @@ local and tunnel hostnames. The builder saved the three allowed hostnames
 above; the error disappeared, and the builder confirmed **Success** with
 **Sign in** enabled in a regular browser. Automated Chromium did not complete
 the real challenge; disposable browser tests verify the retry/expiry flow.
+
+SiteLedger sends project invitations, feedback replies, and account deletion email through the Resend API. Keep the existing Supabase SMTP configuration for signup and password recovery. Create a separate Resend key with Sending access scoped to `mail.siteledger.codeflowx.dev`, then set the app variables in `.env.local` and in Vercel. Resend displays a new key only once.
+
+```dotenv
+SITELEDGER_RESEND_API_KEY=
+SITELEDGER_EMAIL_FROM=support@mail.siteledger.codeflowx.dev
+SITELEDGER_FEEDBACK_OWNER_EMAIL=
+```
+
+Set `SITELEDGER_FEEDBACK_OWNER_EMAIL` to the builder’s verified SiteLedger sign-in email. Configure the support address as a mailbox or forwarding alias to receive replies. Resend sending-domain verification does not set up incoming mail. To use a different address for feedback and account deletion later, set `SITELEDGER_FEEDBACK_FROM` or `SITELEDGER_FEEDBACK_REPLY_TO` as optional overrides.
+
+Sign in with the verified owner email and open Profile to find the Feedback inbox and Review deletion requests. Keep the Supabase Before User Created hook pointing at `public.account_signup_hook` so the 30-day block applies to native signup as well.

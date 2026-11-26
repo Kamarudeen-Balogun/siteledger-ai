@@ -1,5 +1,7 @@
 import "server-only";
 import type { IntakePayload } from "./update";
+import { normalizedImage } from "../media/images";
+import { validMedia } from "../web/types";
 
 export type IntakeReceipt = {
   update_id: number;
@@ -38,6 +40,8 @@ export async function intakeRpc<T>(name: string, parameters: Record<string, unkn
 
 export async function uploadEvidence(path: string, bytes: Uint8Array, contentType: string) {
   try {
+    if (contentType === "image/jpeg" && !path.startsWith("account/")) bytes=await normalizedImage(bytes,"jpeg",1024*1024,1440);
+    if (contentType.startsWith("audio/")&&!validMedia(bytes,contentType)) throw new IntakeUnavailableError();
     const { url, headers } = configuration();
     const objectPath = path.split("/").map(encodeURIComponent).join("/");
     const response = await fetch(new URL(`/storage/v1/object/site-evidence/${objectPath}`, url), {
@@ -51,4 +55,11 @@ export async function uploadEvidence(path: string, bytes: Uint8Array, contentTyp
     if (String(error.statusCode) === "409" || error.error === "Duplicate") return;
     throw new IntakeUnavailableError();
   } catch { throw new IntakeUnavailableError(); }
+}
+
+export async function profileImage(path: string, method: "GET" | "DELETE" = "GET") {
+  if (!/^account\/[a-f0-9-]{36}\.jpg$/.test(path)) return null;
+  const { url, headers } = configuration();
+  const endpoint = method === "GET" ? `/storage/v1/object/authenticated/site-evidence/${path}` : `/storage/v1/object/site-evidence/${path}`;
+  return fetch(new URL(endpoint,url), { method, headers, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10000) });
 }

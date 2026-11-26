@@ -8,10 +8,14 @@ import { validCurrency } from "../costing/format-money";
 import { intakeRpc } from "../telegram/storage";
 import { projectText, validTimezone } from "./types";
 import { smallJson } from "../auth/request";
+import { validPermissions, validRole } from "./permissions";
+import { sendProductEmail } from "../email/send";
 const shapes: Record<string,string[]> = {
   create: ["name","client","location","contract_sum","currency","timezone"], select: ["project_id"],
   archive: ["project_id"], restore: ["project_id"], invite: ["project_id","email","role"], cancel_invite: ["project_id","invitation_id"],
-  accept_invite: ["secret"], change_role: ["project_id","profile_id","role"], remove_member: ["project_id","profile_id"],
+  resend_invite: ["project_id","invitation_id"], member_permissions: ["project_id","profile_id","role","permissions"], add_role: ["project_id","role"],
+  retire_boq: ["project_id","item_id","revision"],
+  accept_invite: ["secret"], remove_member: ["project_id","profile_id"],
   start_transfer: ["project_id","profile_id"], accept_transfer: ["project_id","transfer_id"],
 };
 export function checkedProject<T>(value: T | null): T {
@@ -56,15 +60,32 @@ export async function projectApi(request: Request,action: string): Promise<Respo
       const project=id(input.project_id);
       if (action==="select") result=await intakeRpc("account_select_project",{p_hash:hash,p_project:project});
       else if (action==="archive" || action==="restore") result=await intakeRpc("account_archive_project",{p_hash:hash,p_project:project,p_archive:action==="archive"});
-      else if (action==="invite") {
+      else if (action==="invite" || action==="resend_invite") {
+        if (!process.env.SITELEDGER_RESEND_API_KEY || !process.env.SITELEDGER_EMAIL_FROM) throw new AccountError("Invitation email is unavailable. Try again later.",503);
         const email=emailAddress(input.email),secret=sessionToken();
-        if (!email || (input.role!=="foreman" && input.role!=="pm")) throw new AccountError("Enter an email and select foreman or PM.",422);
-        const invitation=checkedProject(await intakeRpc<Record<string,unknown>>("account_invite",{p_hash:hash,p_project:project,p_email:email,p_role:input.role,p_secret_hash:secretHash(secret)}));
-        result={...invitation,url:new URL(`/invite#secret=${secret}`,process.env.SITELEDGER_APP_URL).toString()};
+        const args={p_hash:hash,p_project:project,p_secret_hash:secretHash(secret)};
+        let invitation: { id: string; expires_at: string; email?: string };
+        if (action==="invite") {
+          if (!email || !validRole(input.role)) throw new AccountError("Enter an email and select a project role.",422);
+          invitation=checkedProject(await intakeRpc("account_invite_with_role",{...args,p_email:email,p_label:input.role}));
+        } else invitation=checkedProject(await intakeRpc("account_resend_invite",{...args,p_invite:id(input.invitation_id)}));
+        const recipient=invitation.email??email;
+        if (!recipient) throw new AccountError("Invitation email could not be sent.",503);
+        try { await sendProductEmail(recipient,"Your SiteLedger project invitation",`Sign in at ${new URL("/invite",process.env.SITELEDGER_APP_URL)} with this email address, then enter this invitation code:\n\n${secret}\n\nThis code expires in seven days.`); }
+        catch { throw new AccountError("Invitation email could not be sent. Retry from the invitations list.",503); }
+        result={id:invitation.id,expires_at:invitation.expires_at,sent:true};
+      } else if (action==="member_permissions") {
+        if(!validRole(input.role)||!validPermissions(input.permissions))throw new AccountError("Check the role and permissions.",422);
+        result=await intakeRpc("account_set_member_permissions",{p_hash:hash,p_project:project,p_member:id(input.profile_id),p_role:input.role,p_permissions:input.permissions});
+      } else if (action==="add_role") {
+        if(!validRole(input.role))throw new AccountError("Enter a role name up to 40 characters.",422);
+        result=await intakeRpc("account_add_project_role",{p_hash:hash,p_project:project,p_label:input.role});
+      } else if(action==="retire_boq"){
+        if(typeof input.revision!=="string"||!/^[a-f0-9]{32}$/.test(input.revision))throw new AccountError("Open the latest BoQ and try again.",422);
+        result=await intakeRpc("account_retire_boq_item",{p_hash:hash,p_project:project,p_item:id(input.item_id),p_revision:input.revision});
       } else if (action==="cancel_invite") result=await intakeRpc("account_cancel_invite",{p_hash:hash,p_project:project,p_invite:id(input.invitation_id)});
-      else if (action==="change_role" || action==="remove_member") {
-        if (action==="change_role" && input.role!=="foreman" && input.role!=="pm") throw new AccountError("Select foreman or PM.",422);
-        result=await intakeRpc("account_manage_member",{p_hash:hash,p_project:project,p_profile:id(input.profile_id),p_role:action==="change_role"?input.role:null,p_remove:action==="remove_member"});
+      else if (action==="remove_member") {
+        result=await intakeRpc("account_manage_member",{p_hash:hash,p_project:project,p_profile:id(input.profile_id),p_role:null,p_remove:true});
       } else if (action==="start_transfer") result=await intakeRpc("account_start_transfer",{p_hash:hash,p_project:project,p_target:id(input.profile_id)});
       else if (action==="accept_transfer") result=await intakeRpc("account_accept_transfer",{p_hash:hash,p_project:project,p_transfer:id(input.transfer_id)});
     }

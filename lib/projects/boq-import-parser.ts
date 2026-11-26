@@ -19,17 +19,25 @@ function boundedRows(rows: unknown[][]): string[][] {
 }
 export async function parseBoqFile(name: string, bytes: Uint8Array): Promise<ImportSheet[]> {
   if (!bytes.length || bytes.length > MAX_FILE_BYTES) throw new Error("Choose a non-empty CSV or XLSX file up to 2 MB.");
-  if (name.toLowerCase().endsWith(".csv")) {
+  if (/\.(csv|txt)$/i.test(name)) {
     const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    if (/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text) || /^\s*(?:<\?|<html|<script|#!|%PDF-)/i.test(text)) throw new Error("This file is not a plain BoQ document.");
     let count = 0;
-    const rows = parse(text, { bom: true, relax_column_count: true, max_record_size: 10000, on_record(record: string[]) {
+    const first = text.split(/\r?\n/,1)[0];
+    const delimiter = /\.txt$/i.test(name) && first.includes("\t") ? "\t" : /\.txt$/i.test(name) && first.includes("|") ? "|" : ",";
+    const rows = parse(text, { delimiter, bom: true, relax_column_count: true, max_record_size: 10000, on_record(record: string[]) {
       if (++count > 1000) throw new Error("Keep each sheet to 1,000 rows or fewer.");
       if (record.length > 50) throw new Error("Keep the sheet to 50 columns or fewer.");
       return record;
     } }) as string[][];
-    return [{ name: "CSV", rows: boundedRows(rows) }];
+    return [{ name: /\.txt$/i.test(name) ? "Text" : "CSV", rows: boundedRows(rows) }];
   }
-  if (!name.toLowerCase().endsWith(".xlsx")) throw new Error("Use CSV or XLSX. Other document formats are not supported.");
+  if (!name.toLowerCase().endsWith(".xlsx")) {
+    const {readBoqDocument}=await import("./document-rows");
+    const sheets=await readBoqDocument(name,bytes);
+    if(!sheets.length||sheets.length>10)throw new Error("No table could be read. Choose a document with up to 10 tables or pages.");
+    return sheets.map(sheet=>({...sheet,rows:boundedRows(sheet.rows)}));
+  }
   // Bound ZIP entries before inflation; then repackage bounded bytes for the
   // spreadsheet reader so it never inflates arbitrary original ZIP streams.
   let size = 0, entries = 0;
