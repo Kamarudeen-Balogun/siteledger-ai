@@ -354,7 +354,16 @@ nav.work-flow { margin: 0; }
   html body main:has(> .stitch-header) {
     padding-top: 0;
     padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
-    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+    /* Same clearance as the general workspace rule: dock (68px) + Ada's
+       floating button (48px, resting 88px up) + a gap, so the last
+       primary action can scroll fully above Ada. This rule wins over the
+       general one on specificity, so it must carry the same value. */
+    padding-bottom: calc(152px + env(safe-area-inset-bottom));
+  }
+  /* Pages with a pinned log action bar dock Ada 140px up, so their
+     content needs clearance past Ada's top edge (140 + 48) too. */
+  html body main:has(> .stitch-header):has(.stitch-log-actions) {
+    padding-bottom: calc(200px + env(safe-area-inset-bottom));
   }
   .workspace-header.stitch-header {
     display: block;

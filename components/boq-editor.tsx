@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/costing/format-money";
-import { displayRatio, displayUnit, formatQuantity } from "@/lib/reports/model";
+import { displayRatio, displayUnit, formatMoneyPerUnit, formatQuantityWithUnit } from "@/lib/reports/model";
 import type { ProjectDashboard } from "@/lib/projects/dashboard";
 import { boqUnits, type BoqRow } from "@/lib/projects/boq-types";
 import { importFields, importLabels, inputErrors, nextBoqCode, reviewedItem, type ImportField, type ImportValues } from "@/lib/projects/boq-input";
@@ -42,7 +42,7 @@ export function BoqEditor({ projectId, currency, rows, editable, overview }: { p
     const values = Object.fromEntries(importFields.map(key => [key, String(form.get(key) ?? "")])) as ImportValues;
     const invalid=inputErrors(values);if(Object.keys(invalid).length){setErrors(invalid);if(invalid.item_code||invalid.section)setDetails(true);event.currentTarget.querySelector<HTMLInputElement>(`[name="${Object.keys(invalid)[0]}"]`)?.focus();return;}
     const item = reviewedItem(values,selected?.id??newId,selected?.revision??null,code);if(!item)return;
-    if (!await confirm({ title: selected ? "Save these BoQ changes?" : "Add this supplied BoQ item?", description: "New and rebuilt drafts will use these quantities and rates. Saved drafts may need costing again. Approved reports keep their original amounts.", confirmLabel: "Save BoQ item", detail: <><p className="font-semibold">{item.description}</p><p>{formatQuantity(item.boq_quantity)} {displayUnit(item.unit)} · {formatMoney(item.rate, currency)} {currency} per {displayUnit(item.unit)}</p></> })) return;
+    if (!await confirm({ title: selected ? "Save these BoQ changes?" : "Add this supplied BoQ item?", description: "New and rebuilt drafts will use these quantities and rates. Saved drafts may need costing again. Approved reports keep their original amounts.", confirmLabel: "Save BoQ item", detail: <><p className="font-semibold">{item.description}</p><p>{`${formatQuantityWithUnit(item.boq_quantity, item.unit)} · ${formatMoney(item.rate, currency)} ${currency} per ${displayUnit(item.unit)}`}</p></> })) return;
     setBusy(true); setError("");setErrors({});
     try { const response = await fetch("/api/projects/boq", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ project_id: projectId, item }), cache: "no-store" }); const result = await response.json(); if (!response.ok) throw new Error(result.error ?? "Could not save this item."); setOpen(false);setDirty(false); setMessage("BoQ item saved."); router.refresh(); }
     catch (error) { setError(error instanceof Error ? error.message : "Could not save this item."); } finally { setBusy(false); }
@@ -67,11 +67,11 @@ export function BoqEditor({ projectId, currency, rows, editable, overview }: { p
       <div className="stitch-title-row"><span className="stitch-kicker">Item {String(index+1).padStart(2,"0")} · {row.section}</span>{row.progress.is_overrun&&<span className="stitch-kicker stitch-chip" data-tone="red">Overrun</span>}</div>
       <h3>{row.description}</h3>
       <dl className="stitch-boq-values">
-        <div><dt>Scope qty</dt><dd>{formatQuantity(row.boq_quantity)} {displayUnit(row.unit)}</dd></div>
-        <div><dt>Unit rate</dt><dd>{formatMoney(row.rate,currency)}</dd></div>
+        <div><dt>Scope qty</dt><dd>{formatQuantityWithUnit(row.boq_quantity, row.unit)}</dd></div>
+        <div><dt>Unit rate</dt><dd>{formatMoneyPerUnit(row.rate, currency, row.unit)}</dd></div>
         <div><dt>Line total</dt><dd>{formatMoney(decimal(row.rate,"rate").times(row.boq_quantity).toFixed(),currency)}</dd></div>
       </dl>
-      <div className="stitch-title-row"><small>Measured progress</small><strong>{formatQuantity(row.progress.cumulative_quantity)} {displayUnit(row.unit)} · {displayRatio(row.progress.percentage_complete)}%</strong></div>
+      <div className="stitch-title-row"><small>Measured progress</small><strong>{formatQuantityWithUnit(row.progress.cumulative_quantity, row.unit)} · {displayRatio(row.progress.percentage_complete)}%</strong></div>
       <progress max={100} value={Math.min(100, Number(row.progress.percentage_complete))} aria-label={`Progress for ${row.description}`}/>
       {editable && <button type="button" className="stitch-button mt-3" disabled={busy||importing} onClick={() => edit(row)} aria-label={`Edit ${row.item_code}`}>Adjust item</button>}
     </li>)}</ul>}

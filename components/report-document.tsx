@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, displayWorkTitle, formatQuantity, lockDate, moneyDisplayNote, type ReportView } from "@/lib/reports/model";
+import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, displayWorkTitle, formatQuantityWithUnit, lockDate, moneyDisplayNote, type ReportView } from "@/lib/reports/model";
 import { formatMoney } from "@/lib/costing/format-money";
 import type { ReactNode } from "react";
 import { DiaryIcon } from "./diary-icon";
@@ -32,12 +32,12 @@ export function ReportDocument({ report, trial = false, guestOriginal = false, s
           <thead><tr><th scope="col">Work item</th><th scope="col">Quantity</th><th scope="col">Rate</th><th scope="col">Cost today</th></tr></thead>
           <tbody>{doc.costing.items.map((item, i) => { const price = prices.get(item.boq_item_id); return <tr key={i} data-tour={i===0?"report-progress":undefined}>
             <td><p className="report-eyebrow">{price?.section}</p><p className="report-work-title">{displayWorkTitle(price?.description, source.items[i].description)}</p>
-              <p className={item.variance_color === "red" ? "report-variance" : "report-progress"}>{formatQuantity(item.cumulative_quantity)} / {price?.boq_quantity ? formatQuantity(price.boq_quantity) : "—"} {displayUnit(item.unit)} · {displayRatio(item.percentage_complete)}% complete</p>
+              <p className={item.variance_color === "red" ? "report-variance" : "report-progress"}>{formatQuantityWithUnit(item.cumulative_quantity, item.unit)} / {price?.boq_quantity ? formatQuantityWithUnit(price.boq_quantity, item.unit) : "—"} · {displayRatio(item.percentage_complete)}% complete</p>
               <p className="report-note">Value earned {money(item.value_earned)}</p>
               {item.is_overrun && <p className="report-variance">Over BoQ quantity — check this item.</p>}
               {item.is_behind_plan && <p className="report-variance">{displayRatio(item.variance_percentage_points!)} percentage points against plan</p>}
-              {item.productivity !== null && <p className="report-note">Crew {item.crew} · {displayProductivity(item.productivity)} {displayUnit(item.unit)} per person per day</p>}
-            </td><td data-label="Quantity">{formatQuantity(item.quantity_done)} {displayUnit(item.unit)}</td><td data-label="Rate">{money(item.rate)}</td><td data-label="Cost" className="font-semibold">{money(item.cost_today)}</td>
+              {item.productivity !== null && <p className="report-note">{`Crew ${item.crew} · ${displayProductivity(item.productivity)} ${displayUnit(item.unit)} per person per day`}</p>}
+            </td><td data-label="Quantity">{formatQuantityWithUnit(item.quantity_done, item.unit)}</td><td data-label="Rate">{money(item.rate)}</td><td data-label="Cost" className="font-semibold">{money(item.cost_today)}</td>
           </tr>; })}</tbody>
         </table>
       </div>

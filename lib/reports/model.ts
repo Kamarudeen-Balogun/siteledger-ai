@@ -1,5 +1,6 @@
 import { costReport } from "../costing/cost-report";
 import { decimal } from "../costing/decimal";
+import { formatMoney } from "../costing/format-money";
 import type { BoqPrice, ConfirmedCostItem, CostedReport } from "../costing/types";
 import type { SiteExtraction } from "../ai/extraction-schema";
 import { normalizeDescription } from "../ai/number-words";
@@ -59,6 +60,14 @@ export function formatQuantity(value: string | number): string {
   if (!Number.isFinite(numeric)) return String(value);
   return new Intl.NumberFormat("en-NG", { maximumFractionDigits: 4 }).format(numeric);
 }
+// The single place quantities, rates and money+label pairs are joined for
+// display. JSX collapses the whitespace between a value and its unit across
+// a line break, so every render site must join them in one string here —
+// never inline `{formatQuantity(x)} {unit}` in JSX. "420 m²",
+// "₦14,500 per m²", "₦551,000 earned".
+export const formatQuantityWithUnit = (value: string | number, unit: string) => `${formatQuantity(value)} ${displayUnit(unit)}`;
+export const formatMoneyPerUnit = (rate: string | number, currency: string, unit: string) => `${formatMoney(rate, currency)} per ${displayUnit(unit)}`;
+export const formatMoneyLabel = (money: string, label: string) => `${money} ${label}`;
 // Work-item titles come from the structured record, never from the raw
 // spoken description: a mis-heard transcript ("thin square metre…") can
 // never be recovered by normalising words, but the BoQ item it was costed

@@ -5,7 +5,7 @@ import { currentAccount } from "@/lib/auth/session";
 import { demoLog,demoReport } from "@/lib/data/demo-documents";
 import { formatMoney } from "@/lib/costing/format-money";
 import { decimal } from "@/lib/costing/decimal";
-import { displayDate, displayRatio, displayUnit, displayWorkTitle, formatQuantity } from "@/lib/reports/model";
+import { displayDate, displayRatio, displayWorkTitle, formatMoneyLabel, formatMoneyPerUnit, formatQuantityWithUnit } from "@/lib/reports/model";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { PageLoading } from "@/components/page-loading";
 import { ReportDocument } from "@/components/report-document";
@@ -41,9 +41,9 @@ async function MockContent({query}:{query:Promise<{view?:string}>}) {
         <div className="stitch-day-total"><span className="stitch-kicker">Day total (costed so far)</span><strong>—</strong></div></section>
       <section className="stitch-card stitch-ledger"><span className="stitch-kicker" data-ink="orange">Daily ledger entry</span><h2>{displayDate(sample.document.source.date)}</h2><Link href="/projects/mock?view=report" className="stitch-menu-row"><DiaryIcon name="lock"/>Open last locked report<DiaryIcon name="chevron" size={18}/></Link></section>
       <section className="stitch-card diary-progress" data-tour="measured-progress"><div className="stitch-title-row"><h2><DiaryIcon name="progress" size={20}/>Work Progress — Measured</h2></div><p className="stitch-kicker" data-ink="green">Locked reports</p>
-        <div className="diary-progress-summary"><strong>{displayRatio(String(overall))}% complete</strong><span>{formatMoney(earnedTotal.toFixed(),currency)} earned</span></div>
+        <div className="diary-progress-summary"><strong>{displayRatio(String(overall))}% complete</strong><span>{formatMoneyLabel(formatMoney(earnedTotal.toFixed(), currency), "earned")}</span></div>
         <progress max={100} value={Math.min(100,overall)} aria-label="Measured project progress"/>
-        <dl>{sample.document.costing.items.map((item,index)=><div key={index}><dt>{displayWorkTitle(sample.document.source.price_list.find(price=>price.id===item.boq_item_id)?.description, sample.document.source.items[index].description)}</dt><dd>{formatQuantity(item.cumulative_quantity)} {displayUnit(item.unit)} · {displayRatio(item.percentage_complete)}%</dd></div>)}</dl>
+        <dl>{sample.document.costing.items.map((item,index)=><div key={index}><dt>{displayWorkTitle(sample.document.source.price_list.find(price=>price.id===item.boq_item_id)?.description, sample.document.source.items[index].description)}</dt><dd>{formatQuantityWithUnit(item.cumulative_quantity, item.unit)} · {displayRatio(item.percentage_complete)}%</dd></div>)}</dl>
         <Link className="text-link" href="/projects/mock?view=boq">View all work progress</Link></section>
     </>}
     {view==="report"&&<ReportDocument report={sample} demoPhotos actions={<MockReportActions/>}/>}
@@ -59,7 +59,7 @@ async function MockContent({query}:{query:Promise<{view?:string}>}) {
       <details className="boq-versions" data-tour="boq-history"><summary><span className="boq-versions__label"><DiaryIcon name="history" size={16}/>Version History</span><DiaryIcon name="chevron" size={16}/></summary>
         <div className="boq-versions__body"><p>No BoQ versions have been saved yet.</p></div></details>
       <BoqReview changes={[]} currency={currency}/>
-      <section className="diary-panel"><h1>BoQ &amp; rates</h1><p>{title}</p><dl className="settings-summary">{sample.document.source.price_list.map(row=><div key={row.id}><dt>{row.description}</dt><dd>{formatQuantity(row.cumulative_locked_quantity)} / {formatQuantity(row.boq_quantity)} {displayUnit(row.unit)}{" "}<span>{formatMoney(row.rate,sample.document.currency)} per {displayUnit(row.unit)}</span></dd></div>)}</dl></section>
+      <section className="diary-panel"><h1>BoQ &amp; rates</h1><p>{title}</p><dl className="settings-summary">{sample.document.source.price_list.map(row=><div key={row.id}><dt>{row.description}</dt><dd>{formatQuantityWithUnit(row.cumulative_locked_quantity, row.unit)} / {formatQuantityWithUnit(row.boq_quantity, row.unit)} <span>{formatMoneyPerUnit(row.rate, sample.document.currency, row.unit)}</span></dd></div>)}</dl></section>
     </>}
     {view==="team"&&<section className="diary-panel"><h1>Site team</h1><p>{title}</p><dl className="settings-summary"><div><dt>{sample.document.source.submitted_by}</dt><dd>Foreman</dd></div>{latest&&<div><dt>{latest.author}</dt><dd>PM/QS</dd></div>}</dl></section>}
     <Link className="text-link" href="/projects">Back to your projects</Link>

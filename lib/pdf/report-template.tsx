@@ -1,7 +1,7 @@
 import "server-only";
 import { join } from "node:path";
 import { Document, Page, Text, View, Image as PdfImage, Font, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
-import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, displayWorkTitle, formatQuantity, lockDate, moneyDisplayNote, type ReportView } from "../reports/model";
+import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, displayWorkTitle, formatQuantity, formatQuantityWithUnit, lockDate, moneyDisplayNote, type ReportView } from "../reports/model";
 import { formatMoney } from "../costing/format-money";
 
 Font.register({ family: "PublicSans", fonts: [
@@ -65,10 +65,10 @@ export async function renderReportPdf(report: ReportView, photos: string[] = [])
         </View><Text style={styles.colQty}>{formatQuantity(item.quantity_done)}{"\n"}{displayUnit(item.unit)}</Text>
           <Text style={styles.colMoney}>{money(item.rate)}</Text><Text style={styles.colMoney}>{money(item.cost_today)}</Text></View>
         <Text style={[styles.progress, ...(item.variance_color === "red" ? [styles.red] : [])]}>
-          Cumulative {formatQuantity(item.cumulative_quantity)} {displayUnit(item.unit)} · {displayRatio(item.percentage_complete)}% complete · Value earned {money(item.value_earned)}
+          {`Cumulative ${formatQuantityWithUnit(item.cumulative_quantity, item.unit)} · ${displayRatio(item.percentage_complete)}% complete · Value earned ${money(item.value_earned)}`}
           {item.is_overrun ? " · OVER BOQ QUANTITY" : item.is_behind_plan ? ` · ${displayRatio(item.variance_percentage_points!)} percentage points behind plan` : ""}
         </Text>
-        {item.productivity !== null && <Text style={styles.progress}>Crew {item.crew} · {displayProductivity(item.productivity)} {displayUnit(item.unit)} per person per day</Text>}
+        {item.productivity !== null && <Text style={styles.progress}>{`Crew ${item.crew} · ${displayProductivity(item.productivity)} ${displayUnit(item.unit)} per person per day`}</Text>}
       </View>)}
       <Text style={styles.section}>Materials</Text>
       {!source.materials.length ? <Text style={styles.small}>No materials recorded.</Text> : source.materials.map((item, i) => <Text key={i}>{item.quantity} {item.unit} {item.name} — {item.action}</Text>)}

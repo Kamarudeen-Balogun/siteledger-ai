@@ -116,6 +116,30 @@ test("an empty stored extraction is recovered from the transcript at read time",
   assert.equal(recovered?.work_items[0].matched_boq_hint, "Blockwork");
   assert.equal(recovered?.work_items[1].matched_boq_hint, "In-situ concrete, columns and beams");
 });
+test("the live draft shape recovers both items from its number-words transcript", () => {
+  const empty: SiteExtraction = { work_items: [],
+    materials: [{ name: "Cement", quantity: 40, unit: "bags", action: "delivered", confidence: 0.9 }],
+    delays: [{ reason: "Rain stopped external work", hours: 2, confidence: 0.7 }],
+    issues: ["Clearing was not done on yesterday's slab."], raw_language_notes: "" };
+  const concrete = { id: "70000000-0000-4000-8000-000000000007", description: "In-situ concrete, columns and beams", unit: "m3", section: "Concrete", item_code: "C01" };
+  const recovered = recoverWorkItems(empty, "For the leaky site, we don't set 18 square meters of two hundred and twenty-five millimetre blockwork on the east elevation and cast 2 cubic metres of concrete for the columns.", [...boq, concrete]);
+  assert.equal(recovered?.work_items.length, 2);
+  assert.deepEqual(recovered?.work_items.map(item => [item.quantity, item.unit]), [[18, "m2"], [2, "m3"]]);
+  assert.equal(recovered?.work_items[0].description, "18 m² of 225mm blockwork on the east elevation");
+  assert.equal(recovered?.work_items[0].matched_boq_hint, "Blockwork");
+  assert.equal(recovered?.work_items[1].matched_boq_hint, "In-situ concrete, columns and beams");
+  // The sibling draft states no work, so it stays empty.
+  assert.deepEqual(recoverWorkItems(empty, "So I'm in the site right now. So we want to start working.", boq)?.work_items, []);
+});
+test("recovery never throws on malformed stored data", () => {
+  const empty: SiteExtraction = { work_items: [], materials: [], delays: [], issues: [], raw_language_notes: "" };
+  assert.doesNotThrow(() => recoverWorkItems({ ...empty, work_items: undefined as unknown as [] }, "We set 18 m² of blockwork.", boq));
+  assert.equal(recoverWorkItems({ ...empty, work_items: undefined as unknown as [] }, "We set 18 m² of blockwork.", boq)?.work_items, undefined);
+  assert.doesNotThrow(() => recoverWorkItems(empty, "We set 18 m² of blockwork.", null as unknown as typeof boq));
+  const unmatched = recoverWorkItems(empty, "We set 18 m² of blockwork.", null as unknown as typeof boq);
+  assert.equal(unmatched?.work_items.length, 1);
+  assert.equal(unmatched?.work_items[0].matched_boq_hint, null);
+});
 test("a transcript with no work stays empty and an extraction with items is untouched", () => {
   const empty: SiteExtraction = { work_items: [], materials: [], delays: [], issues: [], raw_language_notes: "" };
   assert.deepEqual(recoverWorkItems(empty, "So I'm in the site right now. So we want to start working.", boq)?.work_items, []);

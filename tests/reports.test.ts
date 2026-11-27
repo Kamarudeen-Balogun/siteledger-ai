@@ -1,7 +1,7 @@
 import { secretHash } from "../lib/auth/session";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildDocument, reportFromInput, displayProductivity, displayRatio, truncateAtWord, displayWorkTitle, formatQuantity, ReportStateError, type ReportSource, type ReportInput } from "../lib/reports/model";
+import { buildDocument, reportFromInput, displayProductivity, displayRatio, truncateAtWord, displayWorkTitle, formatMoneyLabel, formatMoneyPerUnit, formatQuantity, formatQuantityWithUnit, ReportStateError, type ReportSource, type ReportInput } from "../lib/reports/model";
 import { POST } from "../app/api/reports/[id]/route";
 
 const id = "70000000-0000-4000-8000-000000000071", secret = "test-report-secret";
@@ -132,6 +132,15 @@ test("quantities trim trailing zeros and titles use the structured BoQ name", ()
   assert.equal(formatQuantity(""), "");
   assert.equal(displayWorkTitle("Sandcrete blocks 225mm hollow, laid", "thin square metre of two hundred and twenty-five millimetre blockwork on the east elevation"), "Sandcrete blocks 225mm hollow, laid");
   assert.equal(displayWorkTitle(undefined, "cast two cubic metres of concrete for the columns"), "cast 2 m³ of concrete for the columns");
+});
+
+test("quantities, rates and money+label pairs always carry their space", () => {
+  assert.equal(formatQuantityWithUnit("420.0000", "m2"), "420 m²");
+  assert.equal(formatQuantityWithUnit(35, "m3"), "35 m³");
+  assert.equal(formatQuantityWithUnit("18.0000", "m²"), "18 m²");
+  assert.equal(formatMoneyPerUnit(14500, "NGN", "m2"), "₦14,500 per m²");
+  assert.equal(formatMoneyPerUnit("145000", "NGN", "m3"), "₦145,000 per m³");
+  assert.equal(formatMoneyLabel("₦551,000", "earned"), "₦551,000 earned");
 });
 
 test("percentages show whole numbers whole and fractions at one decimal, like the mock", () => {

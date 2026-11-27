@@ -11,6 +11,11 @@
   --paper: #fffdf9;
   --paper-raised: #f3ede3;
   --rule-strong: #d6cebe;
+  /* Loading skeleton bars: a mid-tone warm taupe that reads on paper.
+     The old bars used the hairline rule colour, which is nearly
+     invisible on paper — a page change looked blank. */
+  --skeleton: #d8cbb4;
+  --skeleton-light: #f0e8d7;
   --secondary-ink: #57534e;
   --accent-ink: #a1380b;
   --olive: #3f6212;
@@ -82,7 +87,7 @@ button[aria-pressed="true"] { background: var(--foreground); color: var(--backgr
 @media (prefers-reduced-motion: reduce) { .diary-loading-line::after { animation: none; } }
 /* Motion: skeletons, spinners, upload progress, press states, sheets, bot example. */
 .stitch-skeleton-stack { display: grid; gap: 10px; margin-top: 12px; }
-.stitch-skeleton-stack i { display: block; height: 18px; border-radius: 2px; background: linear-gradient(90deg, var(--rule) 25%, #f5efe4 50%, var(--rule) 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite; }
+.stitch-skeleton-stack i { display: block; height: 18px; border-radius: 2px; background: linear-gradient(90deg, var(--skeleton) 25%, var(--skeleton-light) 50%, var(--skeleton) 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite; }
 .stitch-skeleton-stack i:nth-child(2) { width: 82%; }
 .stitch-skeleton-stack i:nth-child(3) { width: 64%; }
 /* Diary loading skeleton — shaped like the destination content (ruled
@@ -90,16 +95,16 @@ button[aria-pressed="true"] { background: var(--foreground); color: var(--backgr
    change feels intentional instead of flashing blank. The shimmer is the
    same one the old skeleton used; reduced motion disables it (see the
    reduced-motion rule below). */
-.diary-skeleton { display: grid; gap: 4px; margin-top: 20px; }
+.diary-skeleton { display: grid; gap: 4px; margin-top: 20px; border-top: 3px solid var(--accent); }
 .diary-skeleton__entry { display: grid; gap: 8px; align-content: start; padding: 16px 0; border-bottom: 1px solid var(--rule); }
 .diary-skeleton__entry:last-child { border-bottom: 0; }
-.diary-skeleton i { display: block; height: 14px; border-radius: 2px; background: linear-gradient(90deg, var(--rule) 25%, #f5efe4 50%, var(--rule) 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite; }
+.diary-skeleton i { display: block; height: 14px; border-radius: 2px; background: linear-gradient(90deg, var(--skeleton) 25%, var(--skeleton-light) 50%, var(--skeleton) 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite; }
 .diary-skeleton__entry i:first-child { height: 10px; }
 .diary-skeleton--form .diary-skeleton__entry i:last-child { height: 48px; }
 .diary-skeleton__total { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0; border-top: 2px solid var(--accent); border-bottom: 1px solid var(--rule); }
 .diary-skeleton__total i { height: 14px; }
 .diary-skeleton__nav { display: flex; justify-content: space-between; align-items: center; min-height: 56px; border-bottom: 1px solid var(--rule); }
-.diary-skeleton__nav i { display: block; border-radius: 2px; background: linear-gradient(90deg, var(--rule) 25%, #f5efe4 50%, var(--rule) 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite; }
+.diary-skeleton__nav i { display: block; border-radius: 2px; background: linear-gradient(90deg, var(--skeleton) 25%, var(--skeleton-light) 50%, var(--skeleton) 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite; }
 @keyframes skeleton-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 .stitch-spinner { display: inline-block; width: 18px; height: 18px; margin-right: 8px; vertical-align: -3px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -307,7 +312,12 @@ button[aria-pressed="true"] { background: var(--foreground); color: var(--backgr
 body:has(.workspace-header) > div > footer[aria-label="Creator credit"], body:has(.workspace-header) footer[aria-label="Creator credit"] { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
 button, a, summary { touch-action: manipulation; }
 h1, h2, h3, [id] { scroll-margin-top: 24px; }
-@media (max-width: 1023px) { main:has(.workspace-header) { padding-bottom: calc(112px + env(safe-area-inset-bottom)); } body:has(.workspace-header) > .creator-credit { padding-bottom: calc(96px + env(safe-area-inset-bottom)); } }
+/* Workspace mains clear the dock (68px) plus Ada's floating button (48px,
+   resting 88px up on stitch pages) plus a gap, so the last primary action
+   on a page can scroll fully above Ada instead of sliding underneath it.
+   Pages with a pinned log action bar dock Ada 140px up; see the stitch.css
+   rule for their extra clearance. */
+@media (max-width: 1023px) { main:has(.workspace-header) { padding-bottom: calc(152px + env(safe-area-inset-bottom)); } body:has(.workspace-header) > .creator-credit { padding-bottom: calc(96px + env(safe-area-inset-bottom)); } }
 @media (min-width: 640px) { .work-flow li { font-size: 14px; } }
 @media (min-width: 1024px) { .workspace-header .workspace-dock { display: none; } }
 @media print { .workspace-dock, .work-flow, .work-intro, .work-state { display: none !important; } }
@@ -682,10 +692,8 @@ body:has(.workspace-dock) .ada-help { --ada-reserve: calc(var(--dock-height) + 1
   main:has(> .workspace-header) {
     padding-top: calc(12px + env(safe-area-inset-top));
     padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
-    /* Dock height + Ada's floating button + a gap, so the last content on
-       a page (e.g. the Connect Telegram card) can scroll fully above Ada
-       instead of sliding underneath it. */
-    padding-bottom: calc(var(--dock-height) + 60px + env(safe-area-inset-bottom) + 24px);
+    /* Bottom clearance lives in the general main:has(.workspace-header)
+       rule above, so every workspace page clears Ada the same way. */
   }
   .workspace-header { position: sticky; top: 0; z-index: 25; margin: 0 -8px 16px; padding: calc(4px + env(safe-area-inset-top)) 8px 8px; background: var(--background); flex-wrap: nowrap; gap: 6px; }
   .workspace-header .diary-desktop-brand, .workspace-header .workspace-back { display: none; }
@@ -760,6 +768,8 @@ html[data-theme="dark"] {
   --diary-warning: #422d1f;
   --diary-warning-ink: #f9cd90;
   --diary-red: #ffaba5;
+  --skeleton: #6b5a4c;
+  --skeleton-light: #8a7663;
 }
 @media (prefers-color-scheme: dark) {
   html[data-theme="system"] {
@@ -776,5 +786,7 @@ html[data-theme="dark"] {
   --diary-warning: #422d1f;
   --diary-warning-ink: #f9cd90;
   --diary-red: #ffaba5;
+  --skeleton: #6b5a4c;
+  --skeleton-light: #8a7663;
   }
 }

@@ -12,7 +12,7 @@ import { WorkFlow, WorkDisclosure } from "./work-flow";
 import { DiaryIcon } from "./diary-icon";
 import { MockProjectControl } from "./mock-project";
 import { useActionConfirmation } from "./action-confirmation";
-import { formatQuantity } from "@/lib/reports/model";
+import { formatMoneyLabel, formatQuantityWithUnit } from "@/lib/reports/model";
 
 const button="min-h-12 border border-rule px-4 py-3 text-base disabled:opacity-50";
 type TodaySummary = {
@@ -240,9 +240,9 @@ export function CaptureDiary() {
           <section className="stitch-card stitch-ledger"><span className="stitch-kicker" data-ink="orange">Daily ledger entry</span><h2>Today{date?`, ${date}`:""}</h2>{lastLocked&&<Link href={lastLocked.href} className="stitch-menu-row"><DiaryIcon name="lock"/>Open last locked report<DiaryIcon name="chevron" size={18}/></Link>}</section>
           <section className="stitch-card diary-progress" data-tour="measured-progress"><div className="stitch-title-row"><h2><DiaryIcon name="progress" size={20}/>Work Progress — Measured</h2></div><p className="stitch-kicker" data-ink="green">{currentSummary?.readScope??"Locked reports"}</p>
             {currentSummary?.percentage==null?(currentSummary||summaryError||!online?<p>{currentSummary?"Add a BoQ with rates to measure project progress.":summaryError?"Measured progress is unavailable.":"Reconnect to see measured progress."}</p>:<div className="stitch-skeleton-stack" role="status" aria-label="Loading measured progress"><i/><i/><i/></div>):<>
-              <div className="diary-progress-summary"><strong>{currentSummary.percentage}% complete</strong><span>{currentSummary.earned} earned</span></div>
+              <div className="diary-progress-summary"><strong>{currentSummary.percentage}% complete</strong><span>{formatMoneyLabel(currentSummary.earned, "earned")}</span></div>
               <progress max={100} value={currentSummary.percentage} aria-label="Measured project progress"/>
-              <dl>{currentSummary.rows.map(row=><div key={row.id}><dt>{row.description}</dt><dd>{formatQuantity(row.done)} / {formatQuantity(row.scope)} {row.unit} · {row.percentage}%</dd></div>)}</dl>
+              <dl>{currentSummary.rows.map(row=><div key={row.id}><dt>{row.description}</dt><dd>{formatQuantityWithUnit(row.done, row.unit)} / {formatQuantityWithUnit(row.scope, row.unit)} · {row.percentage}%</dd></div>)}</dl>
               <Link className="text-link" href={`/projects/${context.project_id}?view=progress`}>View all work progress</Link>
             </>}
           </section>

@@ -17,10 +17,13 @@ export function recoverWorkItems(
   transcript: string | null,
   boq: BoqChoice[],
 ): SiteExtraction | null {
-  if (!extraction || extraction.work_items.length > 0 || !transcript?.trim()) return extraction;
+  // Fail-safe on malformed stored data: a missing work list or BoQ means
+  // no recovery, never a throw — the Confirm page must still render the
+  // stored record.
+  if (!extraction || !Array.isArray(extraction.work_items) || extraction.work_items.length > 0 || !transcript?.trim()) return extraction;
   const candidates = extractWorkCandidates(
     transcript,
-    boq.map((item) => ({ description: item.description, unit: item.unit })),
+    (Array.isArray(boq) ? boq : []).map((item) => ({ description: item.description, unit: item.unit })),
   );
   if (!candidates.length) return extraction;
   return { ...extraction, work_items: candidates };
