@@ -24,7 +24,7 @@ async function Log(props: Props) {
   if (active?.active_project_id && result.log.project.id !== active.active_project_id) redirect("/reports");
   const canAmend = result.reviewer?.canReview && !result.reviewer.archived && result.log.entries.some(entry=>entry.kind==="report"&&entry.submission_id===id);
   return <><WorkspaceHeader current="reports" project={result.log.project.name} projectId={result.log.project.id}/>
-    <DisputeLogDocument log={result.log} canShare={result.reviewer?.canApprove} actions={canAmend?<AmendmentForm id={id} sheet primary/>:undefined}/>
+    <DisputeLogDocument log={result.log} canShare={result.reviewer?.canView} actions={canAmend?<AmendmentForm id={id} sheet primary/>:undefined}/>
     <Link prefetch={false} href={`/reports/${id}`} className="text-link">Back to report</Link>
   </>;
 }
