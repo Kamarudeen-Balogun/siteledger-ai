@@ -37,8 +37,14 @@ function PublicMenu() {
         `fixed inset-0` dialog nested in the header is only the header's ~64px
         box instead of the viewport (the drawer looked transparent because its
         solid background covered only the top strip). Portalling keeps the
-        header's blur and gives the dialog the full viewport again. */}
-    {open && createPortal(<div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Site menu">
+        header's blur and gives the dialog the full viewport again.
+        The dialog root ALSO carries the `transplant` class: every Stitch
+        token utility in transplant-public.css is scoped under `.transplant`
+        (`.transplant .bg-surface`, …) and the --sl-* variables live on
+        `.transplant`, so a portal rendered outside that root would match no
+        background rule at all and the panel would be fully transparent.
+        Keep `transplant` on this div so the panel stays solid #fff8f5. */}
+    {open && createPortal(<div className="transplant fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Site menu">
       <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="absolute inset-0 h-full w-full cursor-default bg-black/40" />
       <div className="absolute right-0 top-0 flex h-full w-[300px] max-w-[85vw] flex-col bg-surface shadow-xl">
         <div className="flex h-16 items-center justify-between px-4 pt-safe">

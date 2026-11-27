@@ -28,8 +28,15 @@ test("public menu dialog is portalled out of the blurred header", () => {
   // box and its solid background covers just the top strip (the drawer
   // looked transparent). The dialog must be portalled to document.body.
   const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "components", "public-site.tsx"), "utf8");
-  assert.ok(source.includes('createPortal(<div className="fixed inset-0 z-50"'), "Menu dialog must be rendered through createPortal");
+  assert.ok(source.includes('createPortal(<div className="transplant fixed inset-0 z-50"'), "Menu dialog must be rendered through createPortal with the transplant class on its root");
   assert.ok(source.includes("document.body)"), "Menu dialog portal target must be document.body");
+  // Second half of the same regression: every Stitch token utility in
+  // transplant-public.css is scoped under `.transplant`
+  // (`.transplant .bg-surface { background-color: var(--sl-surface); }`) and
+  // the --sl-* variables live on `.transplant`, so a portal rendered outside
+  // that root matches no background rule and the panel is fully transparent
+  // (page text legible through it) even though the dialog covers the viewport.
+  // The `transplant` class on the dialog root keeps the panel solid #fff8f5.
   const headerStart = source.indexOf("<header");
   const headerEnd = source.indexOf("</header>", headerStart);
   assert.ok(headerStart >= 0 && headerEnd > headerStart, "Public header must exist");
