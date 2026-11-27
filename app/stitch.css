@@ -143,6 +143,9 @@ nav.work-flow { margin: 0; }
 .stitch-transcript .stitch-title-row p { display: flex; align-items: center; gap: 9px; }
 .stitch-transcript .diary-symbol { color: var(--stitch-accent); }
 .stitch-audio { display: flex; align-items: center; gap: 12px; padding: 5px 8px; min-height: 56px; border-radius: 4px; background: var(--stitch-inset); }
+.stitch-audio-progress { height: 4px; margin-top: 8px; overflow: hidden; border-radius: 2px; background: var(--rule); }
+.stitch-audio-progress i { display: block; height: 100%; background: var(--stitch-primary); }
+.diary-photo-grid figcaption { margin-top: 6px; font-size: 13px; line-height: 1.5; color: var(--stitch-muted); }
 .stitch-audio .stitch-button { min-width: 44px; min-height: 44px; background: var(--stitch-strong); padding: 0; }
 .stitch-audio .stitch-kicker { margin-left: auto; }
 .stitch-transcript-block blockquote { padding: 12px; border-radius: 5px; background: var(--stitch-raised); font: italic 600 16px/1.65 var(--stitch-serif); white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -226,7 +229,7 @@ nav.work-flow { margin: 0; }
 .stitch-boq-editor progress::-moz-progress-bar { background: var(--stitch-primary); border-radius: 20px; }
 .stitch-boq-values { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; margin: 8px 0 12px; padding: 8px; border-radius: 4px; background: var(--stitch-card); }
 .stitch-boq-values dt { font: 500 10px/1.5 var(--stitch-mono); text-transform: uppercase; color: var(--stitch-muted); }
-.stitch-boq-values dd { overflow-wrap: anywhere; font-weight: 700; }
+.stitch-boq-values dd { white-space: nowrap; font-weight: 700; }
 .stitch-boq-items { display: grid; gap: 12px; }
 .stitch-boq-items .stitch-card h3 { margin: 3px 0 8px; font: 600 17px/1.35 var(--stitch-serif); }
 .stitch-compact-disclosure { min-width: 0; flex: 1; }

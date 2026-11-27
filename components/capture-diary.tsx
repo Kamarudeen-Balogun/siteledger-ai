@@ -189,8 +189,14 @@ export function CaptureDiary() {
   }
   const visible=rows.filter(row=>context&&belongsToActor(row,context)).sort((a,b)=>b.manifest.captured_at.localeCompare(a.manifest.captured_at));
   const currentSummary=summary?.projectId===context?.project_id?summary:null;
+  // The Awaiting review count must be strictly this project's: while the
+  // summary is still loading, the capture context can still name the
+  // previous project after a switch, so local sent rows are gated on the
+  // summary's project whenever one is loaded — and the count chip shows
+  // "—" until the summary arrives instead of a stale number.
+  const reviewProjectId=currentSummary?.projectId??context?.project_id;
   const pending=visible.filter(row=>row.status!=="sent");
-  const localReviews=visible.filter(row=>row.status==="sent"&&row.manifest.project_id===context?.project_id&&!currentSummary?.notes.some(note=>note.id===row.manifest.id)).slice(0,5);
+  const localReviews=visible.filter(row=>row.status==="sent"&&row.manifest.project_id===reviewProjectId&&!currentSummary?.notes.some(note=>note.id===row.manifest.id)).slice(0,5);
   const drafts=currentSummary?.notes.filter(note=>note.amount==null)??[];
   const lastLocked=currentSummary?.notes.find(note=>note.stage==="approved");
   const daily=currentSummary?.notes.filter(note=>note.today).toReversed()??[];
@@ -240,7 +246,7 @@ export function CaptureDiary() {
           {!readOnly&&<div className="diary-today-actions"><button type="button" className="diary-primary" onClick={()=>{setCapturing(true);setError("");window.scrollTo(0,0);}} data-tour="add-work"><DiaryIcon name="plus" size={26}/>Add today&apos;s work</button><a href="https://t.me/SiteLedgerNGbot" className="diary-row-link" target="_blank" rel="noreferrer"><DiaryIcon name="send" size={20}/><strong>Send via Telegram</strong><span className="stitch-chip">@SiteLedgerNGbot</span></a></div>}
           {person&&<MockProjectControl person={person} explore/>}
           <section className="stitch-card stitch-drafts" aria-labelledby="today-drafts" data-tour="drafts"><div className="stitch-title-row">
-            <h2 id="today-drafts"><DiaryIcon name="pending" size={20}/>Awaiting review <span className="stitch-chip">{drafts.length+localReviews.length}</span></h2><span className="stitch-kicker">Not costed yet</span></div>
+            <h2 id="today-drafts"><DiaryIcon name="pending" size={20}/>Awaiting review <span className="stitch-chip">{!currentSummary&&online?"—":drafts.length+localReviews.length}</span></h2><span className="stitch-kicker">Not costed yet</span></div>
             <p>Open a draft to check the details, edit quantities, or finish costing it later.</p>
             {summaryError?<div><p>Could not open the daily ledger.</p><button type="button" className="text-link" onClick={()=>void loadSummary(context.project_id)}>Try again</button></div>:!currentSummary&&online?<div className="stitch-skeleton-stack" role="status" aria-label="Loading drafts"><i/><i/><i/></div>:!drafts.length&&!localReviews.length?<p>No notes waiting for review.</p>:<ul className="diary-list">
               {drafts.map(note=><li key={note.id}><Link href={note.href} prefetch={false}><span><strong>{note.label}</strong><small>{note.capturedAt?new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeStyle:"short",timeZone:context.timezone}).format(new Date(note.capturedAt)):note.date}</small></span><DiaryIcon name="chevron" size={18}/></Link></li>)}
@@ -249,7 +255,7 @@ export function CaptureDiary() {
           </section>
           <section className="stitch-card stitch-drafts" data-tour="day-submissions"><div className="stitch-title-row"><h2><DiaryIcon name="receipt" size={20}/>Today&apos;s submissions</h2></div>
             <p>{daily.length?"Every note and upload from today, in time order.":"No site notes have been submitted today."}</p>
-            <ul className="diary-list">{daily.map(note=><li key={note.id}><Link href={note.href} prefetch={false}><span><strong>{note.stage==="approved"?"Locked report":note.amount?"Draft report":"Awaiting review"}</strong><small>{note.capturedAt?new Intl.DateTimeFormat("en-GB",{timeStyle:"short",timeZone:context.timezone}).format(new Date(note.capturedAt)):note.date}</small>{note.items?.map((item,index)=><small key={index}>{item}</small>)}</span><strong>{note.amount}</strong></Link></li>)}</ul>
+            <ul className="diary-list">{daily.map(note=><li key={note.id}><Link href={note.href} prefetch={false}><span><strong>{note.stage==="approved"?"Locked report":note.amount?"Draft report":"Awaiting review"}</strong><small>{note.capturedAt?new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeStyle:"short",timeZone:context.timezone}).format(new Date(note.capturedAt)):note.date}</small>{note.items?.map((item,index)=><small key={index}>{item}</small>)}</span><strong>{note.amount}</strong></Link></li>)}</ul>
             <div className="stitch-day-total"><span className="stitch-kicker">Day total (costed so far)</span><strong>{currentSummary?.dayTotal??"—"}</strong></div>
           </section>
           <section className="stitch-card stitch-ledger"><span className="stitch-kicker" data-ink="orange">Daily ledger entry</span><h2>Today{date?`, ${date}`:""}</h2>{lastLocked&&<Link href={lastLocked.href} className="stitch-menu-row"><DiaryIcon name="lock"/>Open last locked report<DiaryIcon name="chevron" size={18}/></Link>}</section>

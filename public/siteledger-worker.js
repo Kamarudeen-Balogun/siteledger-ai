@@ -1,6 +1,6 @@
 /* Only the public Today shell, scripts, styles and fonts are cached. Never
    cache private API responses, reports, review links, audio or site photos. */
-const CACHE="siteledger-today-v3";
+const CACHE="siteledger-today-v4";
 const staticPath=path=>path.startsWith("/_next/static/")||path.startsWith("/fonts/");
 self.addEventListener("install",event=>event.waitUntil((async()=>{
   const cache=await caches.open(CACHE),shell=await fetch("/today",{credentials:"omit",cache:"reload"});
@@ -11,7 +11,7 @@ self.addEventListener("install",event=>event.waitUntil((async()=>{
   await Promise.allSettled(assets.map(async url=>{const result=await fetch(url,{credentials:"omit"});if(result.ok)await cache.put(url,result);}));
   await self.skipWaiting();
 })()));
-self.addEventListener("activate",event=>event.waitUntil(self.clients.claim()));
+self.addEventListener("activate",event=>event.waitUntil((async()=>{const names=await caches.keys();await Promise.all(names.filter(name=>name!==CACHE&&name.startsWith("siteledger-")).map(name=>caches.delete(name)));await self.clients.claim();})()));
 self.addEventListener("message",event=>{
   if(event.data?.type!=="CACHE_STATIC"||!Array.isArray(event.data.urls))return;
   event.waitUntil((async()=>{const cache=await caches.open(CACHE);await Promise.allSettled(event.data.urls.slice(0,100).map(async value=>{

@@ -125,7 +125,7 @@ test("switching to the mock makes the mock the current project", () => {
   const navigation = read("components", "app-navigation.tsx");
   assert.match(navigation, /const isMock = \(navigation\?\.\pathname \?\? ""\)\.startsWith\("\/projects\/mock"\);/);
   assert.match(navigation, /function selectMock\(\) \{/);
-  assert.match(navigation, /router\.push\("\/projects\/mock"\)/);
+  assert.match(navigation, /router\.push\("\/projects\/mock\?view=today"\)/);
   assert.match(navigation, /id===item\.id && !isMock \? <span className="stitch-switch-current">/);
   assert.match(navigation, /const fromMock = \(navigation\?\.\pathname \?\? ""\)\.startsWith\("\/projects\/mock"\);/);
   assert.match(navigation, /const path = fromMock \? "\/today" :/);
@@ -188,4 +188,87 @@ test("BoQ version history is compact rows with a version sheet", () => {
 test("percentages are formatted at one decimal like the mock", () => {
   assert.equal(displayRatio("100"), "100");
   assert.equal(displayRatio("45.74"), "45.7");
+});
+
+test("the company chip updates when switching to the mock", () => {
+  // Regression: the switcher button kept showing the previous real
+  // project's company ("ADEBAYO FAM…") after switching to the mock,
+  // because the chip read selected.client — and on the mock page the
+  // navigation project id is still the last real project. The mock has
+  // no company, so its chip must show the mock's own label, never a
+  // stale real one.
+  const navigation = read("components", "app-navigation.tsx");
+  assert.match(navigation, /\{isMock \? <span className="stitch-kicker">Demo data<\/span> : selected\?\.client &&/);
+});
+
+test("the mock Today renders the new design with no old tabs in the DOM", () => {
+  // Regression: /projects/mock showed the old project page and the top
+  // text tabs (Today / Report / Log / BoQ / Team) appeared in the DOM on
+  // first load. The mock views are switched by the bottom navigation —
+  // the views list is data only (validation + dock area) and renders no
+  // tab row anywhere, and the old section-tab strings must not exist.
+  const mock = read("app", "projects", "mock", "page.tsx");
+  assert.ok(!mock.includes('role="tab'), "The mock page must not render a tab list");
+  assert.ok(!mock.includes("Project sections"), "The mock page must not render the old section tabs");
+  assert.match(mock, /const headerTitle = "Mock project";/);
+  assert.match(mock, /title=\{headerTitle\} project=\{headerTitle\}/);
+  // The demo Today is the mock's Today: three notes in the three states,
+  // each with a timestamp, photos and a playable voice note.
+  assert.match(mock, /demoTodayNotes\.map\(note =>/);
+  assert.match(mock, /<MockNoteDetail note=\{demoTodayNotes\[1\]\}/);
+  assert.match(mock, /<MockConfirmView note=\{demoTodayNotes\[2\]\}/);
+  const walk = (dir: string): string[] => readdirSync(dir).flatMap((entry: string) => {
+    const path = join(dir, entry);
+    return statSync(path).isDirectory() ? walk(path) : [path];
+  });
+  for (const file of [...walk(join(dirname(fileURLToPath(import.meta.url)), "..", "app")), ...walk(join(dirname(fileURLToPath(import.meta.url)), "..", "components"))]) {
+    if (!file.endsWith(".tsx")) continue;
+    const source = readFileSync(file, "utf8");
+    assert.ok(!source.includes("Project sections"), `${file} must not render the old section tabs`);
+    assert.ok(!source.includes("Mock project sections"), `${file} must not render the old mock section tabs`);
+  }
+});
+
+test("the page-change loader shows the skeleton bars at once", () => {
+  // Regression: during bottom-tab page changes the app showed a mostly
+  // blank loader (header + heading only), not a loading skeleton — the
+  // grey bars only appeared during project switches. The loader now
+  // renders the same prominent skeleton stack first, then the shaped
+  // diary rows below it.
+  const loading = read("components", "page-loading.tsx");
+  assert.match(loading, /<div className="stitch-skeleton-stack" aria-hidden="true"><i \/><i \/><i \/><\/div>/);
+  assert.match(loading, /<div className=\{`diary-skeleton diary-skeleton--\$\{variant\}`\}/);
+});
+
+test("the Awaiting review count is strictly this project's", () => {
+  // Regression: the count changed 1 → 0 on Ajah with no submission — the
+  // only draft belonged to Lekki. The chip rendered a count even while
+  // the summary was loading, and the capture context can still name the
+  // previous project right after a switch, so local sent rows were
+  // counted for the wrong project. The count is gated on the summary's
+  // project and shows "—" until the summary arrives.
+  const diary = read("components", "capture-diary.tsx");
+  assert.match(diary, /const reviewProjectId=currentSummary\?\.projectId\?\?context\?\.project_id;/);
+  assert.match(diary, /row\.manifest\.project_id===reviewProjectId/);
+  assert.match(diary, /\{!currentSummary&&online\?"—":drafts\.length\+localReviews\.length\}/);
+  // Real Today notes show date + time, like the mock — the daily list
+  // showed time only.
+  assert.match(diary, /new Intl\.DateTimeFormat\("en-GB",\{dateStyle:"medium",timeStyle:"short",timeZone:context\.timezone\}\)\.format\(new Date\(note\.capturedAt\)\):note\.date\}/);
+});
+
+test("BoQ money never breaks mid-number and version sheets fit", () => {
+  // Regression: a BoQ line total wrapped mid-number ("₦6,090,00" / "0")
+  // at phone width, and the version-details sheet overflowed
+  // horizontally. Money amounts are no-wrap; the version sheet splits
+  // quantity and rate into wrapping parts instead of one unbreakable span.
+  const stitch = read("app", "stitch.css");
+  assert.match(stitch, /\.stitch-boq-values dd \{ white-space: nowrap;/);
+  const versions = read("components", "boq-versions.tsx");
+  assert.match(versions, /<span className="boq-versions__value">/);
+  assert.match(versions, /<span className="boq-versions__description">/);
+  const css = read("app", "globals.css");
+  assert.match(css, /\.boq-versions__value span \{ white-space: nowrap; \}/);
+  // BoQ versions show their timestamp (created_at from the new migration),
+  // not just the effective date.
+  assert.match(versions, /selected\.created_at \? <>Saved \{displayTimestamp\(selected\.created_at\)\}/);
 });

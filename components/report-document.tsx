@@ -52,12 +52,14 @@ export function ReportDocument({ report, trial = false, guestOriginal = false, s
     </section>
     <section><h2>Photographic evidence</h2>
       {!source.photos.length && !demoPhotos && <p className="report-note">No photos were attached to this record.</p>}
-      {demoPhotos&&<figure><Image src="/demo/photos/synthetic-column-voids.jpg" width={800} height={600} alt="Illustrative concrete column showing surface voids" className="h-auto w-full"/><figcaption>Synthetic example · Possible honeycombing. Check the column face before recording a finding.</figcaption></figure>}
-      <div className="report-photos">{source.photos.map((photo, i) => <figure key={photo.id}>
+      {demoPhotos ? (source.photos.length ? <div className="report-photos">{source.photos.map((photo, i) => <figure key={photo.id}>
+        <Image src={photo.storage_url} width={800} height={600} alt={`Site evidence photo ${i + 1}`} unoptimized className="h-auto w-full" />
+        <figcaption>Photo {i + 1}{photo.captured_at ? ` · ${displayTimestamp(photo.captured_at, source.project.timezone)}` : ""} · {photo.note || "No observation recorded."}</figcaption>
+      </figure>)}</div> : <figure><Image src="/demo/photos/synthetic-column-voids.jpg" width={800} height={600} alt="Illustrative concrete column showing surface voids" className="h-auto w-full"/><figcaption>Synthetic example · Possible honeycombing. Check the column face before recording a finding.</figcaption></figure>) : <div className="report-photos">{source.photos.map((photo, i) => <figure key={photo.id}>
         <Image src={sharedPath ? `${sharedPath}/${i+1}` : trial ? `/api/trial/media/${photo.id}` : `/api/confirm/${source.submission_id}/media/${photo.id}`} width={800} height={600}
           alt={`Site evidence photo ${i + 1}`} unoptimized className="h-auto w-full" />
-        <figcaption>Photo {i + 1} · {photo.note || "No observation recorded."}</figcaption>
-      </figure>)}</div>
+        <figcaption>Photo {i + 1}{photo.captured_at ? ` · ${displayTimestamp(photo.captured_at, source.project.timezone)}` : ""} · {photo.note || "No observation recorded."}</figcaption>
+      </figure>)}</div>}
     </section>
     {source.guest_origin && !sharedPath && <section><h2>Original guest capture</h2><p>{source.guest_origin.recorded_by} · {displayTimestamp(source.guest_origin.created_at,source.project.timezone)}</p><p>Saved to this account {displayTimestamp(source.guest_origin.handover_at,source.project.timezone)}. Original guest edits and attribution are preserved.</p></section>}
     <section className="report-signatures"><div><h2>{trial || guestOriginal ? "Guest trial / unverified" : source.submitted_role === "pm" ? "Site record / PM" : "Site foreman / site engineer"}</h2><p>{`Recorded by ${source.submitted_by}`}</p><p className="report-signature-line">Signature / date</p></div>

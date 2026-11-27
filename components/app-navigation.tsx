@@ -222,17 +222,20 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
   function selectMock() {
     // The mock is demo data, not a real project: there is no server-side
     // select to run. It still counts as a project switch, so listeners
-    // refresh, and the path itself marks the mock as current.
+    // refresh, and the path itself marks the mock as current. The landing
+    // is the mock's Today view, explicitly — tapping the current mock from
+    // a sub-view (BoQ, Team, log) must return to Today, exactly as
+    // tapping a current real project returns to its Today.
     setError("");
     sheet.current?.close();
     window.dispatchEvent(new Event("siteledger-project-change"));
-    router.push("/projects/mock");
+    router.push("/projects/mock?view=today");
     router.refresh();
   }
   return <>
     <button type="button" className="stitch-project-switch" data-tour="switch-project" onClick={() => { setError(""); sheet.current?.showModal(); }}>
       <DiaryIcon name="building" size={18}/><strong>{project ?? selected?.name ?? "Choose a project"}</strong>
-      {selected?.client && <span className="stitch-kicker">{selected.client}</span>}<DiaryIcon name="switch" size={18}/>
+      {isMock ? <span className="stitch-kicker">Demo data</span> : selected?.client && <span className="stitch-kicker">{selected.client}</span>}<DiaryIcon name="switch" size={18}/>
     </button>
     <dialog ref={sheet} className="action-dialog stitch-sheet" aria-label="Switch project">
       <div className="action-dialog__body">

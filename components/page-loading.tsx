@@ -21,6 +21,11 @@ export function PageLoading({ title, detail, variant = "rows", header }: {
   return <>
     {header}
     <DiaryNotice busy title={title}>{detail}</DiaryNotice>
+    {/* The tall skeleton bars first: on a tab change the loader must read
+      as a skeleton at once, not as a heading over blank paper — the audit
+      saw only the heading, and these are the bars a project switch
+      already shows. The shaped diary rows follow below them. */}
+    <div className="stitch-skeleton-stack" aria-hidden="true"><i /><i /><i /></div>
     <div className={`diary-skeleton diary-skeleton--${variant}`} aria-hidden="true">
       {variant === "report" && <div className="diary-skeleton__total"><i style={{ width: "38%" }} /><i style={{ width: "28%", height: 24 }} /></div>}
       {variant === "form"
