@@ -20,15 +20,24 @@ export class IntakeUnavailableError extends Error {
 // caller can tell a deployment misconfiguration apart from a transport or RPC
 // failure (IntakeUnavailableError). Never thrown for user input.
 export class IntakeConfigError extends Error {
-  constructor() { super("Site note storage is not configured on this deployment."); }
+  // Names of the missing server values (names only, never any value), so the
+  // deployment log can say exactly which one is absent.
+  readonly missing: string[];
+  constructor(missing: string[] = []) {
+    super(missing.length
+      ? `Site note storage is not configured on this deployment (missing: ${missing.join(", ")}).`
+      : "Site note storage is not configured on this deployment.");
+    this.missing = missing;
+  }
 }
 function configuration() {
   // Server configuration must stay runtime-resolved: a local preview must not
   // combine a build-time hosted URL with its isolated local service credentials.
   const url = Reflect.get(process.env, "NEXT_PUBLIC_SUPABASE_URL") as string | undefined;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new IntakeConfigError();
-  return { url, headers: { apikey: key, ...(key.startsWith("eyJ") ? { Authorization: `Bearer ${key}` } : {}) } };
+  const missing = [...(!url ? ["NEXT_PUBLIC_SUPABASE_URL"] : []), ...(!key ? ["SUPABASE_SERVICE_ROLE_KEY"] : [])];
+  if (missing.length) throw new IntakeConfigError(missing);
+  return { url: url as string, headers: { apikey: key as string, ...((key as string).startsWith("eyJ") ? { Authorization: `Bearer ${key}` } : {}) } };
 }
 
 export async function intakeRpc<T>(name: string, parameters: Record<string, unknown>): Promise<T> {

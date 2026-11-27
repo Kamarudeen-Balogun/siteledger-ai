@@ -8,53 +8,53 @@
    from Tailwind; this file supplies only the Stitch design tokens Tailwind
    does not know: colours, type styles and the space/margin/gutter scale. */
 .transplant {
-  --sl-surface: light-dark(#fff8f5, #211914);
-  --sl-surface-dim: light-dark(#e0d8d5, #3a2f28);
-  --sl-surface-bright: light-dark(#fff8f5, #211914);
-  --sl-surface-container-lowest: light-dark(#ffffff, #48362d);
-  --sl-surface-container-low: light-dark(#faf2ee, #30231d);
-  --sl-surface-container: light-dark(#f4ece8, #3b2c24);
-  --sl-surface-container-high: light-dark(#eee7e3, #4a3a32);
-  --sl-surface-container-highest: light-dark(#e9e1dd, #553e34);
-  --sl-on-surface: light-dark(#1e1b19, #f8eee7);
-  --sl-on-surface-variant: light-dark(#59413a, #d8bfb3);
-  --sl-inverse-surface: light-dark(#33302d, #f7efeb);
-  --sl-inverse-on-surface: light-dark(#f7efeb, #33302d);
-  --sl-outline: light-dark(#8d7168, #a08a7e);
-  --sl-outline-variant: light-dark(#e1bfb5, #594238);
-  --sl-surface-tint: light-dark(#ac3400, #ffb59d);
-  --sl-primary: light-dark(#9b2f00, #ffb59d);
-  --sl-on-primary: light-dark(#ffffff, #390c00);
-  --sl-primary-container: light-dark(#c2410c, #c2410c);
-  --sl-on-primary-container: light-dark(#ffece7, #ffece7);
-  --sl-inverse-primary: light-dark(#ffb59d, #9b2f00);
-  --sl-secondary: light-dark(#456818, #a9d477);
-  --sl-on-secondary: light-dark(#ffffff, #102000);
-  --sl-secondary-container: light-dark(#c2ed8d, #34451f);
-  --sl-on-secondary-container: light-dark(#496d1c, #c2ed8d);
-  --sl-secondary-fixed: light-dark(#c5f090, #c5f090);
-  --sl-secondary-fixed-dim: light-dark(#a9d477, #a9d477);
-  --sl-on-secondary-fixed: light-dark(#102000, #102000);
-  --sl-on-secondary-fixed-variant: light-dark(#2e4f00, #2e4f00);
-  --sl-tertiary: light-dark(#ab0e14, #ffb4ab);
-  --sl-on-tertiary: light-dark(#ffffff, #410002);
-  --sl-tertiary-container: light-dark(#cf2d29, #542820);
-  --sl-on-tertiary-container: light-dark(#ffecea, #ffdad6);
-  --sl-tertiary-fixed: light-dark(#ffdad6, #ffdad6);
-  --sl-tertiary-fixed-dim: light-dark(#ffb4ab, #ffb4ab);
-  --sl-on-tertiary-fixed: light-dark(#410002, #410002);
-  --sl-on-tertiary-fixed-variant: light-dark(#93000b, #93000b);
-  --sl-error: light-dark(#ba1a1a, #ffb4ab);
-  --sl-on-error: light-dark(#ffffff, #410002);
-  --sl-error-container: light-dark(#ffdad6, #542820);
-  --sl-on-error-container: light-dark(#93000a, #ffdad6);
-  --sl-primary-fixed: light-dark(#ffdbd0, #ffdbd0);
-  --sl-primary-fixed-dim: light-dark(#ffb59d, #ffb59d);
-  --sl-on-primary-fixed: light-dark(#390c00, #390c00);
-  --sl-on-primary-fixed-variant: light-dark(#832600, #832600);
-  --sl-background: light-dark(#fff8f5, #211914);
-  --sl-on-background: light-dark(#1e1b19, #f8eee7);
-  --sl-surface-variant: light-dark(#e9e1dd, #553e34);
+  --sl-surface: #fff8f5;
+  --sl-surface-dim: #e0d8d5;
+  --sl-surface-bright: #fff8f5;
+  --sl-surface-container-lowest: #ffffff;
+  --sl-surface-container-low: #faf2ee;
+  --sl-surface-container: #f4ece8;
+  --sl-surface-container-high: #eee7e3;
+  --sl-surface-container-highest: #e9e1dd;
+  --sl-on-surface: #1e1b19;
+  --sl-on-surface-variant: #59413a;
+  --sl-inverse-surface: #33302d;
+  --sl-inverse-on-surface: #f7efeb;
+  --sl-outline: #8d7168;
+  --sl-outline-variant: #e1bfb5;
+  --sl-surface-tint: #ac3400;
+  --sl-primary: #9b2f00;
+  --sl-on-primary: #ffffff;
+  --sl-primary-container: #c2410c;
+  --sl-on-primary-container: #ffece7;
+  --sl-inverse-primary: #ffb59d;
+  --sl-secondary: #456818;
+  --sl-on-secondary: #ffffff;
+  --sl-secondary-container: #c2ed8d;
+  --sl-on-secondary-container: #496d1c;
+  --sl-secondary-fixed: #c5f090;
+  --sl-secondary-fixed-dim: #a9d477;
+  --sl-on-secondary-fixed: #102000;
+  --sl-on-secondary-fixed-variant: #2e4f00;
+  --sl-tertiary: #ab0e14;
+  --sl-on-tertiary: #ffffff;
+  --sl-tertiary-container: #cf2d29;
+  --sl-on-tertiary-container: #ffecea;
+  --sl-tertiary-fixed: #ffdad6;
+  --sl-tertiary-fixed-dim: #ffb4ab;
+  --sl-on-tertiary-fixed: #410002;
+  --sl-on-tertiary-fixed-variant: #93000b;
+  --sl-error: #ba1a1a;
+  --sl-on-error: #ffffff;
+  --sl-error-container: #ffdad6;
+  --sl-on-error-container: #93000a;
+  --sl-primary-fixed: #ffdbd0;
+  --sl-primary-fixed-dim: #ffb59d;
+  --sl-on-primary-fixed: #390c00;
+  --sl-on-primary-fixed-variant: #832600;
+  --sl-background: #fff8f5;
+  --sl-on-background: #1e1b19;
+  --sl-surface-variant: #e9e1dd;
   --sl-ink: var(--sl-on-surface);
 }
 .transplant .bg-surface { background-color: var(--sl-surface); }
@@ -443,3 +443,80 @@
 .transplant .divide-outline-variant > :not([hidden]) ~ :not([hidden]) { border-color: var(--sl-outline-variant); }
 .transplant .focus\:ring-primary:focus { --tw-ring-color: var(--sl-primary); }
 
+
+/* Dark theme overrides (plain values — light-dark() stored in a custom
+   property compiles to two space-separated values under Tailwind v4 /
+   Lightning CSS, which is invalid for background-color/color and drops
+   the declaration, e.g. the transparent menu drawer). */
+html[data-theme="dark"] .transplant {
+  --sl-surface: #211914;
+  --sl-surface-dim: #3a2f28;
+  --sl-surface-bright: #211914;
+  --sl-surface-container-lowest: #48362d;
+  --sl-surface-container-low: #30231d;
+  --sl-surface-container: #3b2c24;
+  --sl-surface-container-high: #4a3a32;
+  --sl-surface-container-highest: #553e34;
+  --sl-on-surface: #f8eee7;
+  --sl-on-surface-variant: #d8bfb3;
+  --sl-inverse-surface: #f7efeb;
+  --sl-inverse-on-surface: #33302d;
+  --sl-outline: #a08a7e;
+  --sl-outline-variant: #594238;
+  --sl-surface-tint: #ffb59d;
+  --sl-primary: #ffb59d;
+  --sl-on-primary: #390c00;
+  --sl-inverse-primary: #9b2f00;
+  --sl-secondary: #a9d477;
+  --sl-on-secondary: #102000;
+  --sl-secondary-container: #34451f;
+  --sl-on-secondary-container: #c2ed8d;
+  --sl-tertiary: #ffb4ab;
+  --sl-on-tertiary: #410002;
+  --sl-tertiary-container: #542820;
+  --sl-on-tertiary-container: #ffdad6;
+  --sl-error: #ffb4ab;
+  --sl-on-error: #410002;
+  --sl-error-container: #542820;
+  --sl-on-error-container: #ffdad6;
+  --sl-background: #211914;
+  --sl-on-background: #f8eee7;
+  --sl-surface-variant: #553e34;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-theme="system"] .transplant {
+  --sl-surface: #211914;
+  --sl-surface-dim: #3a2f28;
+  --sl-surface-bright: #211914;
+  --sl-surface-container-lowest: #48362d;
+  --sl-surface-container-low: #30231d;
+  --sl-surface-container: #3b2c24;
+  --sl-surface-container-high: #4a3a32;
+  --sl-surface-container-highest: #553e34;
+  --sl-on-surface: #f8eee7;
+  --sl-on-surface-variant: #d8bfb3;
+  --sl-inverse-surface: #f7efeb;
+  --sl-inverse-on-surface: #33302d;
+  --sl-outline: #a08a7e;
+  --sl-outline-variant: #594238;
+  --sl-surface-tint: #ffb59d;
+  --sl-primary: #ffb59d;
+  --sl-on-primary: #390c00;
+  --sl-inverse-primary: #9b2f00;
+  --sl-secondary: #a9d477;
+  --sl-on-secondary: #102000;
+  --sl-secondary-container: #34451f;
+  --sl-on-secondary-container: #c2ed8d;
+  --sl-tertiary: #ffb4ab;
+  --sl-on-tertiary: #410002;
+  --sl-tertiary-container: #542820;
+  --sl-on-tertiary-container: #ffdad6;
+  --sl-error: #ffb4ab;
+  --sl-on-error: #410002;
+  --sl-error-container: #542820;
+  --sl-on-error-container: #ffdad6;
+  --sl-background: #211914;
+  --sl-on-background: #f8eee7;
+  --sl-surface-variant: #553e34;
+  }
+}

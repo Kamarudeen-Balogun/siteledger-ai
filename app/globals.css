@@ -431,19 +431,19 @@ h1, h2, h3, [id] { scroll-margin-top: 24px; }
 html[data-theme="dark"] { color-scheme: dark; }
 @media (prefers-color-scheme: dark) { html[data-theme="system"] { color-scheme: dark; } }
 :root {
-  --diary-dark: light-dark(#faf7f2, #1e1916);
-  --diary-surface: light-dark(#fffdf9, #2b221d);
-  --diary-inset: light-dark(#f3ede3, #382c24);
-  --diary-line: light-dark(#e7e0d4, #58483e);
-  --diary-edge: light-dark(#d6cebe, #705d50);
-  --diary-ink: light-dark(#1c1917, #f6eee6);
-  --diary-muted: light-dark(#57534e, #d6c4b8);
-  --diary-orange: light-dark(#a1380b, #ffb18e);
-  --diary-green: light-dark(#3f6212, #c2de91);
-  --diary-success: light-dark(#edf1e2, #2d3824);
-  --diary-warning: light-dark(#fff3dd, #422d1f);
-  --diary-warning-ink: light-dark(#78350f, #f9cd90);
-  --diary-red: light-dark(#b91c1c, #ffaba5);
+  --diary-dark: #faf7f2;
+  --diary-surface: #fffdf9;
+  --diary-inset: #f3ede3;
+  --diary-line: #e7e0d4;
+  --diary-edge: #d6cebe;
+  --diary-ink: #1c1917;
+  --diary-muted: #57534e;
+  --diary-orange: #a1380b;
+  --diary-green: #3f6212;
+  --diary-success: #edf1e2;
+  --diary-warning: #fff3dd;
+  --diary-warning-ink: #78350f;
+  --diary-red: #b91c1c;
   --background: var(--diary-dark);
   --foreground: var(--diary-ink);
   --rule: var(--diary-line);
@@ -695,4 +695,41 @@ html:has(dialog[open]) { overflow: hidden; }
   :root { color-scheme: light !important; }
   .report-document { border: 0; padding: 0; background: white; }
   .ada-help { display: none; }
+}
+
+/* Dark theme overrides (plain values — light-dark() stored in a custom
+   property compiles to two space-separated values under Tailwind v4 /
+   Lightning CSS, which is invalid for background-color/color and drops
+   the declaration, e.g. the transparent menu drawer). */
+html[data-theme="dark"] {
+  --diary-dark: #1e1916;
+  --diary-surface: #2b221d;
+  --diary-inset: #382c24;
+  --diary-line: #58483e;
+  --diary-edge: #705d50;
+  --diary-ink: #f6eee6;
+  --diary-muted: #d6c4b8;
+  --diary-orange: #ffb18e;
+  --diary-green: #c2de91;
+  --diary-success: #2d3824;
+  --diary-warning: #422d1f;
+  --diary-warning-ink: #f9cd90;
+  --diary-red: #ffaba5;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-theme="system"] {
+  --diary-dark: #1e1916;
+  --diary-surface: #2b221d;
+  --diary-inset: #382c24;
+  --diary-line: #58483e;
+  --diary-edge: #705d50;
+  --diary-ink: #f6eee6;
+  --diary-muted: #d6c4b8;
+  --diary-orange: #ffb18e;
+  --diary-green: #c2de91;
+  --diary-success: #2d3824;
+  --diary-warning: #422d1f;
+  --diary-warning-ink: #f9cd90;
+  --diary-red: #ffaba5;
+  }
 }

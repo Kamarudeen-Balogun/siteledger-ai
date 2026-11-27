@@ -248,7 +248,7 @@ export async function accountApi(request: Request, action: string): Promise<Resp
     // never hides the real failure from the deployment logs. Only the action
     // and the error's own name/message/stack are logged — never the request
     // body, tokens, passwords or codes.
-    if (!(error instanceof AccountError)) console.error("accountApi failed", { action, name: error instanceof Error ? error.name : "unknown", message: error instanceof Error ? error.message : "unknown", stack: error instanceof Error ? error.stack : undefined });
+    if (!(error instanceof AccountError)) console.error("accountApi failed", { action, name: error instanceof Error ? error.name : "unknown", message: error instanceof Error ? error.message : "unknown", ...(error instanceof IntakeConfigError && error.missing.length ? { missing: error.missing } : {}), stack: error instanceof Error ? error.stack : undefined });
     const message = error instanceof AccountError ? error.message
       : error instanceof IntakeConfigError ? "Account access is not set up on this deployment yet. Your records are preserved — try the main SiteLedger website."
       : "Account access is temporarily unavailable. Try again; your records are preserved.";
