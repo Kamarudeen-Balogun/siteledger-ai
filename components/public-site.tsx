@@ -1,4 +1,5 @@
 "use client";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { DiaryIcon } from "./diary-icon";
@@ -30,7 +31,14 @@ function PublicMenu() {
       <span className="font-label-ledger text-label-ledger text-on-surface">Menu</span>
       <DiaryIcon name="switch" size={18} />
     </button>
-    {open && <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Site menu">
+    {/* The dialog is portalled to document.body, NOT rendered inside the
+        header: the header uses backdrop-blur-xl, and a backdrop-filter makes
+        its element the containing block for fixed-position descendants, so a
+        `fixed inset-0` dialog nested in the header is only the header's ~64px
+        box instead of the viewport (the drawer looked transparent because its
+        solid background covered only the top strip). Portalling keeps the
+        header's blur and gives the dialog the full viewport again. */}
+    {open && createPortal(<div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Site menu">
       <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="absolute inset-0 h-full w-full cursor-default bg-black/40" />
       <div className="absolute right-0 top-0 flex h-full w-[300px] max-w-[85vw] flex-col bg-surface shadow-xl">
         <div className="flex h-16 items-center justify-between px-4 pt-safe">
@@ -48,7 +56,7 @@ function PublicMenu() {
           <a href="https://t.me/SiteLedgerNGbot" target="_blank" rel="noreferrer" className="mt-2 flex min-h-[48px] items-center justify-center gap-2 rounded font-label-ledger text-label-ledger text-primary">Telegram @SiteLedgerNGbot</a>
         </div>
       </div>
-    </div>}
+    </div>, document.body)}
   </>;
 }
 
