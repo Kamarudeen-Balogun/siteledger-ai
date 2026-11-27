@@ -442,3 +442,4 @@
    the help-search focus ring colour. */
 .transplant .divide-outline-variant > :not([hidden]) ~ :not([hidden]) { border-color: var(--sl-outline-variant); }
 .transplant .focus\:ring-primary:focus { --tw-ring-color: var(--sl-primary); }
+
