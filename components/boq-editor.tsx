@@ -14,7 +14,6 @@ import { decimal } from "@/lib/costing/decimal";
 import { suppliedDecimal } from "@/lib/projects/boq-input";
 const BoqImporter = dynamic(() => import("./boq-importer"), { loading: () => <p role="status">Opening import…</p>, ssr: false });
 const field = "mt-2 min-h-12 w-full border border-rule bg-[#fffdf9] px-3 py-3 text-base";
-const button = "work-button";
 export function BoqEditor({ projectId, currency, rows, editable, overview }: { projectId: string; currency: string; rows: ProjectDashboard["rows"]; editable: boolean; overview?: ReactNode }) {
   const router = useRouter(), { confirm, confirmation } = useActionConfirmation();
   const [selected, setSelected] = useState<BoqRow | null>(null), [open, setOpen] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState(""), [message, setMessage] = useState("");
@@ -30,6 +29,16 @@ export function BoqEditor({ projectId, currency, rows, editable, overview }: { p
     if (dialog && !dialog.open) dialog.showModal();
     dialog?.querySelector(".action-dialog__body")?.scrollTo(0, 0);
   }, [importing]);
+  // Add and adjust use the same bottom sheet, so the form opens in view
+  // wherever the row sits — the old inline form opened at the top of the
+  // page, far above a tapped row, and looked like nothing had happened.
+  const formDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const dialog = formDialog.current;
+    if (dialog && !dialog.open) dialog.showModal();
+    dialog?.querySelector(".action-dialog__body")?.scrollTo(0, 0);
+  }, [open ]);
   async function discard() { return !dirty || await confirm({title:"Discard these BoQ edits?",description:"Your changes have not been saved. The existing BoQ is preserved.",confirmLabel:"Discard edits",danger:true}); }
   async function edit(row: BoqRow | null) { if(!await discard())return; setSelected(row); setOpen(true); setError(""); setErrors({}); setMessage(""); setNewId(crypto.randomUUID()); setCode(row?.item_code??nextBoqCode(rows));setDirty(false);setDetails(false);setLineTotal(row?formatMoney(decimal(row.rate,"rate").times(row.boq_quantity).toFixed(),currency):null); }
   async function retire(row:BoqRow) {
@@ -53,14 +62,18 @@ export function BoqEditor({ projectId, currency, rows, editable, overview }: { p
     {editable && !open && !importing && <div className="stitch-two-actions"><button type="button" className="stitch-button" data-primary onClick={()=>{setImporting(true);setMessage("");}} data-tour="boq-upload"><DiaryIcon name="upload" size={20}/>+ Upload BoQ File</button><button type="button" className="stitch-button" data-white disabled={busy} onClick={() => edit(null)} data-tour="boq-add"><DiaryIcon name="plus" size={20}/>+ Add item</button></div>}
     {message && <p className="stitch-card" role="status">{message}</p>}
     {importing&&editable&&<dialog ref={importDialog} className="action-dialog stitch-sheet" aria-label="Import your BoQ" onClose={()=>setImporting(false)}><BoqImporter projectId={projectId} currency={currency} existing={rows} inSheet close={()=>{importDialog.current?.close();setImporting(false);}} saved={message=>{setMessage(message);importDialog.current?.close();setImporting(false);}}/></dialog>}
-    {open && editable && <form key={selected?.id ?? newId} onSubmit={save} noValidate onChange={event=>{setDirty(true);const values=new FormData(event.currentTarget),qty=suppliedDecimal(String(values.get("boq_quantity")??"")),rate=suppliedDecimal(String(values.get("rate")??""));setLineTotal(qty&&rate?formatMoney(decimal(qty,"quantity").times(rate).toFixed(),currency):null);}} data-unsaved={dirty||undefined} className="my-7 max-w-3xl diary-panel"><h2 className="font-serif text-2xl">{selected ? "Edit BoQ item" : "Add a work item"}</h2><div className="grid gap-x-6 sm:grid-cols-2">
+    {open && editable && <dialog ref={formDialog} className="action-dialog stitch-sheet" aria-label={selected ? "Edit BoQ item" : "Add a work item"} onClose={() => setOpen(false)} onCancel={event => { if (!dirty) return; event.preventDefault(); void discard().then(ok => { if (ok) { setOpen(false); setDirty(false); } }); }}>
+      <form key={selected?.id ?? newId} onSubmit={save} noValidate onChange={event=>{setDirty(true);const values=new FormData(event.currentTarget),qty=suppliedDecimal(String(values.get("boq_quantity")??"")),rate=suppliedDecimal(String(values.get("rate")??""));setLineTotal(qty&&rate?formatMoney(decimal(qty,"quantity").times(rate).toFixed(),currency):null);}} data-unsaved={dirty||undefined}>
+      <div className="action-dialog__body"><h2>{selected ? "Edit BoQ item" : "Add a work item"}</h2><div className="grid gap-x-6 sm:grid-cols-2">
       <label className="mt-5 block sm:col-span-2" htmlFor="boq-description">Work description{input("description","e.g. 225 mm blockwork")}</label>
       <label className="mt-5 block">Measurement unit<select className={field} name="unit" defaultValue={selected?.unit ?? "m2"} disabled={selected?.used}>{boqUnits.map(unit => <option key={unit} value={unit}>{displayUnit(unit)} · {({m2:"area",m3:"volume",tonne:"weight",point:"count",day:"time"})[unit]}</option>)}</select>{selected?.used && <><input type="hidden" name="unit" value={selected.unit} /><span className="mt-2 block text-sm leading-6">Fixed because this unit is used in confirmed work.</span></>}{errorFor("unit")}</label>
       <label className="mt-5 block" htmlFor="boq-boq_quantity">Total planned quantity{input("boq_quantity","e.g. 420")}<span className="mt-2 block text-sm leading-6">The full quantity planned for this item.</span></label>
       <label className="mt-5 block sm:col-span-2" htmlFor="boq-rate">Rate per unit ({currency}){input("rate","Your supplied rate")}<span className="mt-2 block text-sm leading-6">Use your QS-verified rate. Commas can group thousands; use a dot for decimals.</span></label>
       {lineTotal&&<p className="mt-4 font-semibold" aria-live="polite">Line total {lineTotal}</p>}
     </div><details className="mt-6 border-t border-rule pt-4" open={details} onToggle={event=>setDetails(event.currentTarget.open)}><summary className="min-h-12 cursor-pointer">Optional details · code and section</summary><div className="grid gap-x-6 sm:grid-cols-2"><label className="mt-4 block" htmlFor="boq-item_code">Item code{input("item_code")}</label><label className="mt-4 block" htmlFor="boq-section">Section{input("section")}</label></div><p className="mt-3 text-sm leading-6">We generate a reference code and use General unless you choose your own.</p></details>
-      {error && <p role="alert" className="my-5 border-l-4 border-amber-700 p-4 text-amber-900">{error}</p>}<div className="mt-6 flex flex-wrap gap-3"><button className={button + " work-button-primary"} disabled={busy}>{busy ? "Saving…" : "Review and save"}</button><button type="button" className={button} disabled={busy} onClick={async()=>{if(await discard()){setOpen(false);setDirty(false);}}}>Cancel editing</button>{selected&&<button type="button" className="text-link" disabled={busy} onClick={()=>void retire(selected)}>Remove item</button>}</div></form>}
+      {error && <p role="alert" className="my-5 border-l-4 border-amber-700 p-4 text-amber-900">{error}</p>}
+      </div><div className="action-dialog__actions stitch-sheet-actions"><button type="button" className="stitch-button" disabled={busy} onClick={async()=>{if(await discard()){setOpen(false);setDirty(false);}}}>Cancel editing</button>{selected&&<button type="button" className="text-link" disabled={busy} onClick={()=>void retire(selected)}>Remove item</button>}<button className="stitch-button" data-primary disabled={busy}>{busy ? "Saving…" : "Review and save"}</button></div>
+      </form></dialog>}
     {overview}
     <div className="stitch-title-row"><h2 className="stitch-section-title">Contract Schedule Items</h2><span className="stitch-kicker">Sorted by trade</span></div>
     {!rows.length ? <p className="stitch-card">No BoQ items yet. Site notes can still be recorded while rates are prepared.</p> : <ul className="stitch-boq-items" aria-label="Supplied BoQ price list" data-tour="boq-progress">{rows.map((row,index) => <li key={row.id} id={`boq-item-${row.item_code}`} className="stitch-card scroll-mt-24">
@@ -73,7 +86,7 @@ export function BoqEditor({ projectId, currency, rows, editable, overview }: { p
       </dl>
       <div className="stitch-title-row"><small>Measured progress</small><strong>{formatQuantityWithUnit(row.progress.cumulative_quantity, row.unit)} · {displayRatio(row.progress.percentage_complete)}%</strong></div>
       <progress max={100} value={Math.min(100, Number(row.progress.percentage_complete))} aria-label={`Progress for ${row.description}`}/>
-      {editable && <button type="button" className="stitch-button mt-3" disabled={busy||importing} onClick={() => edit(row)} aria-label={`Edit ${row.item_code}`}>Adjust item</button>}
+      {editable && <button type="button" className="text-link mt-3" disabled={busy||importing} onClick={() => edit(row)} aria-label={`Edit ${row.item_code}`}>Adjust item</button>}
     </li>)}</ul>}
   </section>;
 }

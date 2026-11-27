@@ -12,7 +12,7 @@ async function Content({searchParams}:{searchParams:Promise<{view?:string}>}) {
   if(!account)redirect("/account");
   const hash=await currentSessionHash();
   if(params.view==="admin"||params.view==="history"){
-    const data=await feedbackData(hash);
+    const data=await feedbackData(hash,params.view==="history");
     if(!data||(params.view==="admin"&&!data.admin))notFound();
     return <><WorkspaceHeader current="account" title={params.view==="admin"?"Feedback Inbox":"My Feedback"} hideProfile/><FeedbackHistory items={data.items} admin={params.view==="admin"&&data.admin}/></>;
   }

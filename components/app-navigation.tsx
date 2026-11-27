@@ -179,6 +179,11 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
   const id = projectId ?? navigation?.projectId;
   const projects = navigation?.projects ?? [];
   const selected = projects.find(item => item.id === id);
+  // The mock project is not a real project: it has no server-side active
+  // state, so "mock is current" is derived from the path, never from the
+  // server project id — the session check would otherwise overwrite it
+  // with the previous real project on every navigation.
+  const isMock = (navigation?.pathname ?? "").startsWith("/projects/mock");
   // The mock project is a demo-data entry in the switcher, not a real
   // project. It hides when the user deletes it (same per-person flag as
   // MockProjectControl) and returns via Restore in Help / Settings.
@@ -200,9 +205,12 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
       // Projects list or a project overview must land on the project
       // overview — landing on the team page instead made its role-gated
       // Invite button appear and vanish as the project changed. Switching
-      // from a team page stays on the team page.
+      // from a team page stays on the team page. Switching back from the
+      // mock project always lands on the new Today for that project —
+      // never on the old project page.
+      const fromMock = (navigation?.pathname ?? "").startsWith("/projects/mock");
       const onTeam = /^\/projects\/[a-f0-9-]{36}\/team/.test(navigation?.pathname ?? "");
-      const path = current === "today" ? "/today" : current === "boq" ? `/projects/${id}/boq` : current === "reports" ? "/reports" : onTeam ? `/projects/${id}/team` : `/projects/${id}`;
+      const path = fromMock ? "/today" : current === "today" ? "/today" : current === "boq" ? `/projects/${id}/boq` : current === "reports" ? "/reports" : onTeam ? `/projects/${id}/team` : `/projects/${id}`;
       router.push(path);
       router.refresh();
     } catch (error) {
@@ -210,6 +218,16 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
       window.dispatchEvent(new Event("siteledger-project-change"));
       setError(error instanceof Error ? error.message : "Could not switch projects.");
     } finally { setBusy(false); }
+  }
+  function selectMock() {
+    // The mock is demo data, not a real project: there is no server-side
+    // select to run. It still counts as a project switch, so listeners
+    // refresh, and the path itself marks the mock as current.
+    setError("");
+    sheet.current?.close();
+    window.dispatchEvent(new Event("siteledger-project-change"));
+    router.push("/projects/mock");
+    router.refresh();
   }
   return <>
     <button type="button" className="stitch-project-switch" data-tour="switch-project" onClick={() => { setError(""); sheet.current?.showModal(); }}>
@@ -221,10 +239,10 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
         <h2>Switch project</h2>
         {projects.length ? <ul>{projects.map(item => <li key={item.id}>
           <button type="button" className="stitch-menu-row" disabled={busy} onClick={() => void select(item.id)}>
-            <DiaryIcon name="building"/><span><strong>{item.name}</strong><small>{item.archived_at ? "Archived" : item.client}</small></span>{id===item.id ? <span className="stitch-switch-current"><DiaryIcon name="verified" size={18}/><span className="stitch-kicker">Current</span></span> : <DiaryIcon name="chevron" size={18}/>}
+            <DiaryIcon name="building"/><span><strong>{item.name}</strong><small>{item.archived_at ? "Archived" : item.client}</small></span>{id===item.id && !isMock ? <span className="stitch-switch-current"><DiaryIcon name="verified" size={18}/><span className="stitch-kicker">Current</span></span> : <DiaryIcon name="chevron" size={18}/>}
           </button>
         </li>)}</ul> : <p>No projects to switch to yet.</p>}
-        {!mockHidden && <Link href="/projects/mock" className="stitch-menu-row" onClick={() => sheet.current?.close()}><DiaryIcon name="flask"/><span><strong>Mock project — Sample Duplex, Ikeja</strong><small>Demo data · not a real project</small></span><span className="stitch-chip">Demo</span></Link>}
+        {!mockHidden && <button type="button" className="stitch-menu-row" disabled={busy} onClick={() => selectMock()}><DiaryIcon name="flask"/><span><strong>Mock project — Sample Duplex, Ikeja</strong><small>Demo data · not a real project</small></span>{isMock ? <span className="stitch-switch-current"><DiaryIcon name="verified" size={18}/><span className="stitch-kicker">Current</span></span> : <span className="stitch-chip">Demo</span>}</button>}
         {error && <p role="alert">{error}</p>}
       </div>
       <div className="action-dialog__actions stitch-sheet-actions"><Link href="/projects" className="work-button" onClick={() => sheet.current?.close()}>All projects</Link><button type="button" className="work-button" onClick={() => sheet.current?.close()}>Close</button></div>
@@ -235,13 +253,16 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
 export function WorkspaceNavigation({ current }: { current: WorkspaceArea }) {
   const navigation = useContext(Navigation);
   const path = navigation?.pathname ?? "/";
-  const project = /^\/projects\/([a-f0-9-]{36})(?:\/|$)/.exec(path)?.[1] ?? navigation?.projectId;
-  const projectHref = project ? `/projects/${project}` : null;
+  // On the mock project the dock stays on the mock: its Today, Reports,
+  // BoQ and Team tabs are the mock views, never the real project's pages.
+  const isMock = path.startsWith("/projects/mock");
+  const project = isMock ? null : /^\/projects\/([a-f0-9-]{36})(?:\/|$)/.exec(path)?.[1] ?? navigation?.projectId;
+  const projectHref = isMock ? "/projects/mock" : project ? `/projects/${project}` : null;
   const links = [
-    { href: "/today", label: "Today", area: "today", icon: "today" },
-    { href: "/reports", label: "Reports & Log", area: "reports", icon: "reports" },
-    { href: projectHref ? `${projectHref}/boq` : "/projects", label: "BoQ & Rates", area: "boq", icon: "boq" },
-    { href: projectHref ? `${projectHref}/team` : "/projects", label: "Projects & Team", area: "projects", icon: "team" },
+    { href: isMock ? "/projects/mock?view=today" : "/today", label: "Today", area: "today", icon: "today" },
+    { href: isMock ? "/projects/mock?view=log" : "/reports", label: "Reports & Log", area: "reports", icon: "reports" },
+    { href: isMock ? "/projects/mock?view=boq" : projectHref ? `${projectHref}/boq` : "/projects", label: "BoQ & Rates", area: "boq", icon: "boq" },
+    { href: isMock ? "/projects/mock?view=team" : projectHref ? `${projectHref}/team` : "/projects", label: "Projects & Team", area: "projects", icon: "team" },
   ] as const;
   function back() {
     if (navigation) navigation.back();

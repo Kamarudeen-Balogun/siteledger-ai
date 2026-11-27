@@ -315,23 +315,23 @@ nav.work-flow { margin: 0; }
 .ada-help .ada-panel { width: min(92vw, 360px); max-height: var(--ada-panel-height); background: var(--stitch-paper); box-shadow: 0 18px 44px rgb(0 0 0 / 34%); }
 .ada-help .ada-panel:not([data-dragging]), .ada-help .ada-launch:not([data-dragging]) { transition: left 220ms ease, top 220ms ease; }
 .ada-help .ada-launch[data-dragging] { cursor: grabbing; transform: scale(1.05); }
-.ada-help .ada-panel header { gap: 9px; padding: 9px 12px; flex: none; touch-action: none; user-select: none; cursor: grab; }
+.ada-help .ada-panel header { gap: 10px; padding: 12px 14px; flex: none; touch-action: none; user-select: none; cursor: grab; }
 .ada-help .ada-panel[data-dragging] header { cursor: grabbing; }
 .ada-help .ada-panel header > div { flex: 1; min-width: 0; }
 .ada-help .ada-panel header strong, .ada-help .ada-panel header small { display: block; line-height: 1.25; }
 .ada-help .ada-panel header small { margin-top: 2px; font-size: 11px; opacity: .88; }
 .ada-help .ada-panel header button { min-width: 44px; min-height: 44px; padding: 0; background: transparent; }
-.ada-help .ada-messages { flex: 1 1 auto; padding: 10px 11px; font-size: 13px; }
-.ada-help .ada-answer { padding: 9px 11px; background: var(--stitch-card); line-height: 1.5; }
-.ada-help .ada-question { margin-left: 28px; line-height: 1.5; }
+.ada-help .ada-messages { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; padding: 16px 14px; font-size: 13px; line-height: 1.6; }
+.ada-help .ada-answer { margin-bottom: 0; padding: 12px 14px; background: var(--stitch-card); line-height: 1.6; }
+.ada-help .ada-question { margin-bottom: 0; margin-left: 28px; padding: 12px 14px; line-height: 1.6; }
 .ada-help .ada-answer .text-link { min-height: 44px; }
-.ada-help .ada-topics { display: flex; flex: none; flex-wrap: nowrap; overflow-x: auto; margin: 0; padding: 5px 11px; gap: 6px; }
+.ada-help .ada-topics { display: flex; flex: none; flex-wrap: wrap; margin: 0; padding: 12px 14px; gap: 8px; }
 .ada-help .ada-topics button { min-height: 44px; flex: none; white-space: nowrap; border-color: var(--stitch-accent); color: var(--stitch-accent); font-size: 12px; font-weight: 600; }
-.ada-help .ada-panel form { display: flex; flex: none; gap: 7px; padding: 7px 11px; border-color: var(--stitch-divider); }
+.ada-help .ada-panel form { display: flex; flex: none; gap: 10px; padding: 12px 14px; border-color: var(--stitch-divider); }
 .ada-help .ada-panel form input { min-height: 44px; padding: 0 10px; background: var(--stitch-raised); color: var(--stitch-ink); border-radius: 9px; }
 .ada-help .ada-panel form button { min-width: 44px; min-height: 44px; border: 0; border-radius: 9px; background: var(--stitch-primary); color: white; }
 .ada-help .ada-panel form button:disabled { opacity: .6; }
-.ada-help .ada-foot { flex: none; padding: 3px 11px 8px; color: var(--stitch-muted); font-size: 11px; text-align: center; }
+.ada-help .ada-foot { flex: none; padding: 8px 14px 12px; color: var(--stitch-muted); font-size: 11px; text-align: center; }
 @media (prefers-reduced-motion: reduce) { .ada-help .ada-panel:not([data-dragging]), .ada-help .ada-launch:not([data-dragging]) { transition: none; } }
 
 @media (max-width: 1023px) {

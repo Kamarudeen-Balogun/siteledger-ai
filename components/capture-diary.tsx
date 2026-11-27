@@ -49,6 +49,7 @@ export function CaptureDiary() {
   const savePending=useRef(false);
   const recordingCancelled=useRef(false);
   const connecting=useRef(false);
+  const reconnectQueued=useRef(false);
   const refresh=async()=>{const values=await listQueue();if(alive.current)setRows(values.filter(row=>active.current&&belongsToActor(row,active.current)));};
   const send=async()=>{
     if(!readyToSend.current||sending.current||!active.current||!navigator.onLine)return;
@@ -75,14 +76,24 @@ export function CaptureDiary() {
       if(!response.ok)throw new Error(data.error);
       if(data.read_only&&typeof data.project_id==="string"){
         const display={...data,expires:Number.POSITIVE_INFINITY};
+        if(active.current?.project_id!==display.project_id){setSummary(null);setSummaryError(false);}
         active.current=display;readyToSend.current=false;setReadOnly(true);setContext(display);setCapturing(false);setError("");void loadSummary(display.project_id);return;
       }
       if(typeof data.access!=="string"||typeof data.project_id!=="string"||typeof data.actor_id!=="string")throw new Error("Project access is unavailable.");
-      const authorized={...data};await saveContext(authorized);active.current=authorized;readyToSend.current=true;
+      const authorized={...data};await saveContext(authorized);
+      // The previous project's figures must never render under the new
+      // project: clear the summary before the new context lands, so the
+      // diary shows its loading state instead of stale numbers.
+      if(active.current?.project_id!==authorized.project_id){setSummary(null);setSummaryError(false);}
+      active.current=authorized;readyToSend.current=true;
       setReadOnly(false);setContext(authorized);setError("");await refresh();void send();
       void loadSummary(authorized.project_id);
     } catch(e){setError(e instanceof Error?e.message:"Could not connect. Your files are kept.");}
-    finally{connecting.current=false;if(alive.current)setOpening(false);}
+    finally{connecting.current=false;if(alive.current)setOpening(false);
+      // A project switch that arrived while this connect was in flight
+      // was previously dropped by the guard above; run it now instead.
+      if(reconnectQueued.current){reconnectQueued.current=false;if(alive.current&&navigator.onLine)void connect();}
+    }
   }
   async function loadSummary(projectId:string) {
     try {
@@ -104,6 +115,10 @@ export function CaptureDiary() {
     })();
     const retry=()=>{setOnline(navigator.onLine);setNow(Date.now());if(navigator.onLine)void send();};
     const reconnect=()=>{setOnline(navigator.onLine);setNow(Date.now());if(navigator.onLine)void connect();};
+    // A project switch must clear the old project's figures at once —
+    // before the new connect resolves — and must not be lost if a
+    // connect is already in flight (the queued flag re-runs it).
+    const projectChanged=()=>{setOnline(navigator.onLine);setNow(Date.now());setSummary(null);setSummaryError(false);reconnectQueued.current=true;if(navigator.onLine)void connect();};
     const incoming=()=>{
       const parameters=new URLSearchParams(window.location.hash.slice(1));
       if(parameters.has("tgWebAppData")){
@@ -115,13 +130,13 @@ export function CaptureDiary() {
     };
     window.addEventListener("online",reconnect);window.addEventListener("offline",retry);window.addEventListener("focus",reconnect);
     window.addEventListener("hashchange",incoming);
-    window.addEventListener("siteledger-project-change",reconnect);
+    window.addEventListener("siteledger-project-change",projectChanged);
     const interval=setInterval(retry,15000);
     if("serviceWorker" in navigator)void navigator.serviceWorker.register("/siteledger-worker.js",{scope:"/"}).then(async()=>{
       const registration=await navigator.serviceWorker.ready;
       registration.active?.postMessage({type:"CACHE_STATIC",urls:performance.getEntriesByType("resource").map(resource=>resource.name)});
     }).catch(()=>undefined);
-    return()=>{alive.current=false;clearInterval(interval);window.removeEventListener("online",reconnect);window.removeEventListener("offline",retry);window.removeEventListener("focus",reconnect);window.removeEventListener("hashchange",incoming);window.removeEventListener("siteledger-project-change",reconnect);
+    return()=>{alive.current=false;clearInterval(interval);window.removeEventListener("online",reconnect);window.removeEventListener("offline",retry);window.removeEventListener("focus",reconnect);window.removeEventListener("hashchange",incoming);window.removeEventListener("siteledger-project-change",projectChanged);
       if(timer.current)clearInterval(timer.current);if(recorder.current?.state==="recording")recorder.current.stop();stream.current?.getTracks().forEach(track=>track.stop());};
   // Bootstrap once; current authorization is held in active.current for retries.
   // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -5,11 +5,11 @@ import { UUID } from "@/lib/confirm/access";
 import { privateDashboard, privateBoqHistory, privateBoqVersions } from "@/lib/projects/boq-data";
 import { BoqHistory } from "@/components/boq-history";
 import { BoqReview } from "@/components/boq-review";
+import { BoqVersions } from "@/components/boq-versions";
 import { BoqEditor } from "@/components/boq-editor";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { PageLoading } from "@/components/page-loading";
 import { DiaryIcon } from "@/components/diary-icon";
-import { displayDate, formatMoneyPerUnit, formatQuantityWithUnit } from "@/lib/reports/model";
 import { formatMoney } from "@/lib/costing/format-money";
 import { decimal } from "@/lib/costing/decimal";
 import { costReport } from "@/lib/costing/cost-report";
@@ -39,15 +39,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
     {(data.access.archived_at || !canEdit) && <p role="status" className="stitch-card">{data.access.archived_at ? "Archived project. Its BoQ remains available to read." : "You have read-only access to the BoQ."}</p>}
     <BoqEditor projectId={id} currency={currency} rows={rows} editable={canEdit && !data.access.archived_at} overview={<>
       <div className="stitch-title-row">
-        <details className="boq-versions" data-tour="boq-history"><summary><span className="boq-versions__label"><DiaryIcon name="history" size={16}/>Version History{versions?.length ? ` (v${versions[0].version} Active)` : ""}</span><DiaryIcon name="chevron" size={16}/></summary>
-          <div className="boq-versions__body">
-            {versions?.length ? <ol className="boq-versions__list">{versions.map(item=><li key={item.version} className="boq-versions__version"><details>
-              <summary><span><strong>Version {item.version}</strong><small>{displayDate(item.effective_date)} · {item.items} {item.items===1?"item":"items"}</small></span>{item.version===versions[0].version&&<span className="stitch-kicker stitch-chip" data-tone="green">Active</span>}</summary>
-              <ul className="boq-versions__rows">{item.rows.map((row,index)=><li key={row.item_code ?? index}><span>{row.description}</span><span>{formatQuantityWithUnit(row.boq_quantity, row.unit)} @ {formatMoneyPerUnit(row.rate, currency, row.unit)}</span></li>)}</ul>
-            </details></li>)}</ol> : <p>No BoQ versions have been saved yet.{changes?.length ? " The current BoQ is the original schedule — every change is listed in the change history below." : ""}</p>}
-            {versions?.length ? <p>Drafts use the current version (Version {versions[0].version}). Locked reports keep the version they were locked with.</p> : null}
-          </div>
-        </details><span className="stitch-kicker">{rows.length} contract {rows.length===1?"item":"items"}</span>
+        <BoqVersions versions={versions} currency={currency}/><span className="stitch-kicker">{rows.length} contract {rows.length===1?"item":"items"}</span>
       </div>
       {changes && <BoqReview changes={changes} currency={currency}/>}
       <section className="stitch-card stitch-boq-allocation">

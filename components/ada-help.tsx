@@ -4,22 +4,29 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type PointerEvent, type FormEvent } from "react";
 import { DiaryIcon } from "./diary-icon";
 
-const topics = [
-  { match: /\b(lock\w*|approv\w*|share\w*)\b/i, question: "How do I lock a report?", answer: "Open the costed draft from Reports. If you can approve reports in this project, check the record and choose Approve & lock. Open the locked report to download its PDF or share it.", label: "Reports", href: "/reports" },
-  { match: /\b(warn\w*|ambigu\w*|missing|stale)\b/i, question: "What does a warning mean?", answer: "Open the warning and check the field it points to. For a BoQ import, compare any flagged quantity or rate with the supplied file before saving. If a draft uses old rates, review the changes and rebuild it before approval.", label: "BoQ & rates", href: "/boq" },
-  { match: /\b(invit\w*|team|member\w*)\b/i, question: "How do I invite someone?", answer: "Open Your projects, choose the site and open its team settings. If you have invitation access, choose Invite a person and enter the recipient’s email and project role.", label: "Your projects", href: "/projects" },
-  { match: /\b(boq|bill of quantities|version\w*|rate\w*)\b/i, question: "How do BoQ changes work?", answer: "Review the BoQ and its change history. When a supplied quantity or rate changes, review and save the edit. Locked reports keep their original quantities, rates and currency.", label: "BoQ & rates", href: "/boq" },
-  { match: /\b(record\w*|voice|photos?|upload\w*)\b/i, question: "How do I record work?", answer: "Open Today, choose the project and tap Add today’s work. Add a voice note, photos or both. Then review the note and confirm the quantities.", label: "Today", href: "/today" },
-  { match: /\b(cost\w*|price\w*|money|quantit\w*)\b/i, question: "How do I cost a site note?", answer: "Open the note and check the extracted quantities and their BoQ matches. Confirm the note before costing it. The report uses the supplied BoQ rates.", label: "Today", href: "/today" },
-];
-const defaultAnswer = { answer: "I can explain how to use SiteLedger. Choose a question here or open Help for the full guide.", label: "Open Help", href: "/help" };
+import { adaTopics, answerAda, type AdaReply } from "@/lib/ada";
+
 const storage = "siteledger-ada-position";
+const chatStorage = "siteledger-ada-chat";
 type Placement = { side: "left" | "right"; y: number };
-type Exchange = { question: string; answer: typeof defaultAnswer };
+type Exchange = { question: string; answer: AdaReply };
+// The chat survives in-app navigation (tapping a link Ada suggests used
+// to wipe the whole conversation, because messages lived only in state).
+function loadChat(): { messages: Exchange[]; lastTopic: string | null } {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(chatStorage) ?? "null");
+    if (value && Array.isArray(value.messages)) return { messages: value.messages.filter((item: unknown): item is Exchange => Boolean(item && typeof item === "object" && typeof (item as Exchange).question === "string" && (item as Exchange).answer)).slice(-20), lastTopic: typeof value.lastTopic === "string" ? value.lastTopic : null };
+  } catch { /* Start a fresh chat. */ }
+  return { messages: [], lastTopic: null };
+}
 
 export function AdaHelp({ projectId }: { projectId: string | null }) {
   const [open, setOpen] = useState(false), [query, setQuery] = useState("");
-  const [messages, setMessages] = useState<Exchange[]>([]);
+  const [messages, setMessages] = useState<Exchange[]>(() => loadChat().messages);
+  const [lastTopic, setLastTopic] = useState<string | null>(() => loadChat().lastTopic);
+  useEffect(() => {
+    try { sessionStorage.setItem(chatStorage, JSON.stringify({ messages: messages.slice(-20), lastTopic })); } catch { /* Keep the chat for this visit only. */ }
+  }, [messages, lastTopic]);
   const [position, setPosition] = useState<Placement | null>(() => {
     try {
       const value = JSON.parse(localStorage.getItem(storage) ?? "null");
@@ -47,10 +54,9 @@ export function AdaHelp({ projectId }: { projectId: string | null }) {
   function answer(value: string) {
     const question = value.trim().slice(0, 400);
     if (!question) return;
-    const topic = topics.find(item => item.match.test(question)) ?? defaultAnswer;
-    const actionRequest=/\b(?:do it|for me|please (?:lock|cost|edit|invite|create|approve)|(?:lock|cost|edit|invite|create|approve) (?:this|my|the))\b/i.test(question)&&!/^how\b/i.test(question);
-    const reply=actionRequest?{...topic,answer:`You’ll need to do this in SiteLedger. ${topic.answer}`}:topic;
+    const reply = answerAda(question, lastTopic);
     setMessages(current => [...current.slice(-19), { question, answer: reply }]);
+    setLastTopic(reply.topicId);
     setQuery("");
     requestAnimationFrame(() => chat.current?.scrollTo(0, chat.current.scrollHeight));
   }
@@ -121,7 +127,7 @@ export function AdaHelp({ projectId }: { projectId: string | null }) {
         <p className="ada-answer"><strong>Hi, I&apos;m Ada, your SiteLedger assistant.</strong><br/>I can guide you through recording work, costing it, and finding your reports. I can make mistakes, so do not rely on me alone — always confirm anything about money or a locked report on the report itself.</p>
         <div aria-live="polite">{messages.map(({ question, answer: reply }, index) => <div key={index}><p className="ada-question">{question}</p><p className="ada-answer">{reply.answer}<br/><Link href={href(reply.href)} className="text-link" onClick={() => setOpen(false)}>{reply.label}</Link></p></div>)}</div>
       </div>
-      <div className="ada-topics">{topics.slice(0, 4).map(topic => <button type="button" key={topic.question} onClick={() => answer(topic.question)}>{topic.question}</button>)}</div>
+      <div className="ada-topics">{adaTopics.map(topic => <button type="button" key={topic.id} onClick={() => answer(topic.question)}>{topic.question}</button>)}</div>
       <form onSubmit={send}><label className="sr-only" htmlFor="ada-question">Ask Ada</label><input id="ada-question" autoComplete="off" value={query} onChange={event => setQuery(event.target.value)} maxLength={400} placeholder="Ask Ada a help question…"/><button type="submit" className="diary-icon-button" aria-label="Send question" disabled={!query.trim()}><DiaryIcon name="send" size={20}/></button></form>
       <p className="ada-foot">Ada can make mistakes. Check money and locked-report details on the report itself.</p>
     </section>}

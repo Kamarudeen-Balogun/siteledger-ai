@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { isWorkspacePath, navigationFallback } from "../lib/navigation/routes";
@@ -95,6 +95,94 @@ test("headers do not flash a signed-out Sign in while the session resolves", () 
   const landing = read("components", "landing-account-link.tsx");
   assert.match(landing, /useState<boolean \| null>\(null\)/);
   assert.match(landing, /if \(active === null\) return/);
+});
+
+test("switching projects never renders the previous project's figures", () => {
+  // Regression: after a project switch, Today first rendered the old
+  // project's figures (Lekki 28.5% / ₦14,911,800 on Ajah's diary) before
+  // the new summary arrived. The diary must clear its summary the moment
+  // the switch lands, and again when a connect resolves to a different
+  // project — the loading state renders instead of stale numbers.
+  const diary = read("components", "capture-diary.tsx");
+  assert.match(diary, /const projectChanged=\(\)=>\{[^}]*setSummary\(null\);[^}]*setSummaryError\(false\);/);
+  assert.match(diary, /window\.addEventListener\("siteledger-project-change",projectChanged\)/);
+  assert.match(diary, /if\(active\.current\?\.\project_id!==authorized\.project_id\)\{setSummary\(null\);setSummaryError\(false\);\}/);
+  // A switch that arrives while a connect is in flight was dropped by the
+  // connecting guard, so the diary kept the old project until the next
+  // 15s retry. The queued flag re-runs the connect when it finishes.
+  assert.match(diary, /const reconnectQueued=useRef\(false\);/);
+  assert.match(diary, /if\(reconnectQueued\.current\)\{reconnectQueued\.current=false;if\(alive\.current&&navigator\.onLine\)void connect\(\);\}/);
+});
+
+test("switching to the mock makes the mock the current project", () => {
+  // Regression: the switcher row for the mock was a plain link — it never
+  // ran a select, so the header kept showing the previous real project
+  // with the CURRENT badge while the mock page was open, and switching
+  // back landed on the old project page. Mock-current is derived from
+  // the path (the session check would overwrite stored state with the
+  // real active project), the mock row runs a real select, and switching
+  // back from the mock lands on the new Today.
+  const navigation = read("components", "app-navigation.tsx");
+  assert.match(navigation, /const isMock = \(navigation\?\.\pathname \?\? ""\)\.startsWith\("\/projects\/mock"\);/);
+  assert.match(navigation, /function selectMock\(\) \{/);
+  assert.match(navigation, /router\.push\("\/projects\/mock"\)/);
+  assert.match(navigation, /id===item\.id && !isMock \? <span className="stitch-switch-current">/);
+  assert.match(navigation, /const fromMock = \(navigation\?\.\pathname \?\? ""\)\.startsWith\("\/projects\/mock"\);/);
+  assert.match(navigation, /const path = fromMock \? "\/today" :/);
+  // The bottom dock stays on the mock: its tabs are the mock views, never
+  // the real project's BoQ or team pages.
+  assert.match(navigation, /const isMock = path\.startsWith\("\/projects\/mock"\);/);
+  assert.match(navigation, /href: isMock \? "\/projects\/mock\?view=boq" : projectHref/);
+  assert.match(navigation, /href: isMock \? "\/projects\/mock\?view=team" : projectHref/);
+});
+
+test("no route renders the old design", () => {
+  // The legacy project pages, their tab bar and their components were
+  // deleted outright. If any of them comes back, the old design can
+  // render again — this test fails the build until it is gone.
+  assert.ok(!existsSync(join(dirname(fileURLToPath(import.meta.url)), "..", "components", "project-navigation.tsx")), "project-navigation.tsx must stay deleted");
+  const walk = (dir: string): string[] => readdirSync(dir).flatMap((entry: string) => {
+    const path = join(dir, entry);
+    return statSync(path).isDirectory() ? walk(path) : [path];
+  });
+  for (const file of [...walk(join(dirname(fileURLToPath(import.meta.url)), "..", "app")), ...walk(join(dirname(fileURLToPath(import.meta.url)), "..", "components"))]) {
+    if (!file.endsWith(".tsx")) continue;
+    const source = readFileSync(file, "utf8");
+    assert.ok(!source.includes("ProjectNavigation"), `${file} must not use the deleted ProjectNavigation`);
+    assert.ok(!source.includes("WorkIntro"), `${file} must not use the deleted WorkIntro`);
+    assert.ok(!source.includes('className="work-tabs"'), `${file} must not render the old tab bar`);
+  }
+  const css = read("app", "globals.css");
+  for (const selector of [".project-navigation", ".project-next", ".project-home", ".project-breadcrumb", ".work-intro", ".project-tabs"]) {
+    assert.ok(!css.includes(selector), `globals.css must not keep the legacy ${selector} rules`);
+  }
+});
+
+test("BoQ add and adjust open as bottom sheets, not inline forms", () => {
+  // Regression: "+ Add item" opened an inline form that pushed the page
+  // down, and "Adjust item" opened the same form at the top of the page —
+  // far above the tapped row, so it looked dead. Both now open the same
+  // bottom sheet in view, and Adjust is a compact text action per row.
+  const editor = read("components", "boq-editor.tsx");
+  assert.match(editor, /const formDialog = useRef<HTMLDialogElement>\(null\);/);
+  assert.match(editor, /<dialog ref=\{formDialog\} className="action-dialog stitch-sheet"/);
+  assert.ok(!editor.includes('className="my-7 max-w-3xl diary-panel"'), "The add/edit form must not render inline on the page");
+  assert.match(editor, /className="text-link mt-3"[^>]*onClick=\{\(\) => edit\(row\)\}[^>]*>Adjust item<\/button>/);
+});
+
+test("BoQ version history is compact rows with a version sheet", () => {
+  // Regression: the Previous versions card expanded inline into a giant
+  // card that buried the BoQ page. Versions are slim rows now; a version's
+  // rows open in a bottom sheet over the intact page.
+  const versions = read("components", "boq-versions.tsx");
+  assert.match(versions, /<button type="button" className="boq-versions__row"/);
+  assert.match(versions, /<dialog ref=\{sheet\} className="action-dialog stitch-sheet"/);
+  const page = read("app", "projects", "[id]", "boq", "page.tsx");
+  assert.match(page, /<BoqVersions versions=\{versions\} currency=\{currency\}\/>/);
+  assert.ok(!page.includes("boq-versions__rows"), "Version rows render only inside the sheet, not inline on the BoQ page");
+  const mock = read("components", "mock-project.tsx");
+  assert.match(mock, /export function MockBoqActions/);
+  assert.match(mock, /<dialog ref=\{sheet\} className="action-dialog stitch-sheet" aria-label="Demo BoQ is read-only"/);
 });
 
 test("percentages are formatted at one decimal like the mock", () => {
