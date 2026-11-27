@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import Script from "next/script";
 import "./globals.css";
+import "@/components/transplant-public.css";
 import { AppNavigation } from "@/components/app-navigation";
 
 export const metadata: Metadata = {

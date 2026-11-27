@@ -69,7 +69,7 @@ export default function Home() {
         <div className="flex flex-col gap-1 rounded-xl bg-surface-container p-4 shadow-sm">
           <div className="flex items-center justify-between"><span className="font-stamp-label text-stamp-label font-bold text-primary">03 / Site fit</span><DiaryIcon name="send" size={20} /></div>
           <h3 className="font-headline-sm text-headline-sm font-semibold text-on-surface">Speak in chat. Queue web notes offline.</h3>
-          <p className="mt-0.5 font-body-md text-body-md text-on-surface-variant">Designed for spotty Lagos &amp; Abuja mobile data. Foremen simply drop a voice note or queue drafting offline; sync happens automatically when reconnected.</p>
+          <p className="mt-0.5 font-body-md text-body-md text-on-surface-variant">Designed for spotty mobile data. Foremen simply drop a voice note or queue drafting offline; sync happens automatically when reconnected.</p>
         </div>
       </section>
 

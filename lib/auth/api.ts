@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { intakeRpc } from "../telegram/storage";
+import { intakeRpc, IntakeConfigError } from "../telegram/storage";
 import { verifyTelegramAccess } from "../confirm/telegram-access";
 import { UUID } from "../confirm/access";
 import { isAllowedAppOrigin } from "../app-url";
@@ -244,7 +244,15 @@ export async function accountApi(request: Request, action: string): Promise<Resp
     }
     throw new AccountError("Account action unavailable.", 404);
   } catch (error) {
-    return Response.json({ error: error instanceof AccountError ? error.message : "Account access is temporarily unavailable. Try again; your records are preserved." },
+    // Log the underlying cause server-side so a generic message to the user
+    // never hides the real failure from the deployment logs. Only the action
+    // and the error's own name/message/stack are logged — never the request
+    // body, tokens, passwords or codes.
+    if (!(error instanceof AccountError)) console.error("accountApi failed", { action, name: error instanceof Error ? error.name : "unknown", message: error instanceof Error ? error.message : "unknown", stack: error instanceof Error ? error.stack : undefined });
+    const message = error instanceof AccountError ? error.message
+      : error instanceof IntakeConfigError ? "Account access is not set up on this deployment yet. Your records are preserved — try the main SiteLedger website."
+      : "Account access is temporarily unavailable. Try again; your records are preserved.";
+    return Response.json({ error: message },
       { status: error instanceof AccountError ? error.status : error instanceof SyntaxError ? 422 : 503, headers: privateHeaders });
   }
 }

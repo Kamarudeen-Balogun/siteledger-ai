@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { accountApi } from "../lib/auth/api";
 import { emailAddress, professionalName } from "../lib/auth/types";
 import { accountCookie, secretHash } from "../lib/auth/session";
-import { nativeSession } from "../lib/auth/provider";
+import { AccountError, authRequest, nativeSession } from "../lib/auth/provider";
 import { validEmailCode } from "../lib/auth/email-code";
 
 process.env.SITELEDGER_APP_URL = "https://siteledger.example.test";
@@ -149,4 +149,30 @@ test("native token claims cannot choose a different person from the provider-ver
   await assert.rejects(nativeSession({ access_token: token, user: { id: "81000000-0000-4000-8000-000000000002" } }), /Sign in again/);
   assert.match(secretHash("opaque-random-session"), /^[a-f0-9]{64}$/);
   assert.match(accountCookie("", true), /Max-Age=0/);
+});
+test("sign-in survives a Supabase RPC transport failure with the generic message", async context => {
+  process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = "test-public-site-key";
+  context.mock.method(globalThis, "fetch", async () => { throw new Error("network down"); });
+  const result = await accountApi(request({ email: "foreman@example.test", password: "long-test-password", captcha_token: "captcha-proof" }), "signin");
+  assert.equal(result.status, 503);
+  assert.equal((await result.json()).error, "Account access is temporarily unavailable. Try again; your records are preserved.");
+});
+test("sign-in names a missing service-role key instead of the generic message", async context => {
+  process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = "test-public-site-key";
+  const saved = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  try {
+    context.mock.method(globalThis, "fetch", async () => { throw new Error("fetch must not be reached without service credentials"); });
+    const result = await accountApi(request({ email: "foreman@example.test", password: "long-test-password", captcha_token: "captcha-proof" }), "signin");
+    assert.equal(result.status, 503);
+    assert.equal((await result.json()).error, "Account access is not set up on this deployment yet. Your records are preserved — try the main SiteLedger website.");
+  } finally { process.env.SUPABASE_SERVICE_ROLE_KEY = saved; }
+});
+test("authRequest converts a fetch failure into an AccountError, not a plain throw", async context => {
+  context.mock.method(globalThis, "fetch", async () => { throw new DOMException("The operation timed out.", "TimeoutError"); });
+  await assert.rejects(authRequest("token?grant_type=password", { email: "foreman@example.test", password: "long-test-password" }), (error: unknown) => {
+    assert.ok(error instanceof AccountError);
+    assert.equal((error as AccountError).status, 503);
+    return true;
+  });
 });

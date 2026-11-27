@@ -1,5 +1,4 @@
 "use client";
-import "@/components/transplant-public.module.css";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { DiaryIcon } from "./diary-icon";
@@ -7,7 +6,7 @@ import { WorkspaceProfile } from "./app-navigation";
 import { LandingAccountLink } from "./landing-account-link";
 
 const menuLinks = [
-  ["/#about", "About"],
+  ["/about", "About"],
   ["/reports/demo", "Sample report"],
   ["/trial", "Trial"],
   ["/help", "Help & FAQ"],
@@ -73,7 +72,6 @@ export function PublicSite({ children, current }: { children: ReactNode; current
     <footer className="public-column mt-10 flex flex-col gap-4 border-t border-surface-container-high pb-safe pt-6">
       <div className="flex items-center justify-between">
         <span className="font-stamp-label text-stamp-label uppercase text-primary">Digital Site Diary</span>
-        <span className="font-stamp-label text-stamp-label uppercase text-on-surface-variant">Lagos · Abuja</span>
       </div>
       <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 font-label-ledger text-label-ledger" aria-label="Footer navigation">
         {menuLinks.map(([href, label]) => <Link key={href} href={href} aria-current={current === href ? "page" : undefined} className="flex min-h-[44px] items-center py-1 text-on-surface-variant transition-colors hover:text-on-surface">{label}</Link>)}

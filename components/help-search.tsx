@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { DiaryIcon } from "./diary-icon";
 
-export type HelpQuestion = { title: string; text: string; topic: string };
+export type HelpQuestion = { title: string; text: string; topic: string; keywords?: string };
 export const helpTopics = ["All topics", "Site intake & voice", "BoQ & rates", "Lock & disputes", "Offline queue", "Team roles", "Accounts"] as const;
 
 export function HelpSearch({ questions }: { questions: HelpQuestion[] }) {
@@ -11,7 +11,9 @@ export function HelpSearch({ questions }: { questions: HelpQuestion[] }) {
   const [open, setOpen] = useState<string | null>(null);
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return questions.filter(item => (topic === "All topics" || item.topic === topic) && (!needle || `${item.title} ${item.text}`.toLowerCase().includes(needle)));
+    // Search titles, bodies, topics and keywords — a word the user types (e.g.
+    // "offline") must match even when it appears only in the topic or keywords.
+    return questions.filter(item => (topic === "All topics" || item.topic === topic) && (!needle || `${item.title} ${item.text} ${item.topic} ${item.keywords ?? ""}`.toLowerCase().includes(needle)));
   }, [query, topic, questions]);
   return <>
     <div className="relative" role="search">
