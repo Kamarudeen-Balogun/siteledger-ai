@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { parseExtraction, type SiteExtraction } from "../lib/ai/extraction-schema";
+import { extractWorkCandidates, normalizeDescription, wordsToNumber } from "../lib/ai/number-words";
 import { transcribeAndExtract, type PipelineDependencies } from "../lib/ai/transcribe-and-extract";
 import { processSubmission, type ProcessingDependencies } from "../lib/ai/process-submission";
 import { extractionPrompt } from "../lib/ai/prompts";
@@ -33,6 +34,48 @@ test("missing spoken values remain null and require low confidence", () => {
   assert.ok(parseExtraction(JSON.stringify(missing)));
   missing.work_items[0].confidence = 0.8;
   assert.equal(parseExtraction(JSON.stringify(missing)), null);
+});
+test("spoken numbers become digits and standard units in descriptions", () => {
+  assert.equal(wordsToNumber("eighteen"), 18);
+  assert.equal(wordsToNumber("two hundred and twenty-five"), 225);
+  assert.equal(wordsToNumber("forty"), 40);
+  assert.equal(wordsToNumber("1,800"), 1800);
+  assert.equal(wordsToNumber("and"), null);
+  assert.equal(wordsToNumber("some"), null);
+  assert.equal(normalizeDescription("eighteen square metres of two hundred and twenty-five millimetre blockwork on the east elevation"),
+    "18 m² of 225mm blockwork on the east elevation");
+  assert.equal(normalizeDescription("Two cubic metres of concrete cast today."), "2 m³ of concrete cast today.");
+  assert.equal(normalizeDescription("Blockwork — East elevation"), "Blockwork — East elevation");
+});
+test("a transcript that states a quantity the model missed still produces a checkable work item", async () => {
+  const spoken = "We don set eighteen square metres of 225mm blockwork on the east elevation. Forty bags cement delivered. Rain stopped work two hours.";
+  const empty: SiteExtraction = { ...valid, work_items: [], raw_language_notes: "" };
+  const result = await transcribeAndExtract(null, hints, { existingTranscript: spoken }, {
+    transcribe: async () => { throw new Error("must reuse transcript"); },
+    extract: async () => JSON.stringify(empty),
+  });
+  assert.equal(result.status, "extracted");
+  assert.deepEqual(result.extraction?.work_items, [{ description: "18 m² of 225mm blockwork on the east elevation",
+    matched_boq_hint: "Sandcrete blocks 225mm hollow, laid", quantity: 18, unit: "m2", crew: null, confidence: 0.7 }]);
+  assert.equal(result.extraction?.materials[0].quantity, 40);
+});
+test("no stated quantity means no recovered work item", async () => {
+  const spoken = "Rain stopped work two hours. Clearing was not done on yesterday's slab.";
+  const empty: SiteExtraction = { ...valid, work_items: [], materials: [],
+    delays: [{ reason: "Rain stopped work", hours: 2, confidence: 0.9 }],
+    issues: ["Clearing was not done on yesterday's slab."], raw_language_notes: "" };
+  const result = await transcribeAndExtract(null, hints, { existingTranscript: spoken }, {
+    transcribe: async () => { throw new Error("must reuse transcript"); },
+    extract: async () => JSON.stringify(empty),
+  });
+  assert.equal(result.status, "extracted");
+  assert.deepEqual(result.extraction?.work_items, []);
+});
+test("a bare dimension never becomes a work quantity", () => {
+  assert.deepEqual(extractWorkCandidates("The 225 millimetre blockwork is on the east elevation.", hints), []);
+  assert.deepEqual(extractWorkCandidates("We did 18 square metres of 225mm blockwork on the east elevation.", hints),
+    [{ description: "18 m² of 225mm blockwork on the east elevation", matched_boq_hint: "Sandcrete blocks 225mm hollow, laid",
+      quantity: 18, unit: "m2", crew: null, confidence: 0.7 }]);
 });
 test("transcript is checkpointed unchanged before extraction and BoQ prompt strips rates", async () => {
   const events: string[] = [];

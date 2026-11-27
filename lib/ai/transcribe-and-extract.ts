@@ -1,5 +1,6 @@
 import "server-only";
 import { extractionJsonSchema, parseExtraction, type BoqHint, type SiteExtraction } from "./extraction-schema";
+import { extractWorkCandidates, normalizeDescription } from "./number-words";
 import { extractionPrompt, transcriptionPrompt, whisperContext } from "./prompts";
 
 export type AudioInput = { bytes: Uint8Array; filename: string; contentType: string };
@@ -178,7 +179,17 @@ export async function transcribeAndExtract(
       return { status: "manual_entry", transcript, detectedLanguages, extraction: null, error: "extraction_failed" };
     }
     const extraction = parseExtraction(content);
-    if (extraction) return { status: "extracted", transcript, detectedLanguages, extraction };
+    if (extraction) {
+      // Spoken numbers become digits and standard units in descriptions, so
+      // a locked report reads "18 m² of 225mm blockwork" instead of the
+      // spoken words. If the model missed the work entirely while the
+      // transcript states a quantity, recover it deterministically from the
+      // transcript itself — the Confirm screen still requires a human to
+      // verify the quantity before anything is costed.
+      extraction.work_items = extraction.work_items.map((item) => ({ ...item, description: normalizeDescription(item.description) }));
+      if (extraction.work_items.length === 0) extraction.work_items = extractWorkCandidates(transcript, hints);
+      return { status: "extracted", transcript, detectedLanguages, extraction };
+    }
   }
   return { status: "manual_entry", transcript, detectedLanguages, extraction: null, error: "extraction_invalid" };
 }
