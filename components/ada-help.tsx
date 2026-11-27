@@ -118,7 +118,7 @@ export function AdaHelp({ projectId }: { projectId: string | null }) {
         <button type="button" className="diary-icon-button" aria-label="Close Ada" onClick={() => {setOpen(false);launch.current?.focus();}}><DiaryIcon name="close" size={20}/></button>
       </header>
       <div className="ada-messages" ref={chat}>
-        <p className="ada-answer"><strong>Hi, I&apos;m Ada, your SiteLedger assistant.</strong><br/>I can guide you through recording work, costing it, and finding your reports. I can make mistakes, so confirm money and locked-report details on the report itself.</p>
+        <p className="ada-answer"><strong>Hi, I&apos;m Ada, your SiteLedger assistant.</strong><br/>I can guide you through recording work, costing it, and finding your reports. I can make mistakes, so do not rely on me alone — always confirm anything about money or a locked report on the report itself.</p>
         <div aria-live="polite">{messages.map(({ question, answer: reply }, index) => <div key={index}><p className="ada-question">{question}</p><p className="ada-answer">{reply.answer}<br/><Link href={href(reply.href)} className="text-link" onClick={() => setOpen(false)}>{reply.label}</Link></p></div>)}</div>
       </div>
       <div className="ada-topics">{topics.slice(0, 4).map(topic => <button type="button" key={topic.question} onClick={() => answer(topic.question)}>{topic.question}</button>)}</div>

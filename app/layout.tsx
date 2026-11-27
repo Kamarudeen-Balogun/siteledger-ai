@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   publisher: "CodeFlowX",
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
-const initialTheme = "(()=>{let mode;try{mode=localStorage.getItem('siteledger-theme')}catch{}if(mode==='dark'||mode==='system'){document.documentElement.dataset.theme=mode}})()";
+const initialTheme = "(()=>{let mode;try{mode=localStorage.getItem('siteledger-theme')}catch{}if(mode==='dark'){document.documentElement.dataset.theme='dark'}})()";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

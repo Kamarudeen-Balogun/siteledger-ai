@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -13,6 +13,8 @@ import { DiaryNotice } from "./diary-notice";
 import { WorkDisclosure } from "./work-flow";
 import type { ReviewDraft } from "@/lib/confirm/draft";
 import { DiaryIcon } from "./diary-icon";
+import { previewCostTotal, type PreviewRate, type PreviewTotal } from "@/lib/costing/preview-total";
+import { formatMoney } from "@/lib/costing/format-money";
 
 const empty: SiteExtraction = { work_items: [], materials: [], delays: [], issues: [], raw_language_notes: "" };
 const inputClass = "min-h-12 w-full rounded-none border border-rule bg-[#fffdf9] px-3 py-2 text-base outline-offset-2 focus:outline-accent";
@@ -52,8 +54,9 @@ function VoicePlayback({ src, label }: { src: string; label: string }) {
     {error&&<p role="alert">Could not play the original voice note.</p>}
   </section>;
 }
-export function ConfirmForm({ record, draft, trial = false, banner, children }: { record: ReviewRecord; draft?: ReviewDraft | null; trial?: boolean; banner?: ReactNode; children?: ReactNode }) {
+export function ConfirmForm({ record, draft, trial = false, banner, children, rates }: { record: ReviewRecord; draft?: ReviewDraft | null; trial?: boolean; banner?: ReactNode; children?: ReactNode; rates?: PreviewRate[] }) {
   const router = useRouter();
+  const currency = record.currency ?? "NGN";
   const source = record.confirmed_extraction ?? record.trial_values ?? record.extraction ?? empty;
   const previouslyChecked = Boolean(record.confirmed_extraction || record.trial_values);
   const fields = draft?.fields ?? {};
@@ -71,6 +74,30 @@ export function ConfirmForm({ record, draft, trial = false, banner, children }: 
   const [dirty, setDirty] = useState(false), [savingDraft,setSavingDraft]=useState(false), [draftNotice,setDraftNotice]=useState(Boolean(draft));
   const feedback = useRef<HTMLDivElement>(null), focusFeedback = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
+  // Display-only preview of what the confirmed quantities will cost, priced
+  // from the project's current BoQ version (passed in as `rates`). The
+  // server costing at confirm time is the authority; the preview shows only
+  // when every costed row can be priced, and it updates as quantities and
+  // BoQ choices change. Without rates (trial, or the BoQ read failed) the
+  // form behaves exactly as before, with no preview.
+  const [previewTick, setPreviewTick] = useState(0);
+  const preview: PreviewTotal = useMemo(() => {
+    void previewTick; // Invalidation signal: re-read the form when it changes.
+    if (!rates) return { lines: [], total: null };
+    const form = formRef.current;
+    const rows = work.map((row, i) => {
+      const raw = form ? String(new FormData(form).get(`w${i}.quantity`) ?? "") : "";
+      const quantity = raw.trim() === "" ? row.value.quantity : Number(raw);
+      return { boqId: row.boqId, quantity: Number.isFinite(quantity) ? quantity : null };
+    });
+    return previewCostTotal(rows, record.boq, rates);
+  }, [previewTick, work, rates, record.boq]);
+  // Re-read the form once it mounts, so a reopened draft (whose quantities
+  // live in the form's default values, not in state) is priced immediately.
+  const attachForm = useCallback((node: HTMLFormElement | null) => {
+    formRef.current = node;
+    if (node) setPreviewTick(tick => tick + 1);
+  }, []);
   // Autosave: leaving Confirm without tapping "Save draft" must not lose
   // edits. Draft fields are saved quietly 2 seconds after the last
   // change, so a draft reopens exactly as left even if the user never
@@ -174,7 +201,7 @@ export function ConfirmForm({ record, draft, trial = false, banner, children }: 
       {source.raw_language_notes && <p className="stitch-language"><DiaryIcon name="translate" size={18}/>{source.raw_language_notes}</p>}
     </div>}
     {listening ? <DiaryNotice busy title="Listening to your note…">Your audio and photos are saved. This page will update when your note is ready to check.</DiaryNotice>
-      : <form ref={formRef} onSubmit={submit} onChange={() => setDirty(true)} data-unsaved={dirty&&!locked&&!archived&&!saving}>
+      : <form ref={attachForm} onSubmit={submit} onChange={() => { setDirty(true); setPreviewTick(tick => tick + 1); }} data-unsaved={dirty&&!locked&&!archived&&!saving}>
       {record.job_status === "manual_entry" && <DiaryNotice tone="warning" title="Enter the site details">We couldn’t read this note reliably. Your audio and photos are saved. Enter what happened below.</DiaryNotice>}
       <fieldset disabled={locked || archived || saving}>
       <Section title="Work items">
@@ -187,9 +214,9 @@ export function ConfirmForm({ record, draft, trial = false, banner, children }: 
             <Field label="Description" name={`w${i}.description`} value={value.description} initial={fields[`w${i}.description`]} required low={low(value.confidence)} />
             <div className="stitch-quantity">
               <label htmlFor={`quantity-${key}`} className="stitch-kicker">{unitValue ? `Quantity (${unitLabel(unitValue)})` : "Quantity"} *</label>
-              <button type="button" className="stitch-button" aria-label={`Decrease quantity for work item ${i+1}`} onClick={event=>{const input=event.currentTarget.parentElement?.querySelector("input");if(input){input.value=String(Math.max(0,(Number(input.value)||0)-1));setDirty(true);}}}>−</button>
+              <button type="button" className="stitch-button" aria-label={`Decrease quantity for work item ${i+1}`} onClick={event=>{const input=event.currentTarget.parentElement?.querySelector("input");if(input){input.value=String(Math.max(0,(Number(input.value)||0)-1));setDirty(true);setPreviewTick(tick=>tick+1);}}}>−</button>
               <input id={`quantity-${key}`} className={inputClass} name={`w${i}.quantity`} type="number" step="any" min="0" inputMode="decimal" defaultValue={fields[`w${i}.quantity`] ?? (low(value.confidence) ? "" : value.quantity ?? "")} required aria-describedby={low(value.confidence) || value.quantity === null ? `quantity-hint-${key}` : undefined}/>
-              <button type="button" className="stitch-button" aria-label={`Increase quantity for work item ${i+1}`} onClick={event=>{const input=event.currentTarget.parentElement?.querySelector("input");if(input){input.value=String((Number(input.value)||0)+1);setDirty(true);}}}>+</button>
+              <button type="button" className="stitch-button" aria-label={`Increase quantity for work item ${i+1}`} onClick={event=>{const input=event.currentTarget.parentElement?.querySelector("input");if(input){input.value=String((Number(input.value)||0)+1);setDirty(true);setPreviewTick(tick=>tick+1);}}}>+</button>
               {(low(value.confidence) || value.quantity === null) && <span id={`quantity-hint-${key}`} className="sr-only">Check this one — enter the value.</span>}
             </div>
             <label className="mt-4 block">BoQ item *<select className={inputClass + " mt-2"} name={`w${i}.boq`} value={boqId} onChange={event => {
@@ -197,6 +224,7 @@ export function ConfirmForm({ record, draft, trial = false, banner, children }: 
               setWork(rows => rows.map(row => row.key === key ? { ...row, boqId: selected, unitValue: chosen?.unit ?? row.unitValue } : row));
             }} required>
               <option value="">Choose the item this work belongs to</option>{record.boq.map(item => <option key={item.id} value={item.id}>{item.section} — {item.description} ({unitLabel(item.unit)})</option>)}</select></label>
+            {preview.lines[i] && <p className="mt-3 border-l-2 border-rule pl-3 font-semibold">{preview.lines[i]!.quantity} {unitLabel(unitValue)} @ {formatMoney(preview.lines[i]!.rate, currency)} / {unitLabel(unitValue)} = {formatMoney(preview.lines[i]!.amount, currency)}</p>}
             <p className="mt-3 border-l-2 border-rule pl-3 font-semibold">{unitValue ? `Measure in ${unitLabel(unitValue)}: ${unitMeaning(unitValue)}` : "Choose a BoQ item to see its measurement unit."}</p>
             <div className="review-helper-fields mt-4"><label className="block">Measurement unit *
               <input className={inputClass + " mt-2"} name={`w${i}.unit`} value={unitValue} required onChange={event => {
@@ -250,8 +278,9 @@ export function ConfirmForm({ record, draft, trial = false, banner, children }: 
       <p className="mb-4">By confirming, you confirm that these are the quantities and observations from your site.</p>
       {!record.audio_url&&!record.photos.length&&!locked&&<p role="status" className="my-4">Add a voice note or photo in the same Telegram chat before confirming.</p>}
       {draftNotice&&!dirty&&<p role="status" className="mb-3">Draft saved. <Link href="/today" className="text-link">Return to Today</Link></p>}
+      {preview.total !== null && !locked && <section className="mt-5 flex items-baseline justify-between gap-4 border-y border-rule py-4"><span className="stitch-kicker">Total verified value</span><strong className="font-serif text-2xl">{formatMoney(preview.total, currency)}</strong></section>}
       {!locked&&!archived&&<div className="diary-confirm-actions"><button type="submit" disabled={saving || savingDraft || record.pending_media || record.pending_photo_analysis || (!record.audio_url&&!record.photos.length) || (!!saved && !dirty && !draftNotice)} className="stitch-button" data-primary>
-        <DiaryIcon name="check" size={20}/>{saving ? costing ? <><span className="stitch-spinner" aria-hidden="true"/>Costing against the BoQ…</> : "Saving your confirmation…" : saved ? "Confirm changes and rebuild report" : "Confirm and cost it"}</button>
+        <DiaryIcon name="check" size={20}/>{saving ? costing ? <><span className="stitch-spinner" aria-hidden="true"/>Costing against the BoQ…</> : "Saving your confirmation…" : saved ? "Confirm changes and rebuild report" : preview.total !== null ? `Confirm and Cost It (${formatMoney(preview.total, currency)})` : "Confirm and cost it"}</button>
         {!trial&&<button type="button" data-tour="save-draft" className="stitch-button" disabled={saving||savingDraft} onClick={event=>void saveDraft(event.currentTarget.form)}><DiaryIcon name="bookmark" size={20}/>{savingDraft?"Saving draft…":"Save draft — finish later"}</button>}</div>}
       </form>}{children}
   </main>;

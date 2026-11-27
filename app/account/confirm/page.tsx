@@ -1,3 +1,3 @@
 import { SignupConfirmation } from "@/components/account-forms";
-import { WorkspaceHeader } from "@/components/workspace-header";
-export default function ConfirmSignupPage() { return <main className="mx-auto min-h-screen max-w-5xl px-5 pb-16 pt-7"><WorkspaceHeader current="account" title="Finish account signup"/><SignupConfirmation siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""} /></main>; }
+import { PublicSite } from "@/components/public-site";
+export default function ConfirmSignupPage() { return <PublicSite current="account"><div className="mx-auto w-full max-w-md px-4 pb-16 pt-8"><SignupConfirmation siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""} /></div></PublicSite>; }

@@ -62,7 +62,7 @@ async function Report({ params }: Props) {
       {!locked && !report.stale && !reviewer?.archived && reviewer?.canApprove && <ApprovalForm id={id} version={reportVersion(report)} reviewer={reviewer.name} project={source.project.name} date={displayDate(source.date)} amount={formatMoney(report.document.costing.total_cost,report.document.currency)}/>}
     </>}/>
     {sameDay.length > 0 && <section className="stitch-card mt-4" data-tour="day-submissions">
-      <div className="stitch-title-row"><h2>Today’s costed submissions</h2><strong>{formatMoney(dayAmount.toFixed(),report.document.currency)}</strong></div>
+      <div className="stitch-title-row"><h2>Today’s report — all submissions</h2><strong>{formatMoney(dayAmount.toFixed(),report.document.currency)}</strong></div>
       <ol className="diary-list">{sameDay.map(note=><li key={note.id}><Link href={`/reports/${note.id}`} prefetch={false} aria-current={note.id===id?"page":undefined}>
         <span><strong>{note.report_status==="locked"?"Locked report":"Draft report"}</strong><small>{note.captured_at?displayTimestamp(note.captured_at,source.project.timezone):displayDate(note.date)}</small>{note.summary_items?.map((item,index)=><small key={index}>{item}</small>)}</span>
         <strong>{formatMoney(note.total_cost!,report.document.currency)}</strong>
