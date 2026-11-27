@@ -21,12 +21,12 @@ async function AccountContent({ searchParams }: { searchParams: Promise<{ sectio
   const query=await searchParams, requested = query.section ?? "overview";
   if(requested==="security"){const recent=Boolean(await accountForHash(await currentSessionHash(),true));return <><WorkspaceHeader current="account" title="Confirm website access"/>{account.source==="browser"?<AccountSecurity siteKey={siteKey} recent={recent} projectId={query.project&&UUID.test(query.project)?query.project:undefined}/>:<AccountLogin siteKey={siteKey} telegramAccount={account} purpose="security"/>}<Link href="/account" className="text-link mt-5">Account overview</Link></>;}
   const section = ["profile", "telegram", "email"].includes(requested) ? requested : "overview";
-  const [details,projects]=await Promise.all([intakeRpc<{phone:string|null;photo_path:string|null}|null>("account_profile_details",{p_hash:await currentSessionHash(),p_update:null}).catch(()=>null),privateProjects()]);
+  const [details,projects]=await Promise.all([intakeRpc<{phone:string|null;photo_path:string|null;company:string|null}|null>("account_profile_details",{p_hash:await currentSessionHash(),p_update:null}).catch(()=>null),privateProjects()]);
   const project=projects?.projects.find(project=>project.id===projects.active_project_id);
   const feedbackOwner=Boolean(account.email_verified&&account.email&&account.email.toLowerCase()===process.env.SITELEDGER_FEEDBACK_OWNER_EMAIL?.toLowerCase());
   const role=project?.role_label??(project?.role==="pm"?"PM/QS":project?.role==="foreman"?"Foreman":"No active project role");
   const settings: (readonly [ComponentProps<typeof DiaryIcon>["name"], string, string, string])[] = [
-    ["help","/help","Help & Support","How to use SiteLedger"], ["info","/about","About","SiteLedger and its builder"],
+    ["help","/help","Help & Support","How to use SiteLedger"], ["info","/#about","About","SiteLedger and its builder"],
     ["feedback","/account/feedback","Send feedback","Report a bug or suggest an improvement"], ["receipt","/account/feedback?view=history","My feedback","Read updates and replies"],
     ["email","/account?section=email","Email & password","Manage account access"],
     ["telegram","/account?section=telegram",account.telegram_linked?"Telegram connection":"Link Telegram","Manage your Telegram account"],
@@ -41,6 +41,7 @@ async function AccountContent({ searchParams }: { searchParams: Promise<{ sectio
         </div></div>
         <dl className="stitch-profile-values">{[
           ["Full name",account.professional_name??"Not added"],["Email",account.email??"Sign in with email to view it"],["Role",role],
+          ...(details?.company?[["Company / Firm",details.company]] as const:[]),
           ["Phone",details?.phone??"Not added"],["Telegram",account.telegram_linked?"Linked":"Not linked"],["Current project",project?.name??"Select a project"],
         ].map(([label,value])=><div key={label}><dt className="stitch-kicker">{label}</dt><dd>{value}</dd></div>)}</dl>
         <Link href="/account?section=profile" className="stitch-button" data-primary>Edit profile</Link>

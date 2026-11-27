@@ -9,7 +9,7 @@ try {
   page.on("pageerror",error=>errors.push(error.message));
   for(const width of [390,768,1440]){
     await page.setViewportSize({width,height:1000});
-    for(const path of ["/","/about","/help","/contact","/privacy","/terms"]){
+    for(const path of ["/","/help","/contact","/privacy","/terms"]){
       const response=await page.goto(origin+path);assert.equal(response.status(),200);await page.evaluate(()=>document.fonts.ready);
       await page.getByRole("heading",{level:1}).waitFor();
       assert.equal(await page.getByRole("heading",{level:1}).count(),1,`${path} needs one main heading`);
@@ -18,6 +18,7 @@ try {
       for(const target of new Set(broken))if(!checkedLinks.has(target)){assert.ok((await page.request.get(origin+target)).ok(),`${target} is unavailable`);checkedLinks.add(target);}
       if(path==="/"){
         assert.deepEqual(await page.getByRole("navigation",{name:"Main navigation"}).getByRole("link").allTextContents(),["How it works","Sign in"]);
+        assert.equal(await page.locator('#about').count(),1,"About is a section of the landing page");
         assert.equal(await page.getByRole("link",{name:"SiteLedger AI home"}).count(),1);
         assert.equal(await page.locator('a[href="/reports/demo"],a[href="/log/demo"],.sample-total,.ada-launch').count(),0);
         await page.getByRole("link",{name:"Try a private site record",exact:true}).waitFor();
@@ -28,5 +29,5 @@ try {
       if(path==="/"&&width===1440)await page.screenshot({path:`${out}/landing-desktop.png`,fullPage:false});
     }
   }
-  assert.deepEqual(errors,[]);console.log("Six public pages pass at 390/768/1440px, with working links, keyboard skip/FAQ, and the private trial on the homepage.");
+  assert.deepEqual(errors,[]);console.log("Five public pages pass at 390/768/1440px, with working links, keyboard skip/FAQ, and the private trial on the homepage.");
 }finally{await browser.close();}

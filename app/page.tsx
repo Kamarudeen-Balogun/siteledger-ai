@@ -33,6 +33,20 @@ export default function Home() {
           <li><DiaryIcon name="team" size={18}/>Private projects with owner-controlled access.</li>
         </ul>
       </section>
+      <section id="about" className="stitch-card" aria-labelledby="about-title">
+        <h2 id="about-title">About SiteLedger</h2>
+        <p>A voice note tells you what happened. A costed, confirmed record helps explain what that work means for the project.</p>
+        <h3>From verbal updates to dated proof</h3>
+        <p>A foreman’s update, a phone gallery and a price list often live in separate places. SiteLedger brings them into a daily report: work items, quantities, supplied rates, photos and the people who confirmed and approved it.</p>
+        <p>The Nigerian demonstration uses naira, Nigerian English and Pidgin site terms. Private projects select their own currency and timezone; prices always come from that project’s BoQ.</p>
+        <h3>The person stays in charge</h3>
+        <p>AI transcribes and suggests structured work items and possible photo findings. A person checks the quantities and observations before costing. A PM then approves the report in a separate action, including on a one-person project.</p>
+        <p>A locked original cannot be silently rewritten. A correction becomes an amendment with its own author and timestamp. Your reports are locked once approved.</p>
+        <h3>About the builder</h3>
+        <p>Built by Balogun Kamarudeen Ayomide — Civil Engineer &amp; AI Automation Specialist</p>
+        <div className="flex flex-wrap gap-5"><a className="text-link" href="https://codeflowx.dev" target="_blank" rel="noreferrer">codeflowx.dev</a><a className="text-link" href="mailto:kamarudeen@codeflowx.dev">kamarudeen@codeflowx.dev</a><a className="text-link" href="https://github.com/Kamarudeen-Balogun/siteledger-ai" target="_blank" rel="noreferrer">GitHub</a><a className="text-link" href="https://t.me/SiteLedgerNGbot" target="_blank" rel="noreferrer">Telegram @SiteLedgerNGbot</a></div>
+        <p className="mt-4">The public Lekki duplex and its client are fictional. Its rates are illustrative. Synthetic demonstration photos are labelled; the public sample never includes a user’s private uploads.</p>
+      </section>
       <section className="stitch-card" aria-labelledby="sample-title">
         <h2 id="sample-title">See a sample</h2>
         <p>Open the fictional Lekki duplex demonstration — a locked daily report and its dispute log, exactly as a client would see them.</p>

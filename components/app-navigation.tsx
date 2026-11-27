@@ -138,7 +138,7 @@ export function AppNavigation({ children }: { children: ReactNode }) {
     if (canBack || pathname !== "/") telegram.BackButton.show();
     else telegram.BackButton.hide();
   }, [telegram, pathname, canBack]);
-  const workspace = isWorkspacePath(pathname) || (active && ["/help","/about"].includes(pathname));
+  const workspace = isWorkspacePath(pathname) || (active && pathname === "/help");
   return <Navigation.Provider value={{ back, active, projectId, selectProject, person, projects, pathname, avatar, avatarVersion }}>{children}{confirmation}{changing&&workspace&&<div className="stitch-transition" aria-hidden="true"/>}{workspace&&!pathname.endsWith("/demo")&&<AdaHelp projectId={projectId}/>} {person&&<DiaryTour key={`${person}/${pathname}`} person={person} path={pathname}/>}<Suspense fallback={null}><PathChanges changed={changed}/></Suspense>{(workspace||pathname==="/") &&
     <Script src="https://telegram.org/js/telegram-web-app.js" onReady={() => {
       const app = (window as Window & { Telegram?: { WebApp?: TelegramApp } }).Telegram?.WebApp;
@@ -147,9 +147,15 @@ export function AppNavigation({ children }: { children: ReactNode }) {
     }} />}</Navigation.Provider>;
 }
 
-export function WorkspaceProfile() {
+export function WorkspaceProfile({ onlyWhenActive = false }: { onlyWhenActive?: boolean } = {}) {
   const navigation = useContext(Navigation);
-  return <Link href="/account" prefetch={false} className="diary-icon-button diary-profile-button" aria-label={navigation?.active ? "Profile" : "Account"} data-tour="profile">{navigation?.active&&navigation.avatar?<Image src={`/api/account/avatar?v=${navigation.avatarVersion}`} unoptimized alt="" width={32} height={32}/>:<DiaryIcon name="profile" size={18}/>}</Link>;
+  if (!navigation?.active) {
+    // Public pages must show no sign of a signed-in user unless one is actually
+    // signed in: logged-out visitors get a plain Sign in link, never a profile icon.
+    if (onlyWhenActive) return null;
+    return <Link href="/account" prefetch={false} className="public-button homepage-signin" data-tour="profile">Sign in</Link>;
+  }
+  return <Link href="/account" prefetch={false} className="diary-icon-button diary-profile-button" aria-label="Profile" data-tour="profile">{navigation.avatar?<Image src={`/api/account/avatar?v=${navigation.avatarVersion}`} unoptimized alt="" width={32} height={32}/>:<DiaryIcon name="profile" size={18}/>}</Link>;
 }
 
 export function WorkspaceBack({ onBack }: { onBack?: () => void }) {

@@ -72,7 +72,7 @@ for (const code of ["123456", "01234567", "0123456789"]) test(`successful ${code
     if (path.endsWith("account_verified_email")) { proved = true; assert.equal(body.p_user,user); return Response.json(account); }
     assert.ok(path.endsWith("account_session")); return Response.json(account);
   });
-  const result=await accountApi(request({email:"foreman@example.test",token:code,name:"Amina",confirm_name:true}),"verify_signup");
+  const result=await accountApi(request({email:"foreman@example.test",token:code,name:"Amina",confirm_name:true,captcha_token:"captcha-proof"}),"verify_signup");
   assert.equal(result.status,200);assert.ok(proved);
   const output=JSON.stringify(await result.json());assert.equal(output.includes(nativeToken),false);assert.equal(output.includes("native-refresh"),false);
   assert.match(result.headers.get("set-cookie")!,/HttpOnly; SameSite=Lax.*Secure/);
@@ -114,10 +114,10 @@ test("eight-digit recovery and invitation email codes reach native verification 
     if (path.endsWith("account_verified_email")) { emailProved = true; return Response.json(account); }
     assert.equal(path, "/auth/v1/logout"); return Response.json({});
   });
-  const recovered = await accountApi(request({ email: account.email, token: "01234567", password: "long-test-password" }), "reset_password");
+  const recovered = await accountApi(request({ email: account.email, token: "01234567", password: "long-test-password", captcha_token: "captcha-proof" }), "reset_password");
   assert.equal(recovered.status, 200); assert.ok(revoked);
   assert.match(recovered.headers.get("set-cookie")!, /Max-Age=0/);
-  const invitation = request({ token: "01234567" });
+  const invitation = request({ token: "01234567", captcha_token: "captcha-proof" });
   invitation.headers.set("cookie", accountCookie("a".repeat(43)));
   assert.equal((await accountApi(invitation, "verify_email")).status, 200);
   assert.ok(emailProved); assert.deepEqual(verified, ["recovery", "email"]);
@@ -130,7 +130,7 @@ test("a correctly shaped but invalid native code cannot create account access", 
     assert.equal(path, "/auth/v1/verify");
     return Response.json({ error_code: "otp_expired" }, { status: 403 });
   });
-  const result = await accountApi(request({ email: "foreman@example.test", token: "01234567", name: "Amina", confirm_name: true }), "verify_signup");
+  const result = await accountApi(request({ email: "foreman@example.test", token: "01234567", name: "Amina", confirm_name: true, captcha_token: "captcha-proof" }), "verify_signup");
   assert.equal(result.status, 400); assert.equal(result.headers.get("set-cookie"), null);
 });
 test("signup detects hosted confirmation settings before creating a native account", async context => {
