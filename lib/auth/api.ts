@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { intakeRpc } from "../telegram/storage";
 import { verifyTelegramAccess } from "../confirm/telegram-access";
 import { UUID } from "../confirm/access";
+import { isAllowedAppOrigin } from "../app-url";
 import { accountCookie, accountForHash, requestSessionHash, secretHash, sessionToken } from "./session";
 import { AccountError, authRequest, nativeSession } from "./provider";
 import { emailAddress, professionalName, validPassword, type Account } from "./types";
@@ -125,7 +126,7 @@ async function botLink(secret: string) {
 export async function accountApi(request: Request, action: string): Promise<Response> {
   if (!Object.hasOwn(shapes, action)) return Response.json({ error: "Account action unavailable." }, { status: 404, headers: privateHeaders });
   try {
-    if (!process.env.SITELEDGER_APP_URL || request.headers.get("origin") !== new URL(process.env.SITELEDGER_APP_URL).origin) throw new AccountError("Open this action on SiteLedger.", 403);
+    if (!isAllowedAppOrigin(request.headers.get("origin"))) throw new AccountError("Open this action on SiteLedger.", 403);
     const input = await smallJson(request);
     if (Object.keys(input).some(key => !shapes[action].includes(key))) throw new AccountError("Check your account details.", 422);
     const hash = requestSessionHash(request);

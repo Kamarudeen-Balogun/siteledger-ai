@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isAllowedAppOrigin } from "@/lib/app-url";
 import { requestSessionHash, accountForHash } from "@/lib/auth/session";
 import { privateHeaders } from "@/lib/auth/api";
 import { smallJson } from "@/lib/auth/request";
@@ -21,7 +22,7 @@ export async function GET(request:Request) {
   }catch{return new Response(null,{status:503,headers:privateHeaders});}
 }
 export async function POST(request:Request) {
-  if(request.headers.get("origin")!==process.env.SITELEDGER_APP_URL)return reply({error:"Open the feedback form in SiteLedger."},403);
+  if(!isAllowedAppOrigin(request.headers.get("origin")))return reply({error:"Open the feedback form in SiteLedger."},403);
   const hash=requestSessionHash(request);let path:string|undefined;
   try {
     const account=await accountForHash(hash);if(!account)return reply({error:"Sign in to send feedback."},401);

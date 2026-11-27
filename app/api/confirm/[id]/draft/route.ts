@@ -1,4 +1,5 @@
 import { privateHeaders } from "@/lib/auth/api";
+import { isAllowedAppOrigin } from "@/lib/app-url";
 import { accountForHash, requestSessionHash } from "@/lib/auth/session";
 import { smallJson } from "@/lib/auth/request";
 import { UUID } from "@/lib/confirm/access";
@@ -7,7 +8,7 @@ import { intakeRpc } from "@/lib/telegram/storage";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const reply = (body: unknown, status = 200) => Response.json(body, { status, headers: privateHeaders });
-  if (request.headers.get("origin") !== process.env.SITELEDGER_APP_URL) return reply({ error: "Open the site note in SiteLedger." }, 403);
+  if (!isAllowedAppOrigin(request.headers.get("origin"))) return reply({ error: "Open the site note in SiteLedger." }, 403);
   const { id } = await params, hash = requestSessionHash(request);
   if (!hash || !UUID.test(id)) return reply({ error: "Site note unavailable." }, 404);
   try {

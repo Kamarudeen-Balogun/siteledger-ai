@@ -1,4 +1,5 @@
 import { createHmac, randomInt } from "node:crypto";
+import { isAllowedAppOrigin } from "@/lib/app-url";
 import { requestSessionHash } from "@/lib/auth/session";
 import { privateHeaders } from "@/lib/auth/api";
 import { smallJson } from "@/lib/auth/request";
@@ -23,7 +24,7 @@ function hashCode(session:string,code:string) {
 }
 export async function POST(request:Request) {
   const reply=(body:unknown,status=200)=>Response.json(body,{status,headers:privateHeaders});
-  if(request.headers.get("origin")!==process.env.SITELEDGER_APP_URL)return reply({error:"Open your account in SiteLedger."},403);
+  if(!isAllowedAppOrigin(request.headers.get("origin")))return reply({error:"Open your account in SiteLedger."},403);
   const hash=requestSessionHash(request);
   if(!hash)return reply({error:"Sign in to continue."},401);
   const admin=process.env.SITELEDGER_FEEDBACK_OWNER_EMAIL??"";

@@ -8,10 +8,11 @@ import { UUID } from "../confirm/access";
 import { validBoqEdit } from "./boq-types";
 import { MAX_IMPORT_ROWS, MAX_FILE_BYTES } from "./boq-input";
 import type { ProjectPermissions } from "./permissions";
+import { isAllowedAppOrigin } from "../app-url";
 
 export async function boqImportApi(request: Request, commit = false) {
   try {
-    if (!process.env.SITELEDGER_APP_URL || request.headers.get("origin") !== new URL(process.env.SITELEDGER_APP_URL).origin) throw new AccountError("Open this action on SiteLedger.", 403);
+    if (!isAllowedAppOrigin(request.headers.get("origin"))) throw new AccountError("Open this action on SiteLedger.", 403);
     const hash = requestSessionHash(request), account = await accountForHash(hash);
     if (!account) throw new AccountError("Sign in to continue.", 401);
     const input = await smallJson(request, commit ? 750000 : 2900000);

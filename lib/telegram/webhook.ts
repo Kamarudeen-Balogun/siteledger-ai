@@ -1,4 +1,5 @@
 import "server-only";
+import { appOrigin } from "../app-url";
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { downloadTelegramFile, telegramCall } from "./api";
 import { intakeRpc, uploadEvidence, type IntakeReceipt } from "./storage";
@@ -123,7 +124,7 @@ export async function handleTelegramWebhook(request: Request, dependencies: Inta
     const reviewId = receipt.submission_id ?? (receipt.payload.kind === "today" && !receipt.reply_path ? await dependencies.reviewSubmission?.(receipt.payload) : null);
     let link:string|undefined;
     const landingStart=receipt.payload.kind==="start"&&!receipt.payload.link_hash&&!receipt.payload.project_code&&receipt.reply_path!=="/today";
-    try {const origin=new URL(process.env.SITELEDGER_APP_URL??"");const path=landingStart?"/":summary?.path??receipt.reply_path??(reviewId?`/confirm/${reviewId}`:"/account");
+    try {const origin=new URL(appOrigin());const path=landingStart?"/":summary?.path??receipt.reply_path??(reviewId?`/confirm/${reviewId}`:"/account");
       if(origin.protocol==="https:" && path.startsWith("/") && !path.startsWith("//"))link=new URL(path,origin.origin).toString();}catch{ /* Saved receipt can be retried when the origin is configured. */ }
     const inChat=dependencies===intakeDependencies&&receipt.status!=="blocked"&&(
       receipt.payload.kind==="projects" ? await sendTelegramProjectList(receipt.payload.chat_id).catch(()=>false) :

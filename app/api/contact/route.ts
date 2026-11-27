@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { smallJson } from "@/lib/auth/request";
 import { intakeRpc } from "@/lib/telegram/storage";
 import { sendProductEmail } from "@/lib/email/send";
+import { appOrigin, isAllowedAppHostname, isAllowedAppOrigin } from "@/lib/app-url";
 
 const reply = (body: unknown, status = 200) => Response.json(body, { status });
 const topics = ["Product question", "Feedback or improvement", "Report a problem", "Something else"] as const;
@@ -9,15 +10,15 @@ const roles = ["Foreman", "Site Engineer", "Project Manager / QS", "Client", "Vi
 
 async function verifyCaptcha(token: unknown) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret || !process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || !process.env.SITELEDGER_APP_URL) throw new Error("The contact form is waiting for its bot-check setup.");
+  if (!secret || !process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || !appOrigin()) throw new Error("The contact form is waiting for its bot-check setup.");
   if (typeof token !== "string" || !token || token.length > 2048) throw new Error("Complete a fresh bot check.");
   const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ secret, response: token }), redirect: "error", signal: AbortSignal.timeout(10000) });
   const result = await response.json();
-  if (!response.ok || result.success !== true || result.hostname !== new URL(process.env.SITELEDGER_APP_URL).hostname) throw new Error("Complete a fresh bot check before sending.");
+  if (!response.ok || result.success !== true || !isAllowedAppHostname(result.hostname)) throw new Error("Complete a fresh bot check before sending.");
 }
 
 export async function POST(request: Request) {
-  if (request.headers.get("origin") !== process.env.SITELEDGER_APP_URL) return reply({ error: "Open the contact form in SiteLedger." }, 403);
+  if (!isAllowedAppOrigin(request.headers.get("origin"))) return reply({ error: "Open the contact form in SiteLedger." }, 403);
   try {
     const input = await smallJson(request, 20000);
     const text = (value: unknown, max: number, required = true) => typeof value === "string" && value.trim().length > 0 && value.length <= max ? value.trim() : required ? null : "";

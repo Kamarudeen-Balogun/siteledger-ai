@@ -6,9 +6,10 @@ import { smallJson } from "../auth/request";
 import { intakeRpc } from "../telegram/storage";
 import { UUID } from "../confirm/access";
 import { validBoqEdit } from "./boq-types";
+import { isAllowedAppOrigin } from "../app-url";
 export async function boqApi(request: Request) {
   try {
-    if (!process.env.SITELEDGER_APP_URL || request.headers.get("origin") !== new URL(process.env.SITELEDGER_APP_URL).origin) throw new AccountError("Open this action on SiteLedger.", 403);
+    if (!isAllowedAppOrigin(request.headers.get("origin"))) throw new AccountError("Open this action on SiteLedger.", 403);
     const input = await smallJson(request);
     if (Object.keys(input).length !== 2 || typeof input.project_id !== "string" || !UUID.test(input.project_id) || !validBoqEdit(input.item)) throw new AccountError("Check the BoQ fields. Use a positive quantity and a supplied decimal rate.", 422);
     const hash = requestSessionHash(request), actor = await accountForHash(hash);

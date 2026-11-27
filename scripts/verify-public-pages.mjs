@@ -17,11 +17,27 @@ try {
       const broken=await page.locator('a[href^="/"]').evaluateAll(links=>links.map(link=>link.getAttribute('href')));
       for(const target of new Set(broken))if(!checkedLinks.has(target)){assert.ok((await page.request.get(origin+target)).ok(),`${target} is unavailable`);checkedLinks.add(target);}
       if(path==="/"){
-        assert.deepEqual(await page.getByRole("navigation",{name:"Main navigation"}).getByRole("link").allTextContents(),["How it works","Sign in"]);
-        assert.equal(await page.locator('#about').count(),1,"About is a section of the landing page");
         assert.equal(await page.getByRole("link",{name:"SiteLedger AI home"}).count(),1);
-        assert.equal(await page.locator('a[href="/reports/demo"],a[href="/log/demo"],.sample-total,.ada-launch').count(),0);
+        assert.equal(await page.locator('#about').count(),1,"About is a section of the landing page");
+        assert.equal(await page.locator('.sample-total').count(),1,"Landing needs the sample record card");
+        assert.ok((await page.locator('.sample-total').innerText()).includes("₦551,000"),"Sample record must total ₦551,000");
+        assert.ok(await page.locator('a[href="/reports/demo"]').count()>=1,"Landing must link the sample report");
+        assert.ok(await page.locator('a[href="/log/demo"]').count()>=1,"Landing must link the sample dispute log");
+        assert.equal(await page.locator('.public-menu summary').count(),1,"Landing needs the menu drawer");
+        await page.locator('.public-menu summary').click();
+        assert.deepEqual(await page.locator('.public-menu nav a').allTextContents(),["About","Sample report","Trial","Help & FAQ","Contact","Terms","Privacy"]);
+        await page.locator('.public-menu summary').click();
+        assert.ok(await page.locator('a[href="#about"],.public-menu nav a[href="/#about"]').count()>=1);
         await page.getByRole("link",{name:"Try a private site record",exact:true}).waitFor();
+      }
+      if(path==="/help"&&width===390){
+        await page.locator('#help-search').fill("cement");
+        assert.ok((await page.locator('p[role="status"]').first().innerText()).includes("Showing 1 of 15 questions"),"Help search must filter to the materials question");
+        await page.locator('#help-search').fill("");
+      }
+      if(path==="/contact"&&width===390){
+        assert.equal(await page.getByRole("button",{name:"Copy"}).count(),1,"Contact desk needs the inbox copy button");
+        assert.equal(await page.locator('a[href="https://t.me/SiteLedgerNGbot"]').count()>=1,true);
       }
       if(width===390&&path==="/"){await page.keyboard.press("Tab");assert.equal(await page.evaluate(()=>document.activeElement.textContent),"Skip to content");await page.keyboard.press("Enter");assert.equal(await page.evaluate(()=>document.activeElement.id),"content");await page.evaluate(()=>document.activeElement.blur());}
       if(path==="/help"){const question=page.locator(".faq-list summary").first();await question.focus();await page.keyboard.press("Enter");assert.equal(await question.evaluate(node=>node.parentElement.open),true);}

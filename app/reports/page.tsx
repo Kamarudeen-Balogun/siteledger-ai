@@ -27,6 +27,6 @@ async function Reports({ searchParams }: { searchParams: Promise<{ view?: string
 
 export default function Page(props: { searchParams: Promise<{ view?: string }> }) {
   return <main className="mx-auto min-h-svh max-w-5xl px-5 py-7 sm:px-10">
-    <Suspense fallback={<><WorkspaceHeader current="reports"/><DiaryNotice busy title="Opening reports…"/></>}><Reports {...props}/></Suspense>
+    <Suspense fallback={<><WorkspaceHeader current="reports"/><DiaryNotice busy title="Opening reports…"/><div className="stitch-skeleton-stack" aria-hidden="true"><i/><i/><i/></div></>}><Reports {...props}/></Suspense>
   </main>;
 }

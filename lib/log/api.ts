@@ -5,9 +5,10 @@ import { addAmendment, approveReport } from "./data";
 import { requestSessionHash } from "../auth/session";
 import { smallJson } from "../auth/request";
 import { AccountError } from "../auth/provider";
+import { isAllowedAppOrigin } from "../app-url";
 const headers = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" };
 export async function logAction(request: Request, context: { params: Promise<{ id: string }> }, action: "approve" | "amend") {
-  if (!process.env.SITELEDGER_APP_URL || request.headers.get("origin") !== process.env.SITELEDGER_APP_URL)
+  if (!isAllowedAppOrigin(request.headers.get("origin")))
     return Response.json({ error: "Open your private report link." }, { status: 403, headers });
   if (Number(request.headers.get("content-length") ?? 0) > 32000)
     return Response.json({ error: "The amendment is too long." }, { status: 413, headers });

@@ -251,7 +251,7 @@ export function ConfirmForm({ record, draft, trial = false, banner, children }: 
       {!record.audio_url&&!record.photos.length&&!locked&&<p role="status" className="my-4">Add a voice note or photo in the same Telegram chat before confirming.</p>}
       {draftNotice&&!dirty&&<p role="status" className="mb-3">Draft saved. <Link href="/today" className="text-link">Return to Today</Link></p>}
       {!locked&&!archived&&<div className="diary-confirm-actions"><button type="submit" disabled={saving || savingDraft || record.pending_media || record.pending_photo_analysis || (!record.audio_url&&!record.photos.length) || (!!saved && !dirty && !draftNotice)} className="stitch-button" data-primary>
-        <DiaryIcon name="check" size={20}/>{saving ? costing ? "Costing against the BoQ…" : "Saving your confirmation…" : saved ? "Confirm changes and rebuild report" : "Confirm and cost it"}</button>
+        <DiaryIcon name="check" size={20}/>{saving ? costing ? <><span className="stitch-spinner" aria-hidden="true"/>Costing against the BoQ…</> : "Saving your confirmation…" : saved ? "Confirm changes and rebuild report" : "Confirm and cost it"}</button>
         {!trial&&<button type="button" data-tour="save-draft" className="stitch-button" disabled={saving||savingDraft} onClick={event=>void saveDraft(event.currentTarget.form)}><DiaryIcon name="bookmark" size={20}/>{savingDraft?"Saving draft…":"Save draft — finish later"}</button>}</div>}
       </form>}{children}
   </main>;

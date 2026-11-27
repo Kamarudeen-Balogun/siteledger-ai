@@ -1,4 +1,5 @@
 import "server-only";
+import { appOrigin, isAllowedAppOrigin } from "../app-url";
 import { accountForHash, requestSessionHash, secretHash, sessionToken } from "../auth/session";
 import { privateHeaders } from "../auth/api";
 import { AccountError } from "../auth/provider";
@@ -41,7 +42,7 @@ function id(value: unknown): string { if (typeof value !== "string" || !UUID.tes
 export async function projectApi(request: Request,action: string): Promise<Response> {
   try {
     if (!Object.hasOwn(shapes,action)) throw new AccountError("Project action unavailable.",404);
-    if (!process.env.SITELEDGER_APP_URL || request.headers.get("origin")!==new URL(process.env.SITELEDGER_APP_URL).origin) throw new AccountError("Open this action on SiteLedger.",403);
+    if (!isAllowedAppOrigin(request.headers.get("origin"))) throw new AccountError("Open this action on SiteLedger.",403);
     const input = await smallJson(request);
     if (Object.keys(input).some(key=>!shapes[action].includes(key))) throw new AccountError("Check the project details.",422);
     const hash=requestSessionHash(request),actor=await accountForHash(hash);
@@ -71,7 +72,7 @@ export async function projectApi(request: Request,action: string): Promise<Respo
         } else invitation=checkedProject(await intakeRpc("account_resend_invite",{...args,p_invite:id(input.invitation_id)}));
         const recipient=invitation.email??email;
         if (!recipient) throw new AccountError("Invitation email could not be sent.",503);
-        try { await sendProductEmail(recipient,"Your SiteLedger project invitation",`Sign in at ${new URL("/invite",process.env.SITELEDGER_APP_URL)} with this email address, then enter this invitation code:\n\n${secret}\n\nThis code expires in seven days.`); }
+        try { await sendProductEmail(recipient,"Your SiteLedger project invitation",`Sign in at ${new URL("/invite",appOrigin())} with this email address, then enter this invitation code:\n\n${secret}\n\nThis code expires in seven days.`); }
         catch {
           // A fresh invitation whose email never went out must not sit
           // as a silent Pending row. Cancel it so the owner can retry

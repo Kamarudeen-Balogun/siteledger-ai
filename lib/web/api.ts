@@ -5,12 +5,13 @@ import { smallJson } from "../auth/request";
 import { AccountError } from "../auth/provider";
 import { validManifest, validMedia, MAX_WEB_AUDIO } from "./types";
 import { intakeRpc, uploadEvidence } from "../telegram/storage";
+import { isAllowedAppOrigin } from "../app-url";
 export const webHeaders = {"Cache-Control":"private, no-store","Referrer-Policy":"no-referrer"};
 type Result = {error?: string; id?: string; status?: string; missing?: number[]; path?: string; asset?: {bytes:number;sha256:string;content_type:string}; busy?: boolean};
 export type WebDependencies = {rpc:typeof intakeRpc;upload:typeof uploadEvidence};
 export const webDependencies: WebDependencies = {rpc:intakeRpc,upload:uploadEvidence};
 function authorize(request: Request) {
-  if(request.headers.get("origin") !== process.env.SITELEDGER_APP_URL) return null;
+  if(!isAllowedAppOrigin(request.headers.get("origin"))) return null;
   return requestSessionHash(request)||null;
 }
 function reply(result: Result) {

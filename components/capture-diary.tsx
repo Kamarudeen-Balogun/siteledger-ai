@@ -230,7 +230,7 @@ export function CaptureDiary() {
           <section className="stitch-card stitch-drafts" aria-labelledby="today-drafts" data-tour="drafts"><div className="stitch-title-row">
             <h2 id="today-drafts"><DiaryIcon name="pending" size={20}/>Awaiting review <span className="stitch-chip">{drafts.length+localReviews.length}</span></h2><span className="stitch-kicker">Not costed yet</span></div>
             <p>Open a draft to check the details, edit quantities, or finish costing it later.</p>
-            {summaryError?<div><p>Could not open the daily ledger.</p><button type="button" className="text-link" onClick={()=>void loadSummary(context.project_id)}>Try again</button></div>:!currentSummary&&online?<p role="status">Loading drafts…</p>:!drafts.length&&!localReviews.length?<p>No notes waiting for review.</p>:<ul className="diary-list">
+            {summaryError?<div><p>Could not open the daily ledger.</p><button type="button" className="text-link" onClick={()=>void loadSummary(context.project_id)}>Try again</button></div>:!currentSummary&&online?<div className="stitch-skeleton-stack" role="status" aria-label="Loading drafts"><i/><i/><i/></div>:!drafts.length&&!localReviews.length?<p>No notes waiting for review.</p>:<ul className="diary-list">
               {drafts.map(note=><li key={note.id}><Link href={note.href} prefetch={false}><span><strong>{note.label}</strong><small>{note.capturedAt?new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeStyle:"short",timeZone:context.timezone}).format(new Date(note.capturedAt)):note.date}</small></span><DiaryIcon name="chevron" size={18}/></Link></li>)}
               {localReviews.map(row=>row.review_url&&<li key={row.manifest.id}><Link href={row.review_url} prefetch={false}><span><strong>Review site note</strong><small>{new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeStyle:"short",timeZone:row.manifest.timezone}).format(new Date(row.manifest.captured_at))}</small></span><DiaryIcon name="chevron" size={18}/></Link></li>)}
             </ul>}
@@ -242,13 +242,26 @@ export function CaptureDiary() {
           </section>
           <section className="stitch-card stitch-ledger"><span className="stitch-kicker" data-ink="orange">Daily ledger entry</span><h2>Today{date?`, ${date}`:""}</h2>{lastLocked&&<Link href={lastLocked.href} className="stitch-menu-row"><DiaryIcon name="lock"/>Open last locked report<DiaryIcon name="chevron" size={18}/></Link>}</section>
           <section className="stitch-card diary-progress" data-tour="measured-progress"><div className="stitch-title-row"><h2><DiaryIcon name="progress" size={20}/>Work Progress — Measured</h2></div><p className="stitch-kicker" data-ink="green">{currentSummary?.readScope??"Locked reports"}</p>
-            {currentSummary?.percentage==null?<p>{currentSummary?"Add a BoQ with rates to measure project progress.":summaryError?"Measured progress is unavailable.":online?"Loading measured progress…":"Reconnect to see measured progress."}</p>:<>
+            {currentSummary?.percentage==null?(currentSummary||summaryError||!online?<p>{currentSummary?"Add a BoQ with rates to measure project progress.":summaryError?"Measured progress is unavailable.":"Reconnect to see measured progress."}</p>:<div className="stitch-skeleton-stack" role="status" aria-label="Loading measured progress"><i/><i/><i/></div>):<>
               <div className="diary-progress-summary"><strong>{currentSummary.percentage}% complete</strong><span>{currentSummary.earned} earned</span></div>
               <progress max={100} value={currentSummary.percentage} aria-label="Measured project progress"/>
               <dl>{currentSummary.rows.map(row=><div key={row.id}><dt>{row.description}</dt><dd>{row.done} / {row.scope} {row.unit} · {row.percentage}%</dd></div>)}</dl>
               <Link className="text-link" href={`/projects/${context.project_id}?view=progress`}>View all work progress</Link>
             </>}
           </section>
+          <details className="work-disclosure" data-tour="bot-example">
+            <summary>How the Telegram bot works — example<small>Example only — the real chat is in Telegram</small></summary>
+            <div className="work-disclosure-body">
+              <div className="stitch-bot-example" aria-label="Example Telegram chat">
+                <p className="stitch-bot-bubble" data-from="foreman"><strong>Voice note</strong>“We don cast 2 cube concrete, 18 square metre blockwork, 40 bags cement.”</p>
+                <p className="stitch-bot-bubble" data-from="bot">Got it — working on your report.</p>
+                <div className="stitch-bot-card"><p><strong>Check the quantities</strong></p><p>18 m² blockwork · 2 m³ concrete · 40 bags cement</p><p><span className="stitch-chip">Confirm</span> <span className="stitch-chip">Edit</span></p></div>
+                <p className="stitch-bot-bubble" data-from="foreman">Confirm</p>
+                <p className="stitch-bot-bubble" data-from="bot">Report locked — ₦551,000. Share the link or download the PDF.</p>
+              </div>
+              <p className="mt-4 leading-7">The bot follows the same steps as this diary: send, confirm, cost, lock, share. <a className="text-link" href="https://t.me/SiteLedgerNGbot" target="_blank" rel="noreferrer">Open the Telegram bot — @SiteLedgerNGbot</a></p>
+            </div>
+          </details>
         </>}
         {pending.length>0&&<WorkDisclosure title="Notes on this device" description={`${pending.length} waiting to send`} open>
           {pending.filter(row=>row.manifest.id!==focusedId).map(row=><article key={row.manifest.id} className="diary-queue-entry" data-status={row.status}><strong>{row.context.project_name}</strong><p>{row.manifest.project_id!==context.project_id?"Reopen the original project to send this note.":row.message}</p></article>)}
