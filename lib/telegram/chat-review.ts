@@ -9,7 +9,7 @@ import { suggestedPhotoNote, validatePhotoAnalysis } from "../ai/photo-schema";
 import { createReport, getReport } from "../reports/data";
 import { approveReport, reportVersion } from "../log/data";
 import { formatMoney } from "../costing/format-money";
-import { displayUnit, truncateAtWord } from "../reports/model";
+import { displayUnit, displayWorkTitle, formatQuantity, truncateAtWord } from "../reports/model";
 import { suppliedDecimal } from "../projects/boq-input";
 import { recordActor } from "../auth/record";
 
@@ -72,7 +72,8 @@ function siteLink(path:string) {return new URL(path,appOrigin()).toString();}
 
 function reportSummary(report: NonNullable<Awaited<ReturnType<typeof getReport>>>) {
   const {source,currency,costing}=report.document;
-  const items=costing.items.slice(0,12).map((item,index)=>`• ${truncateAtWord(source.items[index].description,88)} · ${item.quantity_done} ${displayUnit(item.unit)} · ${formatMoney(item.cost_today,currency)}`);
+  const prices = new Map(source.price_list.map(price => [price.id, price]));
+  const items=costing.items.slice(0,12).map((item,index)=>`• ${truncateAtWord(displayWorkTitle(prices.get(item.boq_item_id)?.description, source.items[index].description),88)} · ${formatQuantity(item.quantity_done)} ${displayUnit(item.unit)} · ${formatMoney(item.cost_today,currency)}`);
   return [`${report.status==="locked"?"Locked report":"Draft report"} · ${formatMoney(costing.total_cost,currency)}`,...items].join("\n");
 }
 

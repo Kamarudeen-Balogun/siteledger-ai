@@ -1,7 +1,7 @@
 import "server-only";
 import { join } from "node:path";
 import { Document, Page, Text, View, Image as PdfImage, Font, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
-import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, lockDate, moneyDisplayNote, type ReportView } from "../reports/model";
+import { displayDate, displayRatio, displayProductivity, displayTimestamp, displayUnit, displayWorkTitle, formatQuantity, lockDate, moneyDisplayNote, type ReportView } from "../reports/model";
 import { formatMoney } from "../costing/format-money";
 
 Font.register({ family: "PublicSans", fonts: [
@@ -58,14 +58,14 @@ export async function renderReportPdf(report: ReportView, photos: string[] = [])
       <Text style={styles.section}>Work done and BoQ value</Text>
       <View style={styles.row} wrap={false}><Text style={styles.colWork}>Work item</Text><Text style={styles.colQty}>Quantity</Text><Text style={styles.colMoney}>Rate</Text><Text style={styles.colMoney}>Cost today</Text></View>
       {!source.items.length && <Text>No measured work recorded today.</Text>}
-      {doc.costing.items.map((item, i) => <View key={i} wrap={source.items[i].description.length > 600} style={{ borderBottomWidth: 0.5, borderBottomColor: "#E7E0D4", paddingBottom: 8 }}>
+      {doc.costing.items.map((item, i) => <View key={i} wrap={displayWorkTitle(prices.get(item.boq_item_id)?.description, source.items[i].description).length > 600} style={{ borderBottomWidth: 0.5, borderBottomColor: "#E7E0D4", paddingBottom: 8 }}>
         <View style={[styles.row, { borderBottomWidth: 0 }]}><View style={styles.colWork}>
           <Text style={styles.eyebrow}>{prices.get(item.boq_item_id)?.section.toUpperCase()}</Text>
-          <Text>{source.items[i].description}</Text><Text style={styles.small}>{prices.get(item.boq_item_id)?.description}</Text>
-        </View><Text style={styles.colQty}>{item.quantity_done}{"\n"}{displayUnit(item.unit)}</Text>
+          <Text>{displayWorkTitle(prices.get(item.boq_item_id)?.description, source.items[i].description)}</Text>
+        </View><Text style={styles.colQty}>{formatQuantity(item.quantity_done)}{"\n"}{displayUnit(item.unit)}</Text>
           <Text style={styles.colMoney}>{money(item.rate)}</Text><Text style={styles.colMoney}>{money(item.cost_today)}</Text></View>
         <Text style={[styles.progress, ...(item.variance_color === "red" ? [styles.red] : [])]}>
-          Cumulative {item.cumulative_quantity} {displayUnit(item.unit)} · {displayRatio(item.percentage_complete)}% complete · Value earned {money(item.value_earned)}
+          Cumulative {formatQuantity(item.cumulative_quantity)} {displayUnit(item.unit)} · {displayRatio(item.percentage_complete)}% complete · Value earned {money(item.value_earned)}
           {item.is_overrun ? " · OVER BOQ QUANTITY" : item.is_behind_plan ? ` · ${displayRatio(item.variance_percentage_points!)} percentage points behind plan` : ""}
         </Text>
         {item.productivity !== null && <Text style={styles.progress}>Crew {item.crew} · {displayProductivity(item.productivity)} {displayUnit(item.unit)} per person per day</Text>}

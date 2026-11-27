@@ -7,9 +7,9 @@ import { BoqHistory } from "@/components/boq-history";
 import { BoqReview } from "@/components/boq-review";
 import { BoqEditor } from "@/components/boq-editor";
 import { WorkspaceHeader } from "@/components/workspace-header";
-import { DiaryNotice } from "@/components/diary-notice";
+import { PageLoading } from "@/components/page-loading";
 import { DiaryIcon } from "@/components/diary-icon";
-import { displayDate } from "@/lib/reports/model";
+import { displayDate, displayUnit, formatQuantity } from "@/lib/reports/model";
 import { formatMoney } from "@/lib/costing/format-money";
 import { decimal } from "@/lib/costing/decimal";
 import { costReport } from "@/lib/costing/cost-report";
@@ -39,10 +39,14 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
     {(data.access.archived_at || !canEdit) && <p role="status" className="stitch-card">{data.access.archived_at ? "Archived project. Its BoQ remains available to read." : "You have read-only access to the BoQ."}</p>}
     <BoqEditor projectId={id} currency={currency} rows={rows} editable={canEdit && !data.access.archived_at} overview={<>
       <div className="stitch-title-row">
-        <details className="stitch-compact-disclosure" data-tour="boq-history"><summary><DiaryIcon name="history" size={16}/>Previous versions<DiaryIcon name="chevron" size={16}/></summary>
-          {versions?.length ? <ul>{versions.map(item=><li key={item.version}><details><summary>Version {item.version} · {displayDate(item.effective_date)} · {item.items} {item.items===1?"item":"items"}</summary>
-            <ul>{item.rows.map((row,index)=><li key={row.item_code ?? index}>{row.description} — {row.boq_quantity} {row.unit} @ {money(row.rate)} per {row.unit}</li>)}</ul></details></li>)}</ul> : <p>No BoQ versions have been saved yet.</p>}
-          {versions?.length ? <p>Drafts use the current version (Version {versions[0].version}). Locked reports keep the version they were locked with.</p> : null}
+        <details className="boq-versions" data-tour="boq-history"><summary><span className="boq-versions__label"><DiaryIcon name="history" size={16}/>Version History{versions?.length ? ` (v${versions[0].version} Active)` : ""}</span><DiaryIcon name="chevron" size={16}/></summary>
+          <div className="boq-versions__body">
+            {versions?.length ? <ol className="boq-versions__list">{versions.map(item=><li key={item.version} className="boq-versions__version"><details>
+              <summary><span><strong>Version {item.version}</strong><small>{displayDate(item.effective_date)} · {item.items} {item.items===1?"item":"items"}</small></span>{item.version===versions[0].version&&<span className="stitch-kicker stitch-chip" data-tone="green">Active</span>}</summary>
+              <ul className="boq-versions__rows">{item.rows.map((row,index)=><li key={row.item_code ?? index}><span>{row.description}</span><span>{formatQuantity(row.boq_quantity)} {displayUnit(row.unit)} @ {money(row.rate)} per {displayUnit(row.unit)}</span></li>)}</ul>
+            </details></li>)}</ol> : <p>No BoQ versions have been saved yet.{changes?.length ? " The current BoQ is the original schedule — every change is listed in the change history below." : ""}</p>}
+            {versions?.length ? <p>Drafts use the current version (Version {versions[0].version}). Locked reports keep the version they were locked with.</p> : null}
+          </div>
         </details><span className="stitch-kicker">{rows.length} contract {rows.length===1?"item":"items"}</span>
       </div>
       {changes && <BoqReview changes={changes} currency={currency}/>}
@@ -60,6 +64,6 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
 
 export default function BoqPage(props: { params: Promise<{ id: string }> }) {
   return <main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10">
-    <Suspense fallback={<><WorkspaceHeader current="boq"/><DiaryNotice busy title="Opening the project BoQ…"/><div className="stitch-skeleton-stack" aria-hidden="true"><i/><i/><i/></div></>}><Content {...props}/></Suspense>
+    <Suspense fallback={<PageLoading title="Opening the project BoQ…" variant="table" header={<WorkspaceHeader current="boq"/>}/>}> <Content {...props}/></Suspense>
   </main>;
 }

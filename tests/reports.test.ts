@@ -1,7 +1,7 @@
 import { secretHash } from "../lib/auth/session";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildDocument, reportFromInput, displayProductivity, truncateAtWord, ReportStateError, type ReportSource, type ReportInput } from "../lib/reports/model";
+import { buildDocument, reportFromInput, displayProductivity, displayRatio, truncateAtWord, displayWorkTitle, formatQuantity, ReportStateError, type ReportSource, type ReportInput } from "../lib/reports/model";
 import { POST } from "../app/api/reports/[id]/route";
 
 const id = "70000000-0000-4000-8000-000000000071", secret = "test-report-secret";
@@ -121,4 +121,25 @@ test("display text shortens at a word boundary, never mid-word", () => {
   assert.equal(truncateAtWord("eighteen square metres of blockwork", 18), "eighteen square…");
   assert.equal(truncateAtWord("Short text", 20), "Short text");
   assert.equal(truncateAtWord("Blockwork", 5), "Block…");
+});
+
+test("quantities trim trailing zeros and titles use the structured BoQ name", () => {
+  assert.equal(formatQuantity("420.0000"), "420");
+  assert.equal(formatQuantity("35.0000"), "35");
+  assert.equal(formatQuantity("1100.0000"), "1,100");
+  assert.equal(formatQuantity("4.5000"), "4.5");
+  assert.equal(formatQuantity("0.2500"), "0.25");
+  assert.equal(formatQuantity(""), "");
+  assert.equal(displayWorkTitle("Sandcrete blocks 225mm hollow, laid", "thin square metre of two hundred and twenty-five millimetre blockwork on the east elevation"), "Sandcrete blocks 225mm hollow, laid");
+  assert.equal(displayWorkTitle(undefined, "cast two cubic metres of concrete for the columns"), "cast 2 m³ of concrete for the columns");
+});
+
+test("percentages show whole numbers whole and fractions at one decimal, like the mock", () => {
+  // The mock BoQ shows 100% Complete beside 45.7% Complete: one-decimal
+  // formatting with trailing zeros dropped, not a forced ".0" everywhere.
+  assert.equal(displayRatio("100"), "100");
+  assert.equal(displayRatio("0"), "0");
+  assert.equal(displayRatio("101.8"), "101.8");
+  assert.equal(displayRatio("45.74"), "45.7");
+  assert.equal(displayRatio("11.666"), "11.7");
 });
