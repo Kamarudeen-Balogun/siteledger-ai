@@ -255,3 +255,7 @@ The builder completed real Kiro reviews of [task 4](.kiro/specs/siteledger/task-
 [The hook investigation](docs/kiro-hook-follow-up.md) distinguishes manual commands from unobserved automatic execution. Successful hook and Crew execution are not claimed. The builder reported exhausted initial credits and a pending 4,000-credit request on 21 November. Codex work is identified separately in handoffs; the final Kiro write-up remains task 14.
 
 Submission target: **3 December 2026**. Deadline: **4 December 2026, 23:00 WAT**, as recorded in the brief.
+
+## Preview deployments
+
+Sign-in on a preview deployment needs three variables set for the Preview environment, with the values for the project's Supabase project: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY`. `NEXT_PUBLIC_*` values are baked in at build time, so changing one only takes effect on the next deployment.
