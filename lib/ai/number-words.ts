@@ -118,6 +118,21 @@ function unitAt(tokens: Token[], start: number): { unit: "m2" | "m3" | "tonne" |
 
 const STOP_WORDS = new Set(["the", "a", "an", "of", "on", "in", "at", "to", "and",
   "east", "west", "north", "south", "elevation", "ground", "floor", "level"]);
+
+// A dimension inside a description ("225 millimetre", "two hundred and
+// twenty-five millimetre") belongs to the work described, not to a new
+// quantity: consume the whole number run plus its dimension word as one
+// "225mm" phrase token, so the block size survives in the description
+// instead of truncating it to a bare number. A number followed by a work
+// unit ("square", "cubic") is not a dimension and is left for the
+// phrase-break rule below.
+function dimensionAt(tokens: Token[], start: number): { text: string; end: number } | null {
+  const number = numberAt(tokens, start);
+  if (!number) return null;
+  const word = tokens[number.end]?.word ?? "";
+  if (!MILLIMETRE_WORDS.has(word) && !METRE_WORDS.has(word)) return null;
+  return { text: `${number.value}${MILLIMETRE_WORDS.has(word) ? "mm" : "m"}`, end: number.end + 1 };
+}
 function contentWords(text: string): string[] {
   return text.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length >= 4 && !STOP_WORDS.has(word));
 }
@@ -143,6 +158,8 @@ export function extractWorkCandidates(transcript: string, hints: BoqHint[]): Wor
     const phrase: string[] = [];
     while (j < tokens.length && phrase.length < 8) {
       const token = tokens[j];
+      const dimension = dimensionAt(tokens, j);
+      if (dimension) { phrase.push(dimension.text); j = dimension.end; if (tokens[j - 1]?.endClause) break; continue; }
       if (phrase.length && (numberAt(tokens, j) || unitAt(tokens, j) || UNIT_WORDS.has(token.word))) break;
       // "…and cast 2 m³…" joins a second item: stop before "and" when a
       // fresh number+unit follows in the same clause, so the next item's

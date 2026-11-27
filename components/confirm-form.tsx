@@ -15,6 +15,7 @@ import type { ReviewDraft } from "@/lib/confirm/draft";
 import { DiaryIcon } from "./diary-icon";
 import { previewCostTotal, type PreviewRate, type PreviewTotal } from "@/lib/costing/preview-total";
 import { formatMoney } from "@/lib/costing/format-money";
+import { formatQuantityWithUnit } from "@/lib/reports/model";
 
 const empty: SiteExtraction = { work_items: [], materials: [], delays: [], issues: [], raw_language_notes: "" };
 const inputClass = "min-h-12 w-full rounded-none border border-rule bg-[#fffdf9] px-3 py-2 text-base outline-offset-2 focus:outline-accent";
@@ -224,7 +225,7 @@ export function ConfirmForm({ record, draft, trial = false, banner, children, ra
               setWork(rows => rows.map(row => row.key === key ? { ...row, boqId: selected, unitValue: chosen?.unit ?? row.unitValue } : row));
             }} required>
               <option value="">Choose the item this work belongs to</option>{record.boq.map(item => <option key={item.id} value={item.id}>{item.section} — {item.description} ({unitLabel(item.unit)})</option>)}</select></label>
-            {preview.lines[i] && <p className="mt-3 border-l-2 border-rule pl-3 font-semibold">{preview.lines[i]!.quantity} {unitLabel(unitValue)} @ {formatMoney(preview.lines[i]!.rate, currency)} / {unitLabel(unitValue)} = {formatMoney(preview.lines[i]!.amount, currency)}</p>}
+            {preview.lines[i] && <p className="mt-3 border-l-2 border-rule pl-3 font-semibold">{`${formatQuantityWithUnit(preview.lines[i]!.quantity, unitValue)} @ ${formatMoney(preview.lines[i]!.rate, currency)} / ${unitLabel(unitValue)} = ${formatMoney(preview.lines[i]!.amount, currency)}`}</p>}
             <p className="mt-3 border-l-2 border-rule pl-3 font-semibold">{unitValue ? `Measure in ${unitLabel(unitValue)}: ${unitMeaning(unitValue)}` : "Choose a BoQ item to see its measurement unit."}</p>
             <div className="review-helper-fields mt-4"><label className="block">Measurement unit *
               <input className={inputClass + " mt-2"} name={`w${i}.unit`} value={unitValue} required onChange={event => {

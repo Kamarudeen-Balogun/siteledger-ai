@@ -1,4 +1,5 @@
 import { formatMoney } from "@/lib/costing/format-money";
+import { formatMoneyPerUnit } from "@/lib/reports/model";
 import { decimal } from "@/lib/costing/decimal";
 import type { BoqChange } from "@/lib/projects/boq-data";
 
@@ -24,7 +25,7 @@ export function BoqReview({ changes, currency }: { changes: BoqChange[]; currenc
   return <details className="work-disclosure" data-tour="boq-review" open={items.length > 0 || undefined}>
     <summary>{items.length ? "Action required" : "Review supplied rates"}{items.length ? <small>{items.length} {items.length === 1 ? "rate" : "rates"} changed by five times or more — check them before the next costing.</small> : <small>Rates that move by five times or more from their previous version are flagged here.</small>}</summary>
     <div className="work-disclosure-body">
-      {items.length ? <ul className="diary-list">{items.map(change => <li key={change.id}><a href={`#boq-item-${change.after.item_code}`}><span><strong>{change.after.description}</strong><small>Rate was {formatMoney(change.before!.rate, currency)} per {change.after.unit}, now {formatMoney(change.after.rate, currency)}. Tap to check and correct it.</small></span><span>Fix</span></a></li>)}</ul>
+      {items.length ? <ul className="diary-list">{items.map(change => <li key={change.id}><a href={`#boq-item-${change.after.item_code}`}><span><strong>{change.after.description}</strong><small>Rate was {formatMoneyPerUnit(change.before!.rate, currency, change.after.unit)}, now {formatMoney(change.after.rate, currency)}. Tap to check and correct it.</small></span><span>Fix</span></a></li>)}</ul>
         : <p>No rates need review. Compare the quantities and rates with the supplied BoQ before the next costing.</p>}
     </div>
   </details>;

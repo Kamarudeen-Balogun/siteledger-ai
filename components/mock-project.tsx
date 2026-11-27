@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useActionConfirmation } from "./action-confirmation";
 import { DiaryIcon } from "./diary-icon";
 import { ReplayTour } from "./diary-tour";
@@ -9,6 +9,35 @@ import { ReplayTour } from "./diary-tour";
 const key="siteledger-mock-hidden:";
 const event="siteledger-mock-change";
 const listen=(notify:()=>void)=>{window.addEventListener(event,notify);window.addEventListener("storage",notify);return()=>{window.removeEventListener(event,notify);window.removeEventListener("storage",notify);};};
+
+export function MockBoqActions() {
+  // The mock BoQ is demo data and cannot be edited — but its buttons must
+  // still do something. They open a bottom sheet that says so and points
+  // at the user's own projects, instead of a dead disabled button.
+  const [open, setOpen] = useState(false);
+  const sheet = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const dialog = sheet.current;
+    if (dialog && !dialog.open) dialog.showModal();
+  }, [open ]);
+  return <>
+    <div className="stitch-two-actions">
+      <button type="button" className="stitch-button" data-primary onClick={() => setOpen(true)}><DiaryIcon name="upload" size={20}/>+ Upload BoQ File</button>
+      <button type="button" className="stitch-button" data-white onClick={() => setOpen(true)}><DiaryIcon name="plus" size={20}/>+ Add item</button>
+    </div>
+    {open && <dialog ref={sheet} className="action-dialog stitch-sheet" aria-label="Demo BoQ is read-only" onClose={() => setOpen(false)}>
+      <div className="action-dialog__body">
+        <h2>Demo BoQ — read-only</h2>
+        <p>This mock project is demo data. Upload and edit the BoQ in your own project.</p>
+      </div>
+      <div className="action-dialog__actions stitch-sheet-actions">
+        <Link href="/projects" className="stitch-button" data-primary>Open your projects</Link>
+        <button type="button" className="stitch-button" onClick={() => { sheet.current?.close(); setOpen(false); }}>Close</button>
+      </div>
+    </dialog>}
+  </>;
+}
 
 export function MockProjectControl({person,restore=false,explore=false}:{person:string;restore?:boolean;explore?:boolean}) {
   const hidden=useSyncExternalStore(listen,()=>{try{return localStorage.getItem(key+person)==="yes";}catch{return false;}},()=>false);

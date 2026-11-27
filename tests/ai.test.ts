@@ -77,6 +77,17 @@ test("a bare dimension never becomes a work quantity", () => {
     [{ description: "18 m² of 225mm blockwork on the east elevation", matched_boq_hint: "Sandcrete blocks 225mm hollow, laid",
       quantity: 18, unit: "m2", crew: null, confidence: 0.7 }]);
 });
+test("a number-words dimension stays in the description instead of truncating it", () => {
+  assert.deepEqual(extractWorkCandidates("For the leaky site, we don't set 18 square meters of two hundred and twenty-five millimetre blockwork on the east elevation and cast 2 cubic metres of concrete for the columns.",
+    [...hints, { description: "In-situ concrete, columns and beams", unit: "m3" }]),
+    [{ description: "18 m² of 225mm blockwork on the east elevation", matched_boq_hint: "Sandcrete blocks 225mm hollow, laid",
+      quantity: 18, unit: "m2", crew: null, confidence: 0.7 },
+     { description: "2 m³ of concrete for the columns", matched_boq_hint: "In-situ concrete, columns and beams",
+      quantity: 2, unit: "m3", crew: null, confidence: 0.7 }]);
+  assert.deepEqual(extractWorkCandidates("We did 18 square metres of 225 millimetre blockwork on the east elevation.", hints),
+    [{ description: "18 m² of 225mm blockwork on the east elevation", matched_boq_hint: "Sandcrete blocks 225mm hollow, laid",
+      quantity: 18, unit: "m2", crew: null, confidence: 0.7 }]);
+});
 test("digit quantities with superscript units are recovered and a trailing preposition is dropped", () => {
   assert.deepEqual(extractWorkCandidates("We set 18 m² of 225mm blockwork on the east elevation and cast 2 m³ of concrete for the columns.",
     [...hints, { description: "In-situ concrete, columns and beams", unit: "m3" }]),
