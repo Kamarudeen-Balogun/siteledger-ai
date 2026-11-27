@@ -204,6 +204,9 @@ nav.work-flow { margin: 0; }
 .stitch-log-entry .stitch-log-time { display: block; margin-top: 3px; text-align: right; }
 .stitch-log-author { display: flex; align-items: center; gap: 8px; padding: 8px; margin: 10px 0 8px; border-radius: 4px; background: var(--stitch-card); font-weight: 600; }
 .stitch-log-author .diary-symbol, .stitch-log-value { color: var(--stitch-accent); }
+.stitch-log-value { display: block; margin: 8px 0; font: 700 23px var(--stitch-serif); }
+.stitch-log-tally { margin: 4px 0 8px; line-height: 1.7; }
+.stitch-log-tally .stitch-kicker { display: block; margin-bottom: 2px; }
 .stitch-log-note { padding: 10px; background: var(--stitch-inset); border-radius: 4px; }
 .stitch-log-note .stitch-kicker { color: var(--stitch-danger); }
 .stitch-log-note p { margin-top: 4px; white-space: pre-wrap; }
@@ -395,6 +398,8 @@ nav.work-flow { margin: 0; }
   .stitch-back { display: grid; min-width: 48px; min-height: 48px; place-items: center; flex: none; margin-left: -8px; }
   .stitch-project-switch { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; margin-top: 4px; border-radius: 5px; padding: 0 16px; background: var(--stitch-card); text-align: left; }
   .stitch-project-switch strong { overflow: hidden; flex: 1; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; }
+  .stitch-switch-current { display: flex; flex: none; align-items: center; gap: 6px; }
+  .stitch-switch-current > .diary-symbol { color: var(--stitch-accent); }
   .stitch-project-switch > .diary-symbol:first-child { color: var(--stitch-accent); }
   .stitch-project-switch > .diary-symbol:last-child { color: var(--stitch-muted); }
   .stitch-project-switch .stitch-kicker { max-width: 32%; padding: 2px 5px; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: var(--stitch-inset); }
@@ -404,6 +409,10 @@ nav.work-flow { margin: 0; }
   .workspace-header.stitch-header .workspace-dock a[aria-current="page"] { color: var(--stitch-primary); font-weight: 600; text-decoration: none; }
   body:has(.stitch-header) .ada-help { --ada-reserve: calc(22px + env(safe-area-inset-bottom)); }
   body:has(.stitch-header .workspace-dock) .ada-help { --ada-reserve: calc(88px + env(safe-area-inset-bottom)); }
+  /* The pinned log action bar sits directly above the dock; Ada's default
+     rest position overlaps it and truncates its label, so on pages with a
+     sticky bottom action bar Ada docks above the bar instead. */
+  body:has(.stitch-header .workspace-dock):has(.stitch-log-actions) .ada-help { --ada-reserve: calc(140px + env(safe-area-inset-bottom)); }
   body:has(.stitch-header) .ada-help .ada-launch { min-height: 44px; right: max(14px, env(safe-area-inset-right)); font-size: 13.5px; }
   body:has(.stitch-header) .ada-help .ada-panel { width: min(360px, 92vw); }
   .stitch-header ~ .diary-panel { border-radius: 8px; }

@@ -12,6 +12,7 @@ import { WorkFlow, WorkDisclosure } from "./work-flow";
 import { DiaryIcon } from "./diary-icon";
 import { MockProjectControl } from "./mock-project";
 import { useActionConfirmation } from "./action-confirmation";
+import { formatQuantity } from "@/lib/reports/model";
 
 const button="min-h-12 border border-rule px-4 py-3 text-base disabled:opacity-50";
 type TodaySummary = {
@@ -130,20 +131,17 @@ export function CaptureDiary() {
     if(recording){recorder.current?.stop();return;}
     if(starting)return;setStarting(true);setError("");bindCapture();
     try {
-      if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error("Recording is unavailable. Choose a saved voice file instead.");
+      if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error("Recording is unavailable on this device. Send the voice note in Telegram instead.");
       const media=await navigator.mediaDevices.getUserMedia({audio:true});stream.current=media;
       const type=["audio/webm;codecs=opus","audio/ogg;codecs=opus","audio/mp4"].find(value=>MediaRecorder.isTypeSupported(value));
-      if(!type){media.getTracks().forEach(track=>track.stop());throw new Error("Recording is unavailable. Choose a saved voice file instead.");}
+      if(!type){media.getTracks().forEach(track=>track.stop());throw new Error("Recording is unavailable on this device. Send the voice note in Telegram instead.");}
       const record=new MediaRecorder(media,{mimeType:type,audioBitsPerSecond:64000}),chunks:Blob[]=[];recorder.current=record;recordingCancelled.current=false;
       record.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
       record.onstop=()=>{if(timer.current)clearInterval(timer.current);media.getTracks().forEach(track=>track.stop());if(!alive.current)return;
         if(!recordingCancelled.current){const blob=new Blob(chunks,{type:type.split(";")[0]});try{audioType(blob);setAudio(blob);}catch(e){setError((e as Error).message);}}setRecording(false);};
       record.start();setSeconds(0);setRecording(true);const began=Date.now();
       timer.current=setInterval(()=>{const value=Math.floor((Date.now()-began)/1000);setSeconds(value);if(value>=90&&record.state==="recording")record.stop();},500);
-    }catch(e){setError(e instanceof Error ? e.message:"Microphone access is unavailable. Choose a saved voice file instead.");}finally{setStarting(false);}
-  }
-  async function chooseAudio(event:ChangeEvent<HTMLInputElement>) {
-    const file=event.target.files?.[0];if(!file)return;setError("");try{const type=audioType(file);bindCapture();setAudio(new Blob([file],{type}));}catch(e){setError((e as Error).message);}event.target.value="";
+    }catch(e){setError(e instanceof Error ? e.message:"Microphone access is unavailable. Send the voice note in Telegram instead.");}finally{setStarting(false);}
   }
   async function choosePhotos(event:ChangeEvent<HTMLInputElement>) {
     const files=[...event.target.files??[]];event.target.value="";if(!files.length)return;
@@ -222,7 +220,6 @@ export function CaptureDiary() {
           <button type="button" disabled={busy||recording||(!audio&&!photos.length)} onClick={()=>void save()} className="stitch-button stitch-review-button" data-primary><DiaryIcon name="check" size={20}/>{saving?"Saving…":online?"Review & cost it":"Save offline"}</button>
           <p className="diary-capture-hint">{!audio&&!photos.length?"Add a voice note or at least one photo to continue.":"You can check quantities and observations before costing."}</p>
           <button type="button" disabled={busy||recording||(!audio&&!photos.length)} onClick={()=>void save(true)} className="stitch-button"><DiaryIcon name="bookmark" size={20}/>Save draft — finish later</button>
-          <label className="text-link justify-center cursor-pointer">Choose a saved voice file<input className="sr-only" type="file" accept="audio/ogg,audio/mpeg,audio/mp4,audio/webm,audio/wav,.m4a,.mp3,.ogg,.webm,.wav" disabled={busy||recording} onChange={event=>void chooseAudio(event)}/></label>
         </section>:<>
           <div className="stitch-status"><span className="stitch-kicker"><i/>{pending.length?`${pending.length} waiting to send`:online?"All changes saved":"Offline"}</span><DiaryIcon name="saved" size={18}/></div>
           {!readOnly&&<div className="diary-today-actions"><button type="button" className="diary-primary" onClick={()=>{setCapturing(true);setError("");window.scrollTo(0,0);}} data-tour="add-work"><DiaryIcon name="plus" size={26}/>Add today&apos;s work</button><a href="https://t.me/SiteLedgerNGbot" className="diary-row-link" target="_blank" rel="noreferrer"><DiaryIcon name="send" size={20}/><strong>Send via Telegram</strong><span className="stitch-chip">@SiteLedgerNGbot</span></a></div>}
@@ -245,7 +242,7 @@ export function CaptureDiary() {
             {currentSummary?.percentage==null?(currentSummary||summaryError||!online?<p>{currentSummary?"Add a BoQ with rates to measure project progress.":summaryError?"Measured progress is unavailable.":"Reconnect to see measured progress."}</p>:<div className="stitch-skeleton-stack" role="status" aria-label="Loading measured progress"><i/><i/><i/></div>):<>
               <div className="diary-progress-summary"><strong>{currentSummary.percentage}% complete</strong><span>{currentSummary.earned} earned</span></div>
               <progress max={100} value={currentSummary.percentage} aria-label="Measured project progress"/>
-              <dl>{currentSummary.rows.map(row=><div key={row.id}><dt>{row.description}</dt><dd>{row.done} / {row.scope} {row.unit} · {row.percentage}%</dd></div>)}</dl>
+              <dl>{currentSummary.rows.map(row=><div key={row.id}><dt>{row.description}</dt><dd>{formatQuantity(row.done)} / {formatQuantity(row.scope)} {row.unit} · {row.percentage}%</dd></div>)}</dl>
               <Link className="text-link" href={`/projects/${context.project_id}?view=progress`}>View all work progress</Link>
             </>}
           </section>

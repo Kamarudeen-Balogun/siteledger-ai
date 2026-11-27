@@ -2,6 +2,7 @@ import { costReport } from "../costing/cost-report";
 import { decimal } from "../costing/decimal";
 import type { BoqPrice, ConfirmedCostItem, CostedReport } from "../costing/types";
 import type { SiteExtraction } from "../ai/extraction-schema";
+import { normalizeDescription } from "../ai/number-words";
 
 export const REPORT_FIRM_NAME = "Perkins Limited";
 export type ReportSource = {
@@ -49,6 +50,23 @@ export const displayTimestamp = (date: string, timezone = "Africa/Lagos") => new
 export const lockDate = (report: ReportView) => report.locked_at ? new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: report.document.source.project.timezone ?? "Africa/Lagos" }).format(new Date(report.locked_at)) : report.document.source.date;
 export const moneyDisplayNote = (currency: string) => currency === "NGN" ? "Amounts rounded to the nearest ₦10 for display. Exact values retained in the record." : `Amounts displayed at ${currency} currency precision. Exact values retained in the record.`;
 export const displayRatio = (value: string, digits = 1) => new Intl.NumberFormat("en-NG", { maximumFractionDigits: digits }).format(Number(value));
+// Quantities are stored as numeric(14,4), so the database hands back
+// "420.0000". Display trims the trailing zeros ("420 m²", "35 m³") while
+// keeping real decimals ("4.5 tonne"). Non-numeric input is shown as-is.
+export function formatQuantity(value: string | number): string {
+  if (typeof value === "string" && value.trim() === "") return value;
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) return String(value);
+  return new Intl.NumberFormat("en-NG", { maximumFractionDigits: 4 }).format(numeric);
+}
+// Work-item titles come from the structured record, never from the raw
+// spoken description: a mis-heard transcript ("thin square metre…") can
+// never be recovered by normalising words, but the BoQ item it was costed
+// against is exact. Unmatched items fall back to the normalised spoken
+// description so digits and units still read correctly.
+export function displayWorkTitle(boqDescription: string | undefined | null, storedDescription: string): string {
+  return boqDescription?.trim() ? boqDescription : normalizeDescription(storedDescription);
+}
 // Shorten display text at a word boundary, never mid-word. A truncated
 // value always ends with an ellipsis so the reader knows more was there.
 export const truncateAtWord = (value: string, maxLength: number) => {

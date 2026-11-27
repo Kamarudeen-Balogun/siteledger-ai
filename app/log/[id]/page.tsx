@@ -8,6 +8,7 @@ import { privateProjects } from "@/lib/projects/data";
 import { DisputeLogDocument } from "@/components/dispute-log";
 import { TelegramAccountEntry } from "@/components/account-forms";
 import { WorkspaceHeader } from "@/components/workspace-header";
+import { PageLoading } from "@/components/page-loading";
 import { DiaryNotice } from "@/components/diary-notice";
 import { AmendmentForm } from "@/components/amendment-form";
 export const metadata: Metadata = { title: "Dispute log — SiteLedger", referrer: "no-referrer", robots: { index: false, follow: false } };
@@ -29,5 +30,5 @@ async function Log(props: Props) {
   </>;
 }
 export default function Page(props: Props) {
-  return <main className="mx-auto max-w-5xl px-5 py-7 sm:px-10"><Suspense fallback={<><WorkspaceHeader current="reports"/><DiaryNotice busy title="Opening the dispute log…"/></>}><Log {...props} /></Suspense></main>;
+  return <main className="mx-auto max-w-5xl px-5 py-7 sm:px-10"><Suspense fallback={<PageLoading title="Opening the dispute log…" variant="rows" header={<WorkspaceHeader current="reports"/>}/>}> <Log {...props} /></Suspense></main>;
 }

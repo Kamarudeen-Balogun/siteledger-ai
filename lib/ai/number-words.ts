@@ -72,7 +72,8 @@ function tokenize(text: string): Token[] {
   for (const raw of text.split(/\s+/)) {
     if (!raw) continue;
     const endClause = /[.!?;,:\n]$/.test(raw);
-    const clean = raw.replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, "");
+    // Keep ² and ³ so a spoken "18 m²" survives as a quantity token.
+    const clean = raw.replace(/^[^a-z0-9²³]+|[^a-z0-9²³]+$/gi, "");
     for (const part of clean.split(/-/).filter(Boolean))
       tokens.push({ word: part.toLowerCase(), endClause: false });
     if (tokens.length) tokens[tokens.length - 1].endClause = endClause;
@@ -100,6 +101,8 @@ const MILLIMETRE_WORDS = new Set(["millimetre", "millimetres", "millimeter", "mi
 function unitAt(tokens: Token[], start: number): { unit: "m2" | "m3" | "tonne" | "point" | "day"; display: string; end: number } | null {
   const first = tokens[start];
   if (!first) return null;
+  if (first.word === "m²") return { unit: "m2", display: "m²", end: start + 1 };
+  if (first.word === "m³") return { unit: "m3", display: "m³", end: start + 1 };
   if (first.word === "square" && METRE_WORDS.has(tokens[start + 1]?.word ?? ""))
     return { unit: "m2", display: "m²", end: start + 2 };
   if (first.word === "cubic" && METRE_WORDS.has(tokens[start + 1]?.word ?? ""))
@@ -141,11 +144,25 @@ export function extractWorkCandidates(transcript: string, hints: BoqHint[]): Wor
     while (j < tokens.length && phrase.length < 8) {
       const token = tokens[j];
       if (phrase.length && (numberAt(tokens, j) || unitAt(tokens, j) || UNIT_WORDS.has(token.word))) break;
+      // "…and cast 2 m³…" joins a second item: stop before "and" when a
+      // fresh number+unit follows in the same clause, so the next item's
+      // verb never lands in this item's description. A plain "and" inside
+      // one item's description ("blockwork and concrete") has no quantity
+      // after it and is kept.
+      if (phrase.length && token.word === "and") {
+        let k = j + 1, fresh = false;
+        while (k < tokens.length && !tokens[k - 1].endClause) {
+          const next = numberAt(tokens, k);
+          if (next && unitAt(tokens, next.end)) { fresh = true; break; }
+          k++;
+        }
+        if (fresh) break;
+      }
       phrase.push(token.word);
       j++;
       if (token.endClause) break;
     }
-    while (phrase.length && ["and", "the", "of", "a", "an"].includes(phrase[phrase.length - 1])) phrase.pop();
+    while (phrase.length && ["and", "the", "of", "a", "an", "on", "in", "at", "to"].includes(phrase[phrase.length - 1])) phrase.pop();
     i = Math.max(j, unit.end + 1);
     if (!phrase.length || !phrase.some((word) => word.length >= 4)) continue;
     const detail = normalizeDescription(phrase.join(" "));

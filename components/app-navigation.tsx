@@ -16,7 +16,7 @@ import { projectAction } from "@/lib/projects/client-actions";
 
 type TelegramApp = { initData: string; ready: () => void; expand: () => void;
   BackButton: { show: () => void; hide: () => void; onClick: (callback: () => void) => void; offClick: (callback: () => void) => void } };
-const Navigation = createContext<{ back: () => void; active: boolean; projectId: string | null; selectProject: (id: string) => void; person: string | null; projects: PrivateProject[]; pathname: string; avatar: boolean; avatarVersion: number } | null>(null);
+const Navigation = createContext<{ back: () => void; active: boolean; ready: boolean; projectId: string | null; selectProject: (id: string) => void; person: string | null; projects: PrivateProject[]; pathname: string; avatar: boolean; avatarVersion: number } | null>(null);
 const marker = "siteledgerNavigation";
 const mockListen = (notify: () => void) => { window.addEventListener("siteledger-mock-change", notify); window.addEventListener("storage", notify); return () => { window.removeEventListener("siteledger-mock-change", notify); window.removeEventListener("storage", notify); }; };
 function recordedDepth(state: unknown) {
@@ -36,6 +36,10 @@ export function AppNavigation({ children }: { children: ReactNode }) {
   const [changing, setChanging] = useState(false);
   const [pathname, setPathname] = useState("/");
   const [active, setActive] = useState(false);
+  // The session check is async: until the first check settles, `active` is
+  // still its initial false and the header would flash a "Sign in" link
+  // for a signed-in user. Nothing session-dependent renders until ready.
+  const [ready, setReady] = useState(false);
   const [person, setPerson] = useState<string | null>(null);
   const [avatar,setAvatar]=useState(false),[avatarVersion,setAvatarVersion]=useState(0);
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -66,6 +70,7 @@ export function AppNavigation({ children }: { children: ReactNode }) {
         const data = response.ok ? await response.json() : null;
         if (request === accountRequest.current) { setProjectId(data?.active_project_id ?? null); setProjects(data?.projects ?? []); }
       } catch { if (request === accountRequest.current && navigator.onLine) { setActive(false); setPerson(null); setProjectId(null); setProjects([]); } }
+      finally { if (request === accountRequest.current) setReady(true); }
     })();
   }, [router]);
   useEffect(() => { checkAccount(); }, [pathname, checkAccount]);
@@ -139,7 +144,7 @@ export function AppNavigation({ children }: { children: ReactNode }) {
     else telegram.BackButton.hide();
   }, [telegram, pathname, canBack]);
   const workspace = isWorkspacePath(pathname) || (active && pathname === "/help");
-  return <Navigation.Provider value={{ back, active, projectId, selectProject, person, projects, pathname, avatar, avatarVersion }}>{children}{confirmation}{changing&&workspace&&<div className="stitch-transition" aria-hidden="true"/>}{workspace&&!pathname.endsWith("/demo")&&<AdaHelp projectId={projectId}/>} {person&&<DiaryTour key={`${person}/${pathname}`} person={person} path={pathname}/>}<Suspense fallback={null}><PathChanges changed={changed}/></Suspense>{(workspace||pathname==="/") &&
+  return <Navigation.Provider value={{ back, active, ready, projectId, selectProject, person, projects, pathname, avatar, avatarVersion }}>{children}{confirmation}{changing&&workspace&&<div className="stitch-transition" aria-hidden="true"/>}{workspace&&!pathname.endsWith("/demo")&&<AdaHelp projectId={projectId}/>} {person&&<DiaryTour key={`${person}/${pathname}`} person={person} path={pathname}/>}<Suspense fallback={null}><PathChanges changed={changed}/></Suspense>{(workspace||pathname==="/") &&
     <Script src="https://telegram.org/js/telegram-web-app.js" onReady={() => {
       const app = (window as Window & { Telegram?: { WebApp?: TelegramApp } }).Telegram?.WebApp;
       if (app?.initData && app.BackButton) { app.ready(); app.expand(); setTelegram(app); }
@@ -149,7 +154,11 @@ export function AppNavigation({ children }: { children: ReactNode }) {
 
 export function WorkspaceProfile({ onlyWhenActive = false }: { onlyWhenActive?: boolean } = {}) {
   const navigation = useContext(Navigation);
-  if (!navigation?.active) {
+  // Until the session check settles, render nothing rather than a "Sign in"
+  // link a signed-in user would see flash on every page load.
+  if (!navigation) return <Link href="/account" prefetch={false} className="public-button homepage-signin" data-tour="profile">Sign in</Link>;
+  if (!navigation.ready) return null;
+  if (!navigation.active) {
     // Public pages must show no sign of a signed-in user unless one is actually
     // signed in: logged-out visitors get a plain Sign in link, never a profile icon.
     if (onlyWhenActive) return null;
@@ -212,7 +221,7 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
         <h2>Switch project</h2>
         {projects.length ? <ul>{projects.map(item => <li key={item.id}>
           <button type="button" className="stitch-menu-row" disabled={busy} onClick={() => void select(item.id)}>
-            <DiaryIcon name="building"/><span><strong>{item.name}</strong><small>{item.archived_at ? "Archived" : item.client}</small></span>{id===item.id ? <DiaryIcon name="verified" size={18}/> : <DiaryIcon name="chevron" size={18}/>}
+            <DiaryIcon name="building"/><span><strong>{item.name}</strong><small>{item.archived_at ? "Archived" : item.client}</small></span>{id===item.id ? <span className="stitch-switch-current"><DiaryIcon name="verified" size={18}/><span className="stitch-kicker">Current</span></span> : <DiaryIcon name="chevron" size={18}/>}
           </button>
         </li>)}</ul> : <p>No projects to switch to yet.</p>}
         {!mockHidden && <Link href="/projects/mock" className="stitch-menu-row" onClick={() => sheet.current?.close()}><DiaryIcon name="flask"/><span><strong>Mock project — Sample Duplex, Ikeja</strong><small>Demo data · not a real project</small></span><span className="stitch-chip">Demo</span></Link>}
@@ -240,7 +249,7 @@ export function WorkspaceNavigation({ current }: { current: WorkspaceArea }) {
   }
   return <div className="workspace-navigation">
     <button type="button" className="workspace-back" onClick={back}><DiaryIcon name="back" size={18}/>Back</button>
-    <nav aria-label="Workspace navigation" className="workspace-desktop-nav">{(navigation?.active ? [["/today", "Today"], ["/projects", "Projects"], ["/account", "Account"], ["/help", "Help"]] : [["/", "Home"], ["/account", "Sign in"], ["/help", "Help"]]).map(([href,label]) => <Link key={href} href={href} aria-current={href === `/${current}` ? "page" : undefined}>{label}</Link>)}</nav>
+    <nav aria-label="Workspace navigation" className="workspace-desktop-nav">{(navigation?.ready ? navigation.active ? [["/today", "Today"], ["/projects", "Projects"], ["/account", "Account"], ["/help", "Help"]] : [["/", "Home"], ["/account", "Sign in"], ["/help", "Help"]] : []).map(([href,label]) => <Link key={href} href={href} aria-current={href === `/${current}` ? "page" : undefined}>{label}</Link>)}</nav>
     {navigation?.active && <nav aria-label="Mobile workspace navigation" className="workspace-dock">{links.map(({href,label,area,icon}) => <Link key={area} href={href} prefetch={false} aria-current={area === current ? "page" : undefined}><DiaryIcon name={icon}/><span>{label}</span></Link>)}</nav>}
   </div>;
 }

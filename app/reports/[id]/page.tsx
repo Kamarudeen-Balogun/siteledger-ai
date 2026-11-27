@@ -13,6 +13,7 @@ import { AmendmentForm } from "@/components/amendment-form";
 import { getReviewer, reportVersion } from "@/lib/log/data";
 import { TelegramAccountEntry } from "@/components/account-forms";
 import { WorkspaceHeader } from "@/components/workspace-header";
+import { PageLoading } from "@/components/page-loading";
 import { DiaryNotice } from "@/components/diary-notice";
 import { DiaryIcon } from "@/components/diary-icon";
 import { ReportShare } from "@/components/report-share";
@@ -77,5 +78,5 @@ async function Report({ params }: Props) {
 }
 
 export default function Page(props: Props) {
-  return <main className="mx-auto max-w-6xl px-5 py-7 sm:px-10"><Suspense fallback={<><WorkspaceHeader current="reports"/><DiaryNotice busy title="Opening your report…"/></>}><Report {...props}/></Suspense></main>;
+  return <main className="mx-auto max-w-6xl px-5 py-7 sm:px-10"><Suspense fallback={<PageLoading title="Opening your report…" variant="report" header={<WorkspaceHeader current="reports"/>}/>}> <Report {...props}/></Suspense></main>;
 }

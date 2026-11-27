@@ -4,6 +4,7 @@ import Image from "next/image";
 import { demoReport } from "@/lib/data/demo-documents";
 import { PublicSite } from "@/components/public-site";
 import { DiaryIcon } from "@/components/diary-icon";
+import { displayUnit, displayWorkTitle, formatQuantity } from "@/lib/reports/model";
 export const metadata: Metadata = { title: "Sample report — SiteLedger AI", robots: { index: false, follow: false } };
 const naira = new Intl.NumberFormat("en-NG");
 function money(value: string) { return `₦${naira.format(Number(value))}`; }
@@ -15,7 +16,7 @@ export default function Page() {
   const rows = costing.items.map(item => {
     const found = source.items.find(entry => entry.boq_item_id === item.boq_item_id);
     const priced = source.price_list.find(entry => entry.id === item.boq_item_id);
-    return { title: found?.description ?? priced?.description ?? "Work item", detail: priced?.description && priced.description !== found?.description ? priced.description : "", qty: `${item.quantity_done} ${item.unit}`, rate: money(item.rate), amount: money(item.cost_today) };
+    return { title: displayWorkTitle(priced?.description, found?.description ?? "Work item"), detail: "", qty: `${formatQuantity(item.quantity_done)} ${displayUnit(item.unit)}`, rate: money(item.rate), amount: money(item.cost_today) };
   });
   return <PublicSite current="/reports/demo">
     <div className="public-column flex flex-col gap-3 pb-10 pt-4">
