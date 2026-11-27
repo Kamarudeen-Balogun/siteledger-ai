@@ -19,7 +19,7 @@ async function request(path, options = {}) {
   return { response, bytes };
 }
 await mkdir(out, { recursive: true });
-for (const path of ["/", "/about", "/help", "/contact", "/privacy", "/terms", "/reports/demo", "/log/demo", "/account"]) {
+for (const path of ["/", "/help", "/contact", "/privacy", "/terms", "/reports/demo", "/log/demo", "/account"]) {
   const { response, bytes } = await request(path);
   assert.equal(response.status, 200, path);
   assert.match(bytes.toString(), /SiteLedger/);

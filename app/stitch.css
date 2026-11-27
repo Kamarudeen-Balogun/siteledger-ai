@@ -25,22 +25,22 @@
 }
 
 :root {
-  --stitch-paper: light-dark(#faf7f2, #211914);
-  --stitch-ink: light-dark(#1e1b19, #f8eee7);
-  --stitch-muted: light-dark(#59413a, #d8bfb3);
-  --stitch-card: light-dark(#faf2ee, #30231d);
-  --stitch-inset: light-dark(#f4ece8, #3b2c24);
-  --stitch-raised: light-dark(#fff, #48362d);
-  --stitch-divider: light-dark(#eee7e3, #594238);
-  --stitch-chip: light-dark(#e9e1dd, #553e34);
+  --stitch-paper: #faf7f2;
+  --stitch-ink: #1e1b19;
+  --stitch-muted: #59413a;
+  --stitch-card: #faf2ee;
+  --stitch-inset: #f4ece8;
+  --stitch-raised: #fff;
+  --stitch-divider: #eee7e3;
+  --stitch-chip: #e9e1dd;
   --stitch-primary: #c2410c;
   --stitch-strong: #9b2f00;
-  --stitch-accent: light-dark(#9b2f00, #ffb598);
-  --stitch-green: light-dark(#456818, #c2ed8d);
-  --stitch-green-chip: light-dark(#e4f5ce, #34451f);
-  --stitch-warning: light-dark(#f2e3d9, #493025);
-  --stitch-error: light-dark(#ffd9d4, #542820);
-  --stitch-danger: light-dark(#b91c1c, #ffaba5);
+  --stitch-accent: #9b2f00;
+  --stitch-green: #456818;
+  --stitch-green-chip: #e4f5ce;
+  --stitch-warning: #f2e3d9;
+  --stitch-error: #ffd9d4;
+  --stitch-danger: #b91c1c;
   --stitch-sans: "Stitch Sans", "Report Sans", sans-serif;
   --stitch-serif: "Stitch Serif", "Report Serif", Georgia, serif;
   --stitch-mono: "Stitch Mono", Consolas, monospace;
@@ -426,4 +426,43 @@ nav.work-flow { margin: 0; }
 
 @media (min-width: 1024px) {
   .stitch-header-row { flex: 1; }
+}
+
+/* Dark theme overrides (plain values — light-dark() stored in a custom
+   property compiles to two space-separated values under Tailwind v4 /
+   Lightning CSS, which is invalid for background-color/color and drops
+   the declaration, e.g. the transparent menu drawer). */
+html[data-theme="dark"] {
+  --stitch-paper: #211914;
+  --stitch-ink: #f8eee7;
+  --stitch-muted: #d8bfb3;
+  --stitch-card: #30231d;
+  --stitch-inset: #3b2c24;
+  --stitch-raised: #48362d;
+  --stitch-divider: #594238;
+  --stitch-chip: #553e34;
+  --stitch-accent: #ffb598;
+  --stitch-green: #c2ed8d;
+  --stitch-green-chip: #34451f;
+  --stitch-warning: #493025;
+  --stitch-error: #542820;
+  --stitch-danger: #ffaba5;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-theme="system"] {
+  --stitch-paper: #211914;
+  --stitch-ink: #f8eee7;
+  --stitch-muted: #d8bfb3;
+  --stitch-card: #30231d;
+  --stitch-inset: #3b2c24;
+  --stitch-raised: #48362d;
+  --stitch-divider: #594238;
+  --stitch-chip: #553e34;
+  --stitch-accent: #ffb598;
+  --stitch-green: #c2ed8d;
+  --stitch-green-chip: #34451f;
+  --stitch-warning: #493025;
+  --stitch-error: #542820;
+  --stitch-danger: #ffaba5;
+  }
 }

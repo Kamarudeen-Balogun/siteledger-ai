@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Script from "next/script";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { createContext, Suspense, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, Suspense, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { isWorkspacePath, navigationFallback } from "@/lib/navigation/routes";
 import { useActionConfirmation } from "./action-confirmation";
 import { resolveClientAccount } from "@/lib/auth/client-session";
@@ -16,8 +16,9 @@ import { projectAction } from "@/lib/projects/client-actions";
 
 type TelegramApp = { initData: string; ready: () => void; expand: () => void;
   BackButton: { show: () => void; hide: () => void; onClick: (callback: () => void) => void; offClick: (callback: () => void) => void } };
-const Navigation = createContext<{ back: () => void; active: boolean; projectId: string | null; projects: PrivateProject[]; pathname: string; avatar: boolean; avatarVersion: number } | null>(null);
+const Navigation = createContext<{ back: () => void; active: boolean; projectId: string | null; selectProject: (id: string) => void; person: string | null; projects: PrivateProject[]; pathname: string; avatar: boolean; avatarVersion: number } | null>(null);
 const marker = "siteledgerNavigation";
+const mockListen = (notify: () => void) => { window.addEventListener("siteledger-mock-change", notify); window.addEventListener("storage", notify); return () => { window.removeEventListener("siteledger-mock-change", notify); window.removeEventListener("storage", notify); }; };
 function recordedDepth(state: unknown) {
   const depth = (state as { siteledgerNavigation?: { depth?: unknown } } | null)?.siteledgerNavigation?.depth;
   return typeof depth === "number" && Number.isSafeInteger(depth) && depth >= 0 && depth < window.history.length ? depth : 0;
@@ -39,6 +40,10 @@ export function AppNavigation({ children }: { children: ReactNode }) {
   const [avatar,setAvatar]=useState(false),[avatarVersion,setAvatarVersion]=useState(0);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projects, setProjects] = useState<PrivateProject[]>([]);
+  // Project switching must update the active project in app state
+  // IMMEDIATELY on select — never wait for a pathname change or a
+  // refetch to confirm it. The server call below confirms it after.
+  const selectProject = useCallback((id: string) => { setProjectId(id); }, []);
   useEffect(() => {
     if (!changing) return;
     const timer=setTimeout(()=>setChanging(false),280);
@@ -66,6 +71,14 @@ export function AppNavigation({ children }: { children: ReactNode }) {
   useEffect(() => { checkAccount(); }, [pathname, checkAccount]);
   useEffect(() => { window.addEventListener("siteledger-account-change", checkAccount); return () => window.removeEventListener("siteledger-account-change", checkAccount); }, [checkAccount]);
   useEffect(() => { window.addEventListener("siteledger-project-change", checkAccount); return () => window.removeEventListener("siteledger-project-change", checkAccount); }, [checkAccount]);
+  // Server-rendered workspace lists (/reports, Today) only swap when the
+  // server re-renders. A project switch must refresh them too — a
+  // same-path switch (e.g. /today → /today) otherwise shows stale data.
+  useEffect(() => {
+    const refresh = () => router.refresh();
+    window.addEventListener("siteledger-project-change", refresh);
+    return () => window.removeEventListener("siteledger-project-change", refresh);
+  }, [router]);
   useEffect(() => {const refresh=()=>{setAvatarVersion(value=>value+1);checkAccount();};window.addEventListener("siteledger-avatar-change",refresh);return()=>window.removeEventListener("siteledger-avatar-change",refresh);},[checkAccount]);
   const [canBack, setCanBack] = useState(false), [telegram, setTelegram] = useState<TelegramApp | null>(null);
   useEffect(() => {
@@ -125,8 +138,8 @@ export function AppNavigation({ children }: { children: ReactNode }) {
     if (canBack || pathname !== "/") telegram.BackButton.show();
     else telegram.BackButton.hide();
   }, [telegram, pathname, canBack]);
-  const workspace = isWorkspacePath(pathname) || (active && ["/help","/about"].includes(pathname));
-  return <Navigation.Provider value={{ back, active, projectId, projects, pathname, avatar, avatarVersion }}>{children}{confirmation}{changing&&workspace&&<div className="stitch-transition" aria-hidden="true"/>}{workspace&&!pathname.endsWith("/demo")&&<AdaHelp projectId={projectId}/>} {person&&<DiaryTour key={`${person}/${pathname}`} person={person} path={pathname}/>}<Suspense fallback={null}><PathChanges changed={changed}/></Suspense>{(workspace||pathname==="/") &&
+  const workspace = isWorkspacePath(pathname) || (active && pathname === "/help");
+  return <Navigation.Provider value={{ back, active, projectId, selectProject, person, projects, pathname, avatar, avatarVersion }}>{children}{confirmation}{changing&&workspace&&<div className="stitch-transition" aria-hidden="true"/>}{workspace&&!pathname.endsWith("/demo")&&<AdaHelp projectId={projectId}/>} {person&&<DiaryTour key={`${person}/${pathname}`} person={person} path={pathname}/>}<Suspense fallback={null}><PathChanges changed={changed}/></Suspense>{(workspace||pathname==="/") &&
     <Script src="https://telegram.org/js/telegram-web-app.js" onReady={() => {
       const app = (window as Window & { Telegram?: { WebApp?: TelegramApp } }).Telegram?.WebApp;
       if (app?.initData && app.BackButton) { app.ready(); app.expand(); setTelegram(app); }
@@ -134,19 +147,20 @@ export function AppNavigation({ children }: { children: ReactNode }) {
     }} />}</Navigation.Provider>;
 }
 
-export function WorkspaceProfile() {
+export function WorkspaceProfile({ onlyWhenActive = false }: { onlyWhenActive?: boolean } = {}) {
   const navigation = useContext(Navigation);
-  return <Link href="/account" prefetch={false} className="diary-icon-button diary-profile-button" aria-label={navigation?.active ? "Profile" : "Account"} data-tour="profile">{navigation?.active&&navigation.avatar?<Image src={`/api/account/avatar?v=${navigation.avatarVersion}`} unoptimized alt="" width={32} height={32}/>:<DiaryIcon name="profile" size={18}/>}</Link>;
+  if (!navigation?.active) {
+    // Public pages must show no sign of a signed-in user unless one is actually
+    // signed in: logged-out visitors get a plain Sign in link, never a profile icon.
+    if (onlyWhenActive) return null;
+    return <Link href="/account" prefetch={false} className="public-button homepage-signin" data-tour="profile">Sign in</Link>;
+  }
+  return <Link href="/account" prefetch={false} className="diary-icon-button diary-profile-button" aria-label="Profile" data-tour="profile">{navigation.avatar?<Image src={`/api/account/avatar?v=${navigation.avatarVersion}`} unoptimized alt="" width={32} height={32}/>:<DiaryIcon name="profile" size={18}/>}</Link>;
 }
 
 export function WorkspaceBack({ onBack }: { onBack?: () => void }) {
   const navigation = useContext(Navigation);
   return <button type="button" className="stitch-back" aria-label="Go back" onClick={() => onBack ? onBack() : navigation?.back()}><DiaryIcon name="back"/></button>;
-}
-
-export function WorkspaceSignedIn() {
-  const navigation = useContext(Navigation);
-  return navigation?.active ? <span className="stitch-signed-in"><i/>Signed in</span> : null;
 }
 
 export function WorkspaceProjectPicker({ current, project, projectId }: { current: WorkspaceArea; project?: string; projectId?: string }) {
@@ -156,17 +170,29 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
   const id = projectId ?? navigation?.projectId;
   const projects = navigation?.projects ?? [];
   const selected = projects.find(item => item.id === id);
+  // The mock project is a demo-data entry in the switcher, not a real
+  // project. It hides when the user deletes it (same per-person flag as
+  // MockProjectControl) and returns via Restore in Help / Settings.
+  const mockHidden = useSyncExternalStore(mockListen, () => {
+    try { return Boolean(navigation?.person) && localStorage.getItem(`siteledger-mock-hidden:${navigation!.person}`) === "yes"; } catch { return false; }
+  }, () => false);
   if (!project && !navigation?.active) return null;
   async function select(id: string) {
     setBusy(true);
     setError("");
     try {
+      // Update the active project in app state FIRST, so every screen
+      // that reads it (header, dock, Ada, Today, Log) swaps at once —
+      // even when the destination path is the one we are already on.
+      navigation?.selectProject(id);
       await projectAction("select", { project_id: id });
       sheet.current?.close();
       const path = current === "today" ? "/today" : current === "boq" ? `/projects/${id}/boq` : current === "reports" ? "/reports" : `/projects/${id}/team`;
       router.push(path);
       router.refresh();
     } catch (error) {
+      // The optimistic switch was wrong: reload the real active project.
+      window.dispatchEvent(new Event("siteledger-project-change"));
       setError(error instanceof Error ? error.message : "Could not switch projects.");
     } finally { setBusy(false); }
   }
@@ -183,6 +209,7 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
             <DiaryIcon name="building"/><span><strong>{item.name}</strong><small>{item.archived_at ? "Archived" : item.client}</small></span>{id===item.id ? <DiaryIcon name="verified" size={18}/> : <DiaryIcon name="chevron" size={18}/>}
           </button>
         </li>)}</ul> : <p>No projects to switch to yet.</p>}
+        {!mockHidden && <Link href="/projects/mock" className="stitch-menu-row" onClick={() => sheet.current?.close()}><DiaryIcon name="flask"/><span><strong>Mock project — Sample Duplex, Ikeja</strong><small>Demo data · not a real project</small></span><span className="stitch-chip">Demo</span></Link>}
         {error && <p role="alert">{error}</p>}
       </div>
       <div className="action-dialog__actions stitch-sheet-actions"><Link href="/projects" className="work-button" onClick={() => sheet.current?.close()}>All projects</Link><button type="button" className="work-button" onClick={() => sheet.current?.close()}>Close</button></div>

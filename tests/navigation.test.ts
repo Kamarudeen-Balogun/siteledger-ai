@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { isWorkspacePath, navigationFallback } from "../lib/navigation/routes";
 
 test("direct work links have useful local parents without retaining supplied secrets", () => {
@@ -16,4 +19,27 @@ test("direct work links have useful local parents without retaining supplied sec
   assert.equal(isWorkspacePath("/reports/demo"), true);
   assert.equal(isWorkspacePath("/about"), false);
   assert.equal(isWorkspacePath("/accounts-other"), false);
+});
+
+test("public menu dialog is portalled out of the blurred header", () => {
+  // Regression: the header has backdrop-blur-xl, and a backdrop-filter makes
+  // it the containing block for fixed-position descendants, so a `fixed
+  // inset-0` dialog rendered inside the header is only the header's ~64px
+  // box and its solid background covers just the top strip (the drawer
+  // looked transparent). The dialog must be portalled to document.body.
+  const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "components", "public-site.tsx"), "utf8");
+  assert.ok(source.includes('createPortal(<div className="transplant fixed inset-0 z-50"'), "Menu dialog must be rendered through createPortal with the transplant class on its root");
+  assert.ok(source.includes("document.body)"), "Menu dialog portal target must be document.body");
+  // Second half of the same regression: every Stitch token utility in
+  // transplant-public.css is scoped under `.transplant`
+  // (`.transplant .bg-surface { background-color: var(--sl-surface); }`) and
+  // the --sl-* variables live on `.transplant`, so a portal rendered outside
+  // that root matches no background rule and the panel is fully transparent
+  // (page text legible through it) even though the dialog covers the viewport.
+  // The `transplant` class on the dialog root keeps the panel solid #fff8f5.
+  const headerStart = source.indexOf("<header");
+  const headerEnd = source.indexOf("</header>", headerStart);
+  assert.ok(headerStart >= 0 && headerEnd > headerStart, "Public header must exist");
+  assert.ok(!source.slice(headerStart, headerEnd).includes('role="dialog"'), "No dialog may be nested inside the blurred header");
+  assert.ok(source.slice(headerStart, headerEnd).includes("<PublicMenu />"), "Menu button stays in the header");
 });

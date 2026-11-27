@@ -16,13 +16,28 @@ export type IntakeReceipt = {
 export class IntakeUnavailableError extends Error {
   constructor() { super("Site note storage is temporarily unavailable."); }
 }
+// Thrown only when the server-side Supabase credentials are missing, so the
+// caller can tell a deployment misconfiguration apart from a transport or RPC
+// failure (IntakeUnavailableError). Never thrown for user input.
+export class IntakeConfigError extends Error {
+  // Names of the missing server values (names only, never any value), so the
+  // deployment log can say exactly which one is absent.
+  readonly missing: string[];
+  constructor(missing: string[] = []) {
+    super(missing.length
+      ? `Site note storage is not configured on this deployment (missing: ${missing.join(", ")}).`
+      : "Site note storage is not configured on this deployment.");
+    this.missing = missing;
+  }
+}
 function configuration() {
   // Server configuration must stay runtime-resolved: a local preview must not
   // combine a build-time hosted URL with its isolated local service credentials.
   const url = Reflect.get(process.env, "NEXT_PUBLIC_SUPABASE_URL") as string | undefined;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new IntakeUnavailableError();
-  return { url, headers: { apikey: key, ...(key.startsWith("eyJ") ? { Authorization: `Bearer ${key}` } : {}) } };
+  const missing = [...(!url ? ["NEXT_PUBLIC_SUPABASE_URL"] : []), ...(!key ? ["SUPABASE_SERVICE_ROLE_KEY"] : [])];
+  if (missing.length) throw new IntakeConfigError(missing);
+  return { url: url as string, headers: { apikey: key as string, ...((key as string).startsWith("eyJ") ? { Authorization: `Bearer ${key}` } : {}) } };
 }
 
 export async function intakeRpc<T>(name: string, parameters: Record<string, unknown>): Promise<T> {
@@ -35,7 +50,12 @@ export async function intakeRpc<T>(name: string, parameters: Record<string, unkn
     if (!response.ok) throw new IntakeUnavailableError();
     if (response.status === 204) return undefined as T;
     return await response.json() as T;
-  } catch { throw new IntakeUnavailableError(); }
+  } catch (error) {
+    // A missing deployment credential must stay distinguishable from a
+    // transport or RPC failure — never flatten it into IntakeUnavailableError.
+    if (error instanceof IntakeConfigError) throw error;
+    throw new IntakeUnavailableError();
+  }
 }
 
 export async function uploadEvidence(path: string, bytes: Uint8Array, contentType: string) {
@@ -54,7 +74,10 @@ export async function uploadEvidence(path: string, bytes: Uint8Array, contentTyp
     const error = await response.json().catch(() => ({}));
     if (String(error.statusCode) === "409" || error.error === "Duplicate") return;
     throw new IntakeUnavailableError();
-  } catch { throw new IntakeUnavailableError(); }
+  } catch (error) {
+    if (error instanceof IntakeConfigError) throw error;
+    throw new IntakeUnavailableError();
+  }
 }
 
 export async function profileImage(path: string, method: "GET" | "DELETE" = "GET") {

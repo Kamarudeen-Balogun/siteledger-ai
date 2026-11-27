@@ -5,10 +5,16 @@ type NativeSession = { access_token: string; user: { id: string }; auth_session_
 export async function authRequest(path: string, body?: Record<string, unknown>, access?: string, method = "POST"): Promise<Record<string, unknown>> {
   const base = Reflect.get(process.env, "NEXT_PUBLIC_SUPABASE_URL") as string | undefined, key = Reflect.get(process.env, "NEXT_PUBLIC_SUPABASE_ANON_KEY") as string | undefined;
   if (!base || !key) throw new AccountError("Account access is temporarily unavailable.", 503);
-  const origin = new URL(base);
+  let origin: URL;
+  try { origin = new URL(base); } catch { throw new AccountError("Account access is temporarily unavailable.", 503); }
   if (origin.protocol !== "https:" && !(origin.protocol === "http:" && ["127.0.0.1", "localhost"].includes(origin.hostname))) throw new AccountError("Account access is temporarily unavailable.", 503);
-  const response = await fetch(new URL(`/auth/v1/${path}`, origin), { method, headers: { apikey: key, "Content-Type": "application/json", ...(access ? { Authorization: `Bearer ${access}` } : {}) },
-    ...(body ? { body: JSON.stringify(body) } : {}), cache: "no-store", redirect: "error", signal: AbortSignal.timeout(15000) });
+  // A fetch failure or timeout is a plain Error (DOMException), not an
+  // AccountError — convert it here so callers never see the generic catch-all.
+  let response: Response;
+  try {
+    response = await fetch(new URL(`/auth/v1/${path}`, origin), { method, headers: { apikey: key, "Content-Type": "application/json", ...(access ? { Authorization: `Bearer ${access}` } : {}) },
+      ...(body ? { body: JSON.stringify(body) } : {}), cache: "no-store", redirect: "error", signal: AbortSignal.timeout(15000) });
+  } catch { throw new AccountError("Account access is temporarily unavailable. Try again.", 503); }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 429) throw new AccountError("Too many attempts. Wait a little and try again.", 429);

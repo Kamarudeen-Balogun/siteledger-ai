@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { accountApi } from "../lib/auth/api";
 import { emailAddress, professionalName } from "../lib/auth/types";
 import { accountCookie, secretHash } from "../lib/auth/session";
-import { nativeSession } from "../lib/auth/provider";
+import { AccountError, authRequest, nativeSession } from "../lib/auth/provider";
 import { validEmailCode } from "../lib/auth/email-code";
 
 process.env.SITELEDGER_APP_URL = "https://siteledger.example.test";
@@ -72,7 +72,7 @@ for (const code of ["123456", "01234567", "0123456789"]) test(`successful ${code
     if (path.endsWith("account_verified_email")) { proved = true; assert.equal(body.p_user,user); return Response.json(account); }
     assert.ok(path.endsWith("account_session")); return Response.json(account);
   });
-  const result=await accountApi(request({email:"foreman@example.test",token:code,name:"Amina",confirm_name:true}),"verify_signup");
+  const result=await accountApi(request({email:"foreman@example.test",token:code,name:"Amina",confirm_name:true,captcha_token:"captcha-proof"}),"verify_signup");
   assert.equal(result.status,200);assert.ok(proved);
   const output=JSON.stringify(await result.json());assert.equal(output.includes(nativeToken),false);assert.equal(output.includes("native-refresh"),false);
   assert.match(result.headers.get("set-cookie")!,/HttpOnly; SameSite=Lax.*Secure/);
@@ -114,10 +114,10 @@ test("eight-digit recovery and invitation email codes reach native verification 
     if (path.endsWith("account_verified_email")) { emailProved = true; return Response.json(account); }
     assert.equal(path, "/auth/v1/logout"); return Response.json({});
   });
-  const recovered = await accountApi(request({ email: account.email, token: "01234567", password: "long-test-password" }), "reset_password");
+  const recovered = await accountApi(request({ email: account.email, token: "01234567", password: "long-test-password", captcha_token: "captcha-proof" }), "reset_password");
   assert.equal(recovered.status, 200); assert.ok(revoked);
   assert.match(recovered.headers.get("set-cookie")!, /Max-Age=0/);
-  const invitation = request({ token: "01234567" });
+  const invitation = request({ token: "01234567", captcha_token: "captcha-proof" });
   invitation.headers.set("cookie", accountCookie("a".repeat(43)));
   assert.equal((await accountApi(invitation, "verify_email")).status, 200);
   assert.ok(emailProved); assert.deepEqual(verified, ["recovery", "email"]);
@@ -130,7 +130,7 @@ test("a correctly shaped but invalid native code cannot create account access", 
     assert.equal(path, "/auth/v1/verify");
     return Response.json({ error_code: "otp_expired" }, { status: 403 });
   });
-  const result = await accountApi(request({ email: "foreman@example.test", token: "01234567", name: "Amina", confirm_name: true }), "verify_signup");
+  const result = await accountApi(request({ email: "foreman@example.test", token: "01234567", name: "Amina", confirm_name: true, captcha_token: "captcha-proof" }), "verify_signup");
   assert.equal(result.status, 400); assert.equal(result.headers.get("set-cookie"), null);
 });
 test("signup detects hosted confirmation settings before creating a native account", async context => {
@@ -149,4 +149,46 @@ test("native token claims cannot choose a different person from the provider-ver
   await assert.rejects(nativeSession({ access_token: token, user: { id: "81000000-0000-4000-8000-000000000002" } }), /Sign in again/);
   assert.match(secretHash("opaque-random-session"), /^[a-f0-9]{64}$/);
   assert.match(accountCookie("", true), /Max-Age=0/);
+});
+test("sign-in survives a Supabase RPC transport failure with the generic message", async context => {
+  process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = "test-public-site-key";
+  context.mock.method(globalThis, "fetch", async () => { throw new Error("network down"); });
+  const result = await accountApi(request({ email: "foreman@example.test", password: "long-test-password", captcha_token: "captcha-proof" }), "signin");
+  assert.equal(result.status, 503);
+  assert.equal((await result.json()).error, "Account access is temporarily unavailable. Try again; your records are preserved.");
+});
+test("sign-in names a missing service-role key instead of the generic message", async context => {
+  process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = "test-public-site-key";
+  const saved = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  try {
+    context.mock.method(globalThis, "fetch", async () => { throw new Error("fetch must not be reached without service credentials"); });
+    const result = await accountApi(request({ email: "foreman@example.test", password: "long-test-password", captcha_token: "captcha-proof" }), "signin");
+    assert.equal(result.status, 503);
+    assert.equal((await result.json()).error, "Account access is not set up on this deployment yet. Your records are preserved — try the main SiteLedger website.");
+  } finally { process.env.SUPABASE_SERVICE_ROLE_KEY = saved; }
+});
+test("sign-in logs which deployment value is missing, by name only", async context => {
+  process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = "test-public-site-key";
+  const saved = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const logged: unknown[] = [];
+  const error = context.mock.method(console, "error", (...args: unknown[]) => { logged.push(args); });
+  try {
+    context.mock.method(globalThis, "fetch", async () => { throw new Error("fetch must not be reached without service credentials"); });
+    const result = await accountApi(request({ email: "foreman@example.test", password: "long-test-password", captcha_token: "captcha-proof" }), "signin");
+    assert.equal(result.status, 503);
+    const entry = logged.find(args => Array.isArray(args) && args[0] === "accountApi failed") as unknown[] | undefined;
+    assert.ok(entry, "expected an accountApi failed log entry");
+    assert.deepEqual((entry[1] as { missing?: string[] }).missing, ["SUPABASE_SERVICE_ROLE_KEY"]);
+    assert.equal(JSON.stringify(logged).includes("test-service-role"), false);
+  } finally { process.env.SUPABASE_SERVICE_ROLE_KEY = saved; error.mock.restore(); }
+});
+test("authRequest converts a fetch failure into an AccountError, not a plain throw", async context => {
+  context.mock.method(globalThis, "fetch", async () => { throw new DOMException("The operation timed out.", "TimeoutError"); });
+  await assert.rejects(authRequest("token?grant_type=password", { email: "foreman@example.test", password: "long-test-password" }), (error: unknown) => {
+    assert.ok(error instanceof AccountError);
+    assert.equal((error as AccountError).status, 503);
+    return true;
+  });
 });

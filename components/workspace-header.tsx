@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { WorkspaceBack, WorkspaceNavigation, WorkspaceProfile, WorkspaceProjectPicker, WorkspaceSignedIn } from "./app-navigation";
+import { WorkspaceBack, WorkspaceNavigation, WorkspaceProfile, WorkspaceProjectPicker } from "./app-navigation";
 import { ThemeSwitch } from "./diary-theme";
 
 export type WorkspaceArea = "today" | "account" | "projects" | "reports" | "boq";
@@ -19,7 +19,7 @@ export function WorkspaceHeader({ current, title, project, projectId, publicView
         </div>
       </div>
       <Link href="/" className="site-brand diary-desktop-brand" aria-label="SiteLedger AI home"><Image src="/stitch-siteledger-mark.png" alt="" width={32} height={32}/>SiteLedger AI</Link>
-      <div className="diary-header-actions"><ThemeSwitch/>{!hideProfile && (current==="account" ? <WorkspaceSignedIn/> : <WorkspaceProfile/>)}</div>
+      <div className="diary-header-actions"><ThemeSwitch/>{!hideProfile && <WorkspaceProfile/>}</div>
     </div>
     {!isDetail && <WorkspaceProjectPicker current={current} project={project} projectId={projectId}/>}
     {!publicView && <WorkspaceNavigation current={current}/>}

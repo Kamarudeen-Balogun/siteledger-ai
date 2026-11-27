@@ -1,7 +1,7 @@
 const symbols = {
   today: "today", reports: "description", boq: "calculate", profile: "person",
   theme: "settings_brightness", sun: "light_mode", moon: "dark_mode",
-  plus: "add_circle", chevron: "chevron_right", switch: "expand_more", back: "arrow_back",
+  plus: "add_circle_outline", chevron: "chevron_right", switch: "expand_more", back: "arrow_back",
   mic: "mic", camera: "photo_camera", send: "send", check: "fact_check", close: "close",
   help: "support_agent", team: "engineering", building: "domain", saved: "cloud_done",
   explore: "explore", tour: "tour", flask: "science", pending: "hourglass_top", receipt: "receipt_long",

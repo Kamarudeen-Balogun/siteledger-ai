@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import Script from "next/script";
 import "./globals.css";
+import "@/components/transplant-public.css";
 import { AppNavigation } from "@/components/app-navigation";
 
 export const metadata: Metadata = {
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
   publisher: "CodeFlowX",
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
-const initialTheme = "(()=>{let mode;try{mode=localStorage.getItem('siteledger-theme')}catch{}if(mode==='dark'||mode==='system'){document.documentElement.dataset.theme=mode}})()";
+const initialTheme = "(()=>{let mode;try{mode=localStorage.getItem('siteledger-theme')}catch{}if(mode==='dark'){document.documentElement.dataset.theme='dark'}})()";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

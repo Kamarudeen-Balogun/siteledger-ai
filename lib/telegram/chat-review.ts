@@ -1,4 +1,5 @@
 import "server-only";
+import { appOrigin } from "../app-url";
 import { randomBytes } from "node:crypto";
 import { intakeRpc } from "./storage";
 import { sendTelegramPdf, telegramCall } from "./api";
@@ -67,7 +68,7 @@ function suggestions(record:ReviewRecord):Confirmation|null {
     return candidates.length===1?candidates[0].id:"";
   }),photo_notes:record.photos.map(photo=>({id:photo.id,note:photo.confirmed_findings?.note??(validatePhotoAnalysis(photo.ai_findings)?suggestedPhotoNote(photo.ai_findings):"")}))};
 }
-function siteLink(path:string) {return new URL(path,process.env.SITELEDGER_APP_URL).toString();}
+function siteLink(path:string) {return new URL(path,appOrigin()).toString();}
 
 function reportSummary(report: NonNullable<Awaited<ReturnType<typeof getReport>>>) {
   const {source,currency,costing}=report.document;

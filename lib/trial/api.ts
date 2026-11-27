@@ -11,11 +11,12 @@ import { validTrialManifest, type TrialState } from "./types";
 import { validMedia, MAX_WEB_AUDIO } from "../web/types";
 import { validateConfirmation } from "../confirm/validation";
 import { trialDocument } from "./data";
+import { isAllowedAppOrigin } from "../app-url";
 export const trialHeaders={"Cache-Control":"private, no-store","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff"};
 export type TrialDependencies={rpc:typeof intakeRpc;upload:typeof uploadEvidence;verify:typeof verifyTrialCaptcha;cleanup:typeof cleanExpiredTrials};
 export const trialDependencies:TrialDependencies={rpc:intakeRpc,upload:uploadEvidence,verify:verifyTrialCaptcha,cleanup:cleanExpiredTrials};
 function checked<T>(value:T|null):T {if(!value)throw new AccountError("Trial access is unavailable or expired. Only work already saved to an account can be recovered.",401);if(typeof value==="object"&&"error" in value){const errors:Record<string,[string,number]>={rate_limited:["The trial limit has been reached. Try later or sign in for your private project.",429],busy:["Wait for the saved files and processing to finish, then retry.",409],one_note:["This trial already has a voice note. Reattach the original files to finish it.",409],invalid:["Check the trial files and confirmed quantities.",422],reauthenticate:["Sign in again or confirm your password on the account page before saving this work.",401],verify_account:["Confirm your account email and professional name before saving this work.",403]};const [message,status]=errors[String(value.error)]??["Trial access is unavailable.",403];throw new AccountError(message,status);}return value;}
-function origin(request:Request){if(!process.env.SITELEDGER_APP_URL||request.headers.get("origin")!==new URL(process.env.SITELEDGER_APP_URL).origin)throw new AccountError("Open this action on SiteLedger.",403);}
+function origin(request:Request){if(!isAllowedAppOrigin(request.headers.get("origin")))throw new AccountError("Open this action on SiteLedger.",403);}
 export async function trialApi(request:Request,action:string,deps:TrialDependencies=trialDependencies,onSaved?:(hash:string)=>void){
   try{
     origin(request);const input=await smallJson(request,action==="confirm"?100000:16000),hash=trialHash(request);

@@ -19,9 +19,9 @@ import { ReportShare } from "@/components/report-share";
 import { privateHistory } from "@/lib/projects/data";
 
 export const metadata: Metadata = { title: "Daily site report — SiteLedger", referrer: "no-referrer", robots: { index: false, follow: false } };
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ view?: string }> };
+type Props = { params: Promise<{ id: string }> };
 
-async function Report({ params, searchParams }: Props) {
+async function Report({ params }: Props) {
   await connection();
   const { id } = await params;
   const result = await Promise.all([readReportInput(id), getReviewer(id)])
@@ -41,11 +41,9 @@ async function Report({ params, searchParams }: Props) {
   const { source } = report.document;
   const locked = report.status === "locked";
   const amendable = locked && reviewer?.canReview && !reviewer.archived;
-  if (amendable && (await searchParams).view === "amendment") return <>
-    <WorkspaceHeader current="reports" title="Add an amendment" project={source.project.name} detail/>
-    <AmendmentForm id={id}/>
-    <Link href={`/reports/${id}`} className="text-link">Back to report</Link>
-  </>;
+  // Amendments always open as the scrollable sheet (toolbar below) with
+  // Confirm pinned — never as a separate inline page. The old
+  // ?view=amendment inline form is removed.
 
   const history = await privateHistory(source.project.id).catch(() => null);
   const sameDay = history?.submissions.filter(note => note.date === source.date && note.total_cost != null).toReversed() ?? [];
@@ -64,7 +62,7 @@ async function Report({ params, searchParams }: Props) {
       {!locked && !report.stale && !reviewer?.archived && reviewer?.canApprove && <ApprovalForm id={id} version={reportVersion(report)} reviewer={reviewer.name} project={source.project.name} date={displayDate(source.date)} amount={formatMoney(report.document.costing.total_cost,report.document.currency)}/>}
     </>}/>
     {sameDay.length > 0 && <section className="stitch-card mt-4" data-tour="day-submissions">
-      <div className="stitch-title-row"><h2>Today’s costed submissions</h2><strong>{formatMoney(dayAmount.toFixed(),report.document.currency)}</strong></div>
+      <div className="stitch-title-row"><h2>Today’s report — all submissions</h2><strong>{formatMoney(dayAmount.toFixed(),report.document.currency)}</strong></div>
       <ol className="diary-list">{sameDay.map(note=><li key={note.id}><Link href={`/reports/${note.id}`} prefetch={false} aria-current={note.id===id?"page":undefined}>
         <span><strong>{note.report_status==="locked"?"Locked report":"Draft report"}</strong><small>{note.captured_at?displayTimestamp(note.captured_at,source.project.timezone):displayDate(note.date)}</small>{note.summary_items?.map((item,index)=><small key={index}>{item}</small>)}</span>
         <strong>{formatMoney(note.total_cost!,report.document.currency)}</strong>

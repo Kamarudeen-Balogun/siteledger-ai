@@ -210,3 +210,36 @@ test("all demo units use their supplied rates, checked against a scaled-integer 
     }
   }
 });
+
+test("confirm preview prices the demo note at exactly ₦551,000 from current BoQ rates", async () => {
+  const { previewCostTotal } = await import("../lib/costing/preview-total");
+  const boq = [
+    { id: "blk", item_code: "BLK-01" },
+    { id: "con", item_code: "CON-01" },
+  ];
+  const rates = [
+    { item_code: "BLK-01", rate: "14500" },
+    { item_code: "CON-01", rate: "145000" },
+  ];
+  const result = previewCostTotal(
+    [{ boqId: "blk", quantity: 18 }, { boqId: "con", quantity: 2 }],
+    boq, rates,
+  );
+  assert.deepEqual(result.lines.map(line => line?.amount), ["261000", "290000"]);
+  assert.equal(result.total, "551000");
+});
+
+test("confirm preview shows no total when a row cannot be priced — it never guesses", async () => {
+  const { previewCostTotal } = await import("../lib/costing/preview-total");
+  const boq = [{ id: "blk", item_code: "BLK-01" }];
+  const rates = [{ item_code: "BLK-01", rate: "14500" }];
+  const missingRate = previewCostTotal(
+    [{ boqId: "blk", quantity: 18 }, { boqId: "unknown", quantity: 2 }],
+    boq, rates,
+  );
+  assert.equal(missingRate.lines[0]?.amount, "261000");
+  assert.equal(missingRate.lines[1], null);
+  assert.equal(missingRate.total, null);
+  const missingQuantity = previewCostTotal([{ boqId: "blk", quantity: null }], boq, rates);
+  assert.equal(missingQuantity.total, null);
+});

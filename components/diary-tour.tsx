@@ -8,10 +8,11 @@ type Step = [target: string, title: string, note: string];
 const shared: Step[] = [
   ["theme", "Theme", "Switch between Light, Dark and System. SiteLedger starts in Light."],
   ["profile", "Profile", "Open your profile and settings here."],
-  ["ada", "Ask Ada", "Move Ada’s button to a convenient spot. She answers help questions and can make mistakes. Check money and locked records on the report itself. A person confirms all work."],
+  ["ada", "Ask Ada", "Move Ada’s button to a convenient spot — drag it after a short press, and it stays where you leave it. She answers help questions and can make mistakes. She never costs, locks, or edits anything: a person confirms all work. Check money and locked records on the report itself."],
 ];
 const screens: Record<string, Step[]> = {
-  today: [["switch-project","Choose a project","Switch projects here. The diary and reports follow the selected project."],["add-work","Add today’s work","Start a voice note, add photos, or do both."],["drafts","Awaiting review","Come back to unfinished notes and costed drafts here."],["measured-progress","Measured progress","See quantities measured against the BoQ from locked reports."]],
+  reports: [["locked-record","Read the locked record","Open a report to see its approved record."],["amendment","Add an amendment","Record a dated correction while keeping the original report available. The sheet scrolls and Confirm stays pinned at the bottom."]],
+  today: [["switch-project","Choose a project","Switch projects here. The diary and reports follow the selected project."],["add-work","Add today’s work","Start a voice note, add photos, or do both."],["drafts","Awaiting review","Come back to unfinished notes and costed drafts here."],["measured-progress","Measured progress","See quantities measured against the BoQ from locked reports."],["bot-example","How the Telegram bot works","See an example of the Telegram chat. The real chat lives in Telegram, not on this page."]],
   capture: [["record","Record a voice note","Speak as you would on site. You can listen back before sending."],["photos","Add photos","A photo on its own can start a site note."]],
   confirm: [["work-items","Check the work items","Review the suggested quantities and select their BoQ match."],["materials","Record materials","Keep deliveries and usage here, separate from BoQ costs."],["save-draft","Save draft","Save your edits if you need to finish later."]],
   report: [["report-total","Report total","See the value of the confirmed work."],["day-submissions","Today’s work","Open every costed submission for this site day."],["report-progress","Work progress","See the quantity completed against the planned quantity for each item."],["download-pdf","Download the PDF","Download the formatted report and its photos."],["share","Share a report","Create a client link for the locked report and its PDF."]],
@@ -30,7 +31,7 @@ export function DiaryTour({ path, person }: { path: string; person: string }) {
   const [capture, setCapture] = useState(false);
   const [generation,setGeneration] = useState(0);
   const screen = path === "/today" ? capture ? "capture" : "today" : /^\/confirm\/[^/]+$/.test(path) ? "confirm" :
-    /^\/reports\/(?!demo$)[^/]+$/.test(path) ? "report" : /^\/log\/(?!demo$)[^/]+$/.test(path) ? "log" :
+    /^\/reports\/(?!demo$)[^/]+$/.test(path) ? "report" : path === "/reports" ? "reports" : /^\/log\/(?!demo$)[^/]+$/.test(path) ? "log" :
     path.endsWith("/boq") ? "boq" : path.endsWith("/team") ? "team" : path === "/account" ? "profile" : null;
   const target = useCallback((name: string) => document.querySelector<HTMLElement>(`[data-tour="${name}"]`), []);
   useEffect(() => {

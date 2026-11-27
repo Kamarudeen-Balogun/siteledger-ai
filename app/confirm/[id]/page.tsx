@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { getReview } from "@/lib/confirm/data";
+import { privateBoqVersions } from "@/lib/projects/boq-data";
 import { ConfirmForm } from "@/components/confirm-form";
 import { after } from "next/server";
 import { processSubmissionPhotos } from "@/lib/ai/process-photos";
@@ -36,7 +37,12 @@ async function Review(props: Props) {
   // Start editable fields from the completed extraction after a listening refresh.
   // Photo-only refreshes retain the form so they cannot discard someone's edits.
   const draft = record.status === "locked" ? null : await intakeRpc<{ draft: ReviewDraft | null } | null>("account_review_draft", { p_hash: await currentSessionHash(), p_id: id, p_payload: null }).catch(() => null);
-  return <ConfirmForm key={`${record.id}:${record.job_status}`} record={record} draft={draft?.draft} />;
+  // Rates for the display-only cost preview on the confirm screen, from the
+  // project's current BoQ version. The server costing at confirm time is
+  // the authority; if this read fails the form simply shows no preview.
+  const versions = record.project_id ? await privateBoqVersions(record.project_id).catch(() => null) : null;
+  const rates = versions?.[0]?.rows.filter(row => row.item_code && /^\d+(?:\.\d*)?$/.test(row.rate.trim())).map(row => ({ item_code: row.item_code!, rate: row.rate.trim() }));
+  return <ConfirmForm key={`${record.id}:${record.job_status}`} record={record} draft={draft?.draft} rates={rates?.length ? rates : undefined} />;
 }
 export default function Page(props: Props) {
   return <Suspense fallback={<main className="mx-auto max-w-5xl px-5 py-7 sm:px-10"><WorkspaceHeader current="reports"/><DiaryNotice busy title="Opening your site note…">Loading your voice note and photos.</DiaryNotice></main>}><Review {...props} /></Suspense>;

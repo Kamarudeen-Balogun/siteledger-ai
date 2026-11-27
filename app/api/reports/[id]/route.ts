@@ -1,11 +1,12 @@
 import { createReport } from "@/lib/reports/data";
+import { isAllowedAppOrigin } from "@/lib/app-url";
 import { ReportStateError } from "@/lib/reports/model";
 import { requestSessionHash } from "@/lib/auth/session";
 import { smallJson } from "@/lib/auth/request";
 import { AccountError } from "@/lib/auth/provider";
 const headers = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" };
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
-  if (request.headers.get("origin") !== process.env.SITELEDGER_APP_URL)
+  if (!isAllowedAppOrigin(request.headers.get("origin")))
     return Response.json({ error: "Open your private report link." }, { status: 403, headers });
   if (Number(request.headers.get("content-length") ?? 0) > 2000)
     return Response.json({ error: "The weather note is too long." }, { status: 413, headers });

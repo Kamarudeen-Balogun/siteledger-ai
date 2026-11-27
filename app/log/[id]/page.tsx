@@ -2,7 +2,9 @@ import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import { redirect } from "next/navigation";
 import { getDisputeLog, getReviewer } from "@/lib/log/data";
+import { privateProjects } from "@/lib/projects/data";
 import { DisputeLogDocument } from "@/components/dispute-log";
 import { TelegramAccountEntry } from "@/components/account-forms";
 import { WorkspaceHeader } from "@/components/workspace-header";
@@ -15,6 +17,11 @@ async function Log(props: Props) {
   const result = await Promise.all([getDisputeLog(id),getReviewer(id)]).then(([log,reviewer]) => ({ log,reviewer })).catch(() => null);
   if (!result) return <><WorkspaceHeader current="reports"/><DiaryNotice tone="error" title="Could not open the log">Reopen the link to try again.</DiaryNotice></>;
   if (!result.log) return <><WorkspaceHeader current="reports"/><TelegramAccountEntry /><p>Sign in and open an authorized project to read its dispute log.</p><Link prefetch={false} className="text-link" href="/account">Open your account</Link></>;
+  // A dispute log belongs to one project. If the active project has
+  // switched since this URL was opened, do not show the old project's
+  // log — send the user to the active project's Reports & Log instead.
+  const active = await privateProjects().catch(() => null);
+  if (active?.active_project_id && result.log.project.id !== active.active_project_id) redirect("/reports");
   const canAmend = result.reviewer?.canReview && !result.reviewer.archived && result.log.entries.some(entry=>entry.kind==="report"&&entry.submission_id===id);
   return <><WorkspaceHeader current="reports" project={result.log.project.name} projectId={result.log.project.id}/>
     <DisputeLogDocument log={result.log} canShare={result.reviewer?.canApprove} actions={canAmend?<AmendmentForm id={id} sheet primary/>:undefined}/>

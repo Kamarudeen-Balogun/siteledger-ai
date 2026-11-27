@@ -1,5 +1,6 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { appOrigin } from "../app-url";
 
 export const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 type Access = { id: string; telegramId: number; expires: number };
@@ -26,7 +27,7 @@ export function verifyReviewToken(token: string, id: string, secret: string, now
 }
 export function reviewUrl(id: string, telegramId: number, secret: string): string | null {
   try {
-    const origin = new URL(process.env.SITELEDGER_APP_URL ?? "");
+    const origin = new URL(appOrigin());
     if (origin.protocol !== "https:" || origin.username || origin.password) return null;
     const url = new URL(`/confirm/${id}`, origin.origin);
     url.searchParams.set("access", createReviewToken(id, telegramId, secret));

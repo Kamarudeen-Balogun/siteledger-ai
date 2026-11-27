@@ -54,7 +54,7 @@ export function BoqEditor({ projectId, currency, rows, editable, overview }: { p
       {error && <p role="alert" className="my-5 border-l-4 border-amber-700 p-4 text-amber-900">{error}</p>}<div className="mt-6 flex flex-wrap gap-3"><button className={button + " work-button-primary"} disabled={busy}>{busy ? "Saving…" : "Review and save"}</button><button type="button" className={button} disabled={busy} onClick={async()=>{if(await discard()){setOpen(false);setDirty(false);}}}>Cancel editing</button>{selected&&<button type="button" className="text-link" disabled={busy} onClick={()=>void retire(selected)}>Remove item</button>}</div></form>}
     {overview}
     <div className="stitch-title-row"><h2 className="stitch-section-title">Contract Schedule Items</h2><span className="stitch-kicker">Sorted by trade</span></div>
-    {!rows.length ? <p className="stitch-card">No BoQ items yet. Site notes can still be recorded while rates are prepared.</p> : <ul className="stitch-boq-items" aria-label="Supplied BoQ price list" data-tour="boq-progress">{rows.map((row,index) => <li key={row.id} className="stitch-card">
+    {!rows.length ? <p className="stitch-card">No BoQ items yet. Site notes can still be recorded while rates are prepared.</p> : <ul className="stitch-boq-items" aria-label="Supplied BoQ price list" data-tour="boq-progress">{rows.map((row,index) => <li key={row.id} id={`boq-item-${row.item_code}`} className="stitch-card scroll-mt-24">
       <div className="stitch-title-row"><span className="stitch-kicker">Item {String(index+1).padStart(2,"0")} · {row.section}</span>{row.progress.is_overrun&&<span className="stitch-kicker stitch-chip" data-tone="red">Overrun</span>}</div>
       <h3>{row.description}</h3>
       <dl className="stitch-boq-values">

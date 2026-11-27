@@ -28,7 +28,7 @@ export function FeedbackForm({ name,email,project }: { name:string;email:string|
       await send({kind:form.get("kind"),message:form.get("message"),...photo});setSent(true);
     }catch(error){setError(error instanceof Error?error.message:"Could not send feedback.");}finally{setBusy(false);}
   }
-  if(sent)return <section className="diary-panel"><h2>Feedback sent</h2><p>You can follow replies in your feedback history.</p><Link href="/account" className="work-button work-button-primary mt-4">Back to profile</Link><Link href="/account/feedback?view=history" className="text-link ml-4">My feedback</Link></section>;
+  if(sent)return <section className="diary-panel"><h2>Sent</h2><p>Feedback sent. You can follow replies in your feedback history.</p><Link href="/account" className="work-button work-button-primary mt-4">Back to profile</Link><Link href="/account/feedback?view=history" className="text-link ml-4">My feedback</Link></section>;
   return <form onSubmit={submit} className="stitch-feedback max-w-xl"><h1 className="sr-only">Send feedback</h1>
     <p>Tell us what happened, or what would make SiteLedger better. Your account details are filled in below.</p>
     <fieldset><legend className="stitch-kicker">Type</legend><div className="stitch-feedback-types">{["Bug","Improvement","Complaint"].map(kind=><label key={kind} className="stitch-button"><input className="sr-only" name="kind" type="radio" value={kind} required/>{kind}</label>)}</div></fieldset>

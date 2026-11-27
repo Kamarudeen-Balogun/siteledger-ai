@@ -8,17 +8,18 @@ import { UUID } from "../confirm/access";
 import { validBoqEdit } from "./boq-types";
 import { MAX_IMPORT_ROWS, MAX_FILE_BYTES } from "./boq-input";
 import type { ProjectPermissions } from "./permissions";
+import { isAllowedAppOrigin } from "../app-url";
 
 export async function boqImportApi(request: Request, commit = false) {
   try {
-    if (!process.env.SITELEDGER_APP_URL || request.headers.get("origin") !== new URL(process.env.SITELEDGER_APP_URL).origin) throw new AccountError("Open this action on SiteLedger.", 403);
+    if (!isAllowedAppOrigin(request.headers.get("origin"))) throw new AccountError("Open this action on SiteLedger.", 403);
     const hash = requestSessionHash(request), account = await accountForHash(hash);
     if (!account) throw new AccountError("Sign in to continue.", 401);
     const input = await smallJson(request, commit ? 750000 : 2900000);
     const fields = commit ? ["project_id", "items", "confirmed"] : ["project_id", "name", "data"];
     if (Object.keys(input).length !== fields.length || Object.keys(input).some(key => !fields.includes(key)) || typeof input.project_id !== "string" || !UUID.test(input.project_id)) throw new AccountError("Check the import details.", 422);
-    const access = await intakeRpc<{ role?: string; archived_at?: string; permissions?: ProjectPermissions } | null>("account_project_access", { p_hash: hash, p_project: input.project_id });
-    if (!access || !(access.permissions?.edit_boq ?? access.role === "pm")) throw new AccountError("Project unavailable.", 404);
+    const access = await intakeRpc<{ role?: string; owner?: boolean; archived_at?: string; permissions?: ProjectPermissions } | null>("account_project_access", { p_hash: hash, p_project: input.project_id });
+  if (!access || !(access.permissions?.edit_boq ?? access.owner ?? access.role === "pm")) throw new AccountError("Project unavailable.", 404);
     if (access.archived_at) throw new AccountError("This project is archived. Its BoQ is read-only.", 409);
     if (!await intakeRpc("account_limit", { p_key: "boq-import:" + account.profile_id, p_max: 20, p_seconds: 600 })) throw new AccountError("Too many imports. Wait a little and try again.", 429);
     if (!commit) {

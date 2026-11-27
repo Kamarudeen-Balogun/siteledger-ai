@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { UUID } from "@/lib/confirm/access";
 import { privateDashboard, privateBoqHistory, privateBoqVersions } from "@/lib/projects/boq-data";
 import { BoqHistory } from "@/components/boq-history";
+import { BoqReview } from "@/components/boq-review";
 import { BoqEditor } from "@/components/boq-editor";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { DiaryNotice } from "@/components/diary-notice";
@@ -20,7 +21,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
   if (!UUID.test(id)) notFound();
   const data = await privateDashboard(id);
   if (!data) notFound();
-  const canEdit = data.access.permissions?.edit_boq ?? data.access.role === "pm";
+  const canEdit = data.access.permissions?.edit_boq ?? data.access.owner;
   const [changes,versions] = await Promise.all([canEdit ? privateBoqHistory(id) : null,privateBoqVersions(id).catch(()=>null)]);
   const currency = data.access.currency;
   const money = (value: string) => formatMoney(value,currency);
@@ -39,9 +40,12 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
     <BoqEditor projectId={id} currency={currency} rows={rows} editable={canEdit && !data.access.archived_at} overview={<>
       <div className="stitch-title-row">
         <details className="stitch-compact-disclosure" data-tour="boq-history"><summary><DiaryIcon name="history" size={16}/>Previous versions<DiaryIcon name="chevron" size={16}/></summary>
-          {versions?.length ? <ul>{versions.map(item=><li key={item.version}>Version {item.version} · {displayDate(item.effective_date)}</li>)}</ul> : <p>No BoQ versions have been saved yet.</p>}
+          {versions?.length ? <ul>{versions.map(item=><li key={item.version}><details><summary>Version {item.version} · {displayDate(item.effective_date)} · {item.items} {item.items===1?"item":"items"}</summary>
+            <ul>{item.rows.map((row,index)=><li key={row.item_code ?? index}>{row.description} — {row.boq_quantity} {row.unit} @ {money(row.rate)} per {row.unit}</li>)}</ul></details></li>)}</ul> : <p>No BoQ versions have been saved yet.</p>}
+          {versions?.length ? <p>Drafts use the current version (Version {versions[0].version}). Locked reports keep the version they were locked with.</p> : null}
         </details><span className="stitch-kicker">{rows.length} contract {rows.length===1?"item":"items"}</span>
       </div>
+      {changes && <BoqReview changes={changes} currency={currency}/>}
       <section className="stitch-card stitch-boq-allocation">
         <div className="stitch-title-row"><h2 className="stitch-kicker" data-ink="orange">Contract ledger allocation</h2><span className="stitch-kicker stitch-chip" data-tone="green">{earnedPercent.toFixed(1)}% earned</span></div>
         <div className="stitch-title-row"><strong>{money(allocation)}</strong><small>{money(data.earned)} to date</small></div>
@@ -56,6 +60,6 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
 
 export default function BoqPage(props: { params: Promise<{ id: string }> }) {
   return <main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10">
-    <Suspense fallback={<><WorkspaceHeader current="boq"/><DiaryNotice busy title="Opening the project BoQ…"/></>}><Content {...props}/></Suspense>
+    <Suspense fallback={<><WorkspaceHeader current="boq"/><DiaryNotice busy title="Opening the project BoQ…"/><div className="stitch-skeleton-stack" aria-hidden="true"><i/><i/><i/></div></>}><Content {...props}/></Suspense>
   </main>;
 }

@@ -21,7 +21,7 @@ export function ReportActions({ id, weather = null, exists = false }: { id: stri
   const form = <form onSubmit={save} className="py-4"><label className="block">Weather for this record (optional)
     <textarea name="weather" defaultValue={weather ?? ""} maxLength={500} className="mt-2 min-h-24 w-full border border-rule bg-white/50 px-3 py-2" /></label>
     {error && <p className="mt-3 text-[#B91C1C]" role="alert">{error}</p>}
-    <button className="mt-4 min-h-12 bg-accent px-5 py-3 font-semibold text-white disabled:opacity-60" disabled={saving}>{saving ? "Costing against the BoQ…" : exists ? "Rebuild draft report" : "Create costed report"}</button>
+    <button className="stitch-button mt-4" data-primary disabled={saving}>{saving ? "Costing against the BoQ…" : exists ? "Rebuild draft report" : "Create costed report"}</button>
   </form>;
   return exists ? <details className="mb-5 border-b border-rule"><summary className="min-h-12 cursor-pointer py-3 underline">Change weather or rebuild this draft</summary>{form}</details> : form;
 }

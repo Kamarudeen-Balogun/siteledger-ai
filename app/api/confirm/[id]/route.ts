@@ -1,4 +1,5 @@
 import { getReview } from "@/lib/confirm/data";
+import { isAllowedAppOrigin } from "@/lib/app-url";
 import { requestSessionHash } from "@/lib/auth/session";
 import { smallJson } from "@/lib/auth/request";
 import { AccountError } from "@/lib/auth/provider";
@@ -7,7 +8,7 @@ import { intakeRpc } from "@/lib/telegram/storage";
 const headers = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" };
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  if (request.headers.get("origin") !== process.env.SITELEDGER_APP_URL)
+  if (!isAllowedAppOrigin(request.headers.get("origin")))
     return Response.json({ error: "Open the private review button from Telegram." }, { status: 403, headers });
   if (Number(request.headers.get("content-length") ?? 0) > 100000)
     return Response.json({ error: "The review is too large." }, { status: 413, headers });

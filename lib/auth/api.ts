@@ -1,8 +1,9 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { intakeRpc } from "../telegram/storage";
+import { intakeRpc, IntakeConfigError } from "../telegram/storage";
 import { verifyTelegramAccess } from "../confirm/telegram-access";
 import { UUID } from "../confirm/access";
+import { isAllowedAppOrigin } from "../app-url";
 import { accountCookie, accountForHash, requestSessionHash, secretHash, sessionToken } from "./session";
 import { AccountError, authRequest, nativeSession } from "./provider";
 import { emailAddress, professionalName, validPassword, type Account } from "./types";
@@ -11,13 +12,13 @@ import { validEmailCode } from "./email-code";
 
 export const privateHeaders = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" };
 const shapes: Record<string, string[]> = {
-  signup: ["email", "password", "name", "confirm_name", "captcha_token", "link_existing"],
-  verify_signup: ["email", "token", "name", "confirm_name", "link_existing"],
+  signup: ["email", "password", "name", "confirm_name", "company", "captcha_token", "link_existing"],
+  verify_signup: ["email", "token", "name", "confirm_name", "company", "link_existing", "captcha_token"],
   resend_signup: ["email"],
   signin: ["email", "password", "captcha_token", "link_existing", "combine_profiles"],
   telegram: ["init_data"], profile: ["name", "confirm_name"], logout: ["all"],
-  reauthenticate: ["password", "captcha_token"], request_email_proof: ["captcha_token"], verify_email: ["token"],
-  recover: ["email", "captcha_token"], reset_password: ["email", "token", "password"],
+  reauthenticate: ["password", "captcha_token"], request_email_proof: ["captcha_token"], verify_email: ["token", "captcha_token"],
+  recover: ["email", "captcha_token"], reset_password: ["email", "token", "password", "captcha_token"],
   link_create: ["project_id"], link_status: ["id"], link_finish: ["id", "combine_profiles", "other_email", "other_password", "captcha_token"],
   unlink_telegram: [], connect_telegram: ["init_data", "combine_profiles", "other_email", "other_password", "captcha_token"],
 };
@@ -64,6 +65,11 @@ async function browserLogin(request: Request, input: Record<string, unknown>, ha
   if (signup && existing?.source === "telegram" && existing.browser_linked) throw new AccountError("This Telegram profile already has website access. Sign in to its existing website account.", 409);
   const name = signup ? professionalName(input.name) : null;
   if (signup && (!name || input.confirm_name !== true)) throw new AccountError("Type and confirm your professional name.", 422);
+  // Company / firm is optional on registration. Accept it when given so the
+  // signup form can carry it through to email confirmation, where the profile
+  // row exists and it can be stored. It is never required.
+  const company = typeof input.company === "string" ? input.company.trim() : "";
+  if (company && (company.length > 120 || /[\u0000-\u001f\u007f]/.test(company))) throw new AccountError("Enter a company or firm name up to 120 characters, or leave it empty.", 422);
   if (existing?.source === "telegram" && input.link_existing !== true) throw new AccountError("Confirm that you want to connect this Telegram profile to website access.", 422);
   await limited(request, signup ? "signup" : "signin", email);
   const meta = captcha(input);
@@ -89,11 +95,21 @@ async function confirmSignup(request: Request, input: Record<string, unknown>, h
   if (existing?.source === "browser") throw new AccountError("Sign out before confirming another website account.", 409);
   if (existing?.source === "telegram" && input.link_existing !== true) throw new AccountError("Confirm that this website login should connect to your Telegram profile.", 422);
   await limited(request, "verify_signup", email);
+  // The verification code itself is checked by the Turnstile widget too: a
+  // fresh bot check is required before the code can be submitted.
+  captcha(input);
   const native = await nativeSession(await authRequest("verify", { email, token: input.token, type: "signup" })), token = sessionToken();
   if (existing?.source === "telegram") {
     checked(await intakeRpc("account_attach_browser", { p_hash: hash, p_user: native.user.id, p_auth_session: native.auth_session_id, p_new_hash: secretHash(token), p_combine: false }));
     checked(await intakeRpc("account_profile_name", { p_hash: secretHash(token), p_name: name }));
   } else checked(await intakeRpc("account_browser_session", { p_user: native.user.id, p_auth_session: native.auth_session_id, p_hash: secretHash(token), p_name: name }));
+  // Store the optional company / firm given at registration, if any.
+  const company = typeof input.company === "string" ? input.company.trim() : "";
+  if (company && (company.length > 120 || /[\u0000-\u001f\u007f]/.test(company))) throw new AccountError("Enter a company or firm name up to 120 characters, or leave it empty.", 422);
+  if (company) {
+    // Optional detail only: never let storing it block signup confirmation.
+    await intakeRpc("account_profile_details", { p_hash: secretHash(token), p_update: { company } }).catch(() => null);
+  }
   // Only the successful native signup challenge proves this email, including
   // accounts that existed while automatic confirmation was previously enabled.
   checked(await intakeRpc("account_verified_email", { p_hash: secretHash(token), p_user: native.user.id, p_auth_session: native.auth_session_id }));
@@ -110,7 +126,7 @@ async function botLink(secret: string) {
 export async function accountApi(request: Request, action: string): Promise<Response> {
   if (!Object.hasOwn(shapes, action)) return Response.json({ error: "Account action unavailable." }, { status: 404, headers: privateHeaders });
   try {
-    if (!process.env.SITELEDGER_APP_URL || request.headers.get("origin") !== new URL(process.env.SITELEDGER_APP_URL).origin) throw new AccountError("Open this action on SiteLedger.", 403);
+    if (!isAllowedAppOrigin(request.headers.get("origin"))) throw new AccountError("Open this action on SiteLedger.", 403);
     const input = await smallJson(request);
     if (Object.keys(input).some(key => !shapes[action].includes(key))) throw new AccountError("Check your account details.", 422);
     const hash = requestSessionHash(request);
@@ -154,6 +170,8 @@ export async function accountApi(request: Request, action: string): Promise<Resp
       const email = emailAddress(input.email);
       if (!email || !validPassword(input.password) || !validEmailCode(input.token)) throw new AccountError("Enter the recovery email, the full 6–10 digit code and a new password of 12–128 characters.", 422);
       await limited(request, action, email);
+      // The code step is gated by a fresh Turnstile check in the form.
+      captcha(input);
       const native = await nativeSession(await authRequest("verify", { email, token: input.token, type: "recovery" }));
       await authRequest("user", { password: input.password }, native.access_token, "PUT");
       await intakeRpc("account_revoke_user", { p_user: native.user.id });
@@ -182,6 +200,7 @@ export async function accountApi(request: Request, action: string): Promise<Resp
     }
     if (action === "verify_email") {
       if (current.source !== "browser" || !current.email || !validEmailCode(input.token)) throw new AccountError("Enter the full 6–10 digit email code.", 422);
+      captcha(input);
       const native = await nativeSession(await authRequest("verify", { email: current.email, token: input.token, type: "email" }));
       return Response.json({ account: checked(await intakeRpc("account_verified_email", { p_hash: hash, p_user: native.user.id, p_auth_session: native.auth_session_id })) }, { headers: privateHeaders });
     }
@@ -225,7 +244,15 @@ export async function accountApi(request: Request, action: string): Promise<Resp
     }
     throw new AccountError("Account action unavailable.", 404);
   } catch (error) {
-    return Response.json({ error: error instanceof AccountError ? error.message : "Account access is temporarily unavailable. Try again; your records are preserved." },
+    // Log the underlying cause server-side so a generic message to the user
+    // never hides the real failure from the deployment logs. Only the action
+    // and the error's own name/message/stack are logged — never the request
+    // body, tokens, passwords or codes.
+    if (!(error instanceof AccountError)) console.error("accountApi failed", { action, name: error instanceof Error ? error.name : "unknown", message: error instanceof Error ? error.message : "unknown", ...(error instanceof IntakeConfigError && error.missing.length ? { missing: error.missing } : {}), stack: error instanceof Error ? error.stack : undefined });
+    const message = error instanceof AccountError ? error.message
+      : error instanceof IntakeConfigError ? "Account access is not set up on this deployment yet. Your records are preserved — try the main SiteLedger website."
+      : "Account access is temporarily unavailable. Try again; your records are preserved.";
+    return Response.json({ error: message },
       { status: error instanceof AccountError ? error.status : error instanceof SyntaxError ? 422 : 503, headers: privateHeaders });
   }
 }
