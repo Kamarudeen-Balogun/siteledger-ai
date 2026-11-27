@@ -7,8 +7,9 @@ export type BoqChange = { id: string; timestamp: string; action: string; actor: 
 export async function privateBoqHistory(id: string): Promise<BoqChange[] | null> {
   return intakeRpc("account_boq_history", { p_hash: await currentSessionHash(), p_project: id });
 }
+export type BoqVersion = { version: number; effective_date: string; items: number; rows: { description: string; unit: string; boq_quantity: string; rate: string; item_code?: string; section?: string }[] };
 export async function privateBoqVersions(id:string) {
-  return intakeRpc<{version:number;effective_date:string}[]|null>("account_boq_versions",{p_hash:await currentSessionHash(),p_project:id});
+  return intakeRpc<BoqVersion[]|null>("account_boq_versions",{p_hash:await currentSessionHash(),p_project:id});
 }
 export async function privateDashboard(id: string) {
   const input = await intakeRpc<DashboardInput | null>("account_dashboard_input", { p_hash: await currentSessionHash(), p_project: id });

@@ -20,7 +20,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
   if (!UUID.test(id)) notFound();
   const data = await privateDashboard(id);
   if (!data) notFound();
-  const canEdit = data.access.permissions?.edit_boq ?? data.access.role === "pm";
+  const canEdit = data.access.permissions?.edit_boq ?? data.access.owner;
   const [changes,versions] = await Promise.all([canEdit ? privateBoqHistory(id) : null,privateBoqVersions(id).catch(()=>null)]);
   const currency = data.access.currency;
   const money = (value: string) => formatMoney(value,currency);
@@ -39,7 +39,9 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
     <BoqEditor projectId={id} currency={currency} rows={rows} editable={canEdit && !data.access.archived_at} overview={<>
       <div className="stitch-title-row">
         <details className="stitch-compact-disclosure" data-tour="boq-history"><summary><DiaryIcon name="history" size={16}/>Previous versions<DiaryIcon name="chevron" size={16}/></summary>
-          {versions?.length ? <ul>{versions.map(item=><li key={item.version}>Version {item.version} · {displayDate(item.effective_date)}</li>)}</ul> : <p>No BoQ versions have been saved yet.</p>}
+          {versions?.length ? <ul>{versions.map(item=><li key={item.version}><details><summary>Version {item.version} · {displayDate(item.effective_date)} · {item.items} {item.items===1?"item":"items"}</summary>
+            <ul>{item.rows.map((row,index)=><li key={row.item_code ?? index}>{row.description} — {row.boq_quantity} {row.unit} @ {money(row.rate)} per {row.unit}</li>)}</ul></details></li>)}</ul> : <p>No BoQ versions have been saved yet.</p>}
+          {versions?.length ? <p>Drafts use the current version (Version {versions[0].version}). Locked reports keep the version they were locked with.</p> : null}
         </details><span className="stitch-kicker">{rows.length} contract {rows.length===1?"item":"items"}</span>
       </div>
       <section className="stitch-card stitch-boq-allocation">

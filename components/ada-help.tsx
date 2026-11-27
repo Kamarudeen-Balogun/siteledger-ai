@@ -29,7 +29,8 @@ export function AdaHelp({ projectId }: { projectId: string | null }) {
   const [dragged, setDragged] = useState<{ x: number; y: number } | null>(null);
   const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null);
   const [panelDrag, setPanelDrag] = useState<{ x: number; y: number } | null>(null);
-  const drag = useRef<{ x: number; y: number; left: number; top: number; moved: boolean; panel: boolean } | null>(null), skipClick = useRef(false);
+  const drag = useRef<{ x: number; y: number; left: number; top: number; moved: boolean; panel: boolean; armed: boolean } | null>(null), skipClick = useRef(false);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chat = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLElement>(null);
   const launch = useRef<HTMLButtonElement>(null);
@@ -60,7 +61,11 @@ export function AdaHelp({ projectId }: { projectId: string | null }) {
     const rect=element?.getBoundingClientRect();
     if(!rect)return;
     skipClick.current=false;
-    drag.current={x:event.clientX,y:event.clientY,left:rect.left,top:rect.top,moved:false,panel:isPanel};
+    drag.current={x:event.clientX,y:event.clientY,left:rect.left,top:rect.top,moved:false,panel:isPanel,armed:isPanel};
+    // Long-press to drag: the button starts moving after a short press
+    // (200ms) or a clear drag (24px), whichever comes first. A quick tap
+    // never moves it, and a drag never counts as a tap.
+    if(!isPanel){ holdTimer.current=setTimeout(()=>{ if(drag.current) drag.current.armed=true; },200); }
     event.currentTarget.setPointerCapture(event.pointerId);
   }
   function bounded(x:number,y:number,element:HTMLElement){
@@ -71,7 +76,10 @@ export function AdaHelp({ projectId }: { projectId: string | null }) {
   function move(event: PointerEvent<HTMLElement>) {
     if (!drag.current) return;
     const { clientX, clientY } = event;
-    if (Math.hypot(clientX - drag.current.x, clientY - drag.current.y) < 8 && !drag.current.moved) return;
+    const distance = Math.hypot(clientX - drag.current.x, clientY - drag.current.y);
+    if (!drag.current.armed && distance < 24) return;
+    drag.current.armed = true;
+    if (distance < 8 && !drag.current.moved) return;
     drag.current.moved = true;
     const element = drag.current.panel ? panel.current : launch.current;
     if(!element)return;
@@ -79,6 +87,7 @@ export function AdaHelp({ projectId }: { projectId: string | null }) {
     if(drag.current.panel)setPanelDrag(point);else setDragged(point);
   }
   function release(event: PointerEvent<HTMLElement>) {
+    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
     if (drag.current?.moved) {
       const element=drag.current.panel?panel.current:launch.current;
       if(element){
@@ -95,7 +104,7 @@ export function AdaHelp({ projectId }: { projectId: string | null }) {
     drag.current = null; setDragged(null);setPanelDrag(null);
   }
   function href(path: string) {
-    if (path === "/reports") return projectId ? `/projects/${projectId}?view=records` : "/projects";
+    if (path === "/reports") return "/reports";
     if (path === "/boq") return projectId ? `/projects/${projectId}/boq` : "/projects";
     return path;
   }

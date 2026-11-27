@@ -70,6 +70,16 @@ export function ConfirmForm({ record, draft, trial = false, banner, children }: 
   const [saved, setSaved] = useState<{ by: string; at: string } | null>(() => record.confirmed_at ? { by: record.confirmed_by!, at: record.confirmed_at } : null);
   const [dirty, setDirty] = useState(false), [savingDraft,setSavingDraft]=useState(false), [draftNotice,setDraftNotice]=useState(Boolean(draft));
   const feedback = useRef<HTMLDivElement>(null), focusFeedback = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Autosave: leaving Confirm without tapping "Save draft" must not lose
+  // edits. Draft fields are saved quietly 2 seconds after the last
+  // change, so a draft reopens exactly as left even if the user never
+  // taps Save. No navigation happens on autosave.
+  useEffect(() => {
+    if (!dirty || locked || archived || saving) return;
+    const timer = setTimeout(() => { void saveDraft(formRef.current, { stay: true }); }, 2000);
+    return () => clearTimeout(timer);
+  });
   const listening = ["queued", "processing"].includes(record.job_status ?? "");
   const locked = record.status === "locked";
   const archived = Boolean(record.archived_at);
@@ -86,7 +96,7 @@ export function ConfirmForm({ record, draft, trial = false, banner, children }: 
     focusFeedback.current = false;
   }, [saved, error, saving]);
   const mediaUrl = (id: string) => trial ? `/api/trial/media/${id}` : `/api/confirm/${record.id}/media/${id}`;
-  async function saveDraft(form: HTMLFormElement | null) {
+  async function saveDraft(form: HTMLFormElement | null, options: { stay?: boolean } = {}) {
     if (!form || savingDraft) return;
     setSavingDraft(true); setError("");
     try {
@@ -95,7 +105,7 @@ export function ConfirmForm({ record, draft, trial = false, banner, children }: 
       const result = await response.json();
       if (!response.ok) throw new Error(result.error);
       setDirty(false); setDraftNotice(true);
-      router.push("/today");
+      if (!options.stay) router.push("/today");
     } catch (error) { setError(error instanceof Error ? error.message : "Could not save this draft. Try again."); focusFeedback.current = true; }
     finally { setSavingDraft(false); }
   }
@@ -139,7 +149,7 @@ export function ConfirmForm({ record, draft, trial = false, banner, children }: 
   const time = new Intl.DateTimeFormat("en-GB", { timeStyle: "short", timeZone: record.timezone ?? "Africa/Lagos" }).format(new Date(record.created_at));
   return <main className="mx-auto max-w-7xl px-5 pb-12 pt-7 sm:px-10 stitch-confirm">
     <TelegramFrame />
-    <WorkspaceHeader current="reports" title="Voice Log Recorder" project={record.project_name} detail/>{banner}
+    <WorkspaceHeader current="reports" title="Confirm site note" project={record.project_name} detail/>{banner}
     <header className="stitch-human-gate stitch-card"><span><DiaryIcon name={locked?"lock":"verified"} size={18}/></span><div>
       <p className="stitch-kicker" data-ink="orange">{locked?"Locked record":"Mandatory human review"}</p>
       <h1>{locked?"This site note belongs to a locked report.":"Human confirmation mandatory — nothing is costed or locked until you verify."}</h1></div></header>
@@ -164,7 +174,7 @@ export function ConfirmForm({ record, draft, trial = false, banner, children }: 
       {source.raw_language_notes && <p className="stitch-language"><DiaryIcon name="translate" size={18}/>{source.raw_language_notes}</p>}
     </div>}
     {listening ? <DiaryNotice busy title="Listening to your note…">Your audio and photos are saved. This page will update when your note is ready to check.</DiaryNotice>
-      : <form onSubmit={submit} onChange={() => setDirty(true)} data-unsaved={dirty&&!locked&&!archived&&!saving}>
+      : <form ref={formRef} onSubmit={submit} onChange={() => setDirty(true)} data-unsaved={dirty&&!locked&&!archived&&!saving}>
       {record.job_status === "manual_entry" && <DiaryNotice tone="warning" title="Enter the site details">We couldn’t read this note reliably. Your audio and photos are saved. Enter what happened below.</DiaryNotice>}
       <fieldset disabled={locked || archived || saving}>
       <Section title="Work items">

@@ -17,8 +17,8 @@ export async function boqImportApi(request: Request, commit = false) {
     const input = await smallJson(request, commit ? 750000 : 2900000);
     const fields = commit ? ["project_id", "items", "confirmed"] : ["project_id", "name", "data"];
     if (Object.keys(input).length !== fields.length || Object.keys(input).some(key => !fields.includes(key)) || typeof input.project_id !== "string" || !UUID.test(input.project_id)) throw new AccountError("Check the import details.", 422);
-    const access = await intakeRpc<{ role?: string; archived_at?: string; permissions?: ProjectPermissions } | null>("account_project_access", { p_hash: hash, p_project: input.project_id });
-    if (!access || !(access.permissions?.edit_boq ?? access.role === "pm")) throw new AccountError("Project unavailable.", 404);
+    const access = await intakeRpc<{ role?: string; owner?: boolean; archived_at?: string; permissions?: ProjectPermissions } | null>("account_project_access", { p_hash: hash, p_project: input.project_id });
+  if (!access || !(access.permissions?.edit_boq ?? access.owner ?? access.role === "pm")) throw new AccountError("Project unavailable.", 404);
     if (access.archived_at) throw new AccountError("This project is archived. Its BoQ is read-only.", 409);
     if (!await intakeRpc("account_limit", { p_key: "boq-import:" + account.profile_id, p_max: 20, p_seconds: 600 })) throw new AccountError("Too many imports. Wait a little and try again.", 429);
     if (!commit) {

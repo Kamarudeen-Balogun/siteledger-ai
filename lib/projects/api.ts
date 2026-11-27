@@ -72,7 +72,14 @@ export async function projectApi(request: Request,action: string): Promise<Respo
         const recipient=invitation.email??email;
         if (!recipient) throw new AccountError("Invitation email could not be sent.",503);
         try { await sendProductEmail(recipient,"Your SiteLedger project invitation",`Sign in at ${new URL("/invite",process.env.SITELEDGER_APP_URL)} with this email address, then enter this invitation code:\n\n${secret}\n\nThis code expires in seven days.`); }
-        catch { throw new AccountError("Invitation email could not be sent. Retry from the invitations list.",503); }
+        catch {
+          // A fresh invitation whose email never went out must not sit
+          // as a silent Pending row. Cancel it so the owner can retry
+          // from the invitations list. (A resend failure leaves the
+          // original invitation standing — it is still usable.)
+          if (action === "invite") { try { await intakeRpc("account_cancel_invite", { p_hash: hash, p_project: project, p_invite: invitation.id }); } catch { /* The invite stays visible for the owner to cancel. */ } }
+          throw new AccountError("Invitation email could not be sent. Retry from the invitations list.",503);
+        }
         result={id:invitation.id,expires_at:invitation.expires_at,sent:true};
       } else if (action==="member_permissions") {
         if(!validRole(input.role)||!validPermissions(input.permissions))throw new AccountError("Check the role and permissions.",422);

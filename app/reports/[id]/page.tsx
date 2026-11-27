@@ -19,9 +19,9 @@ import { ReportShare } from "@/components/report-share";
 import { privateHistory } from "@/lib/projects/data";
 
 export const metadata: Metadata = { title: "Daily site report — SiteLedger", referrer: "no-referrer", robots: { index: false, follow: false } };
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ view?: string }> };
+type Props = { params: Promise<{ id: string }> };
 
-async function Report({ params, searchParams }: Props) {
+async function Report({ params }: Props) {
   await connection();
   const { id } = await params;
   const result = await Promise.all([readReportInput(id), getReviewer(id)])
@@ -41,11 +41,9 @@ async function Report({ params, searchParams }: Props) {
   const { source } = report.document;
   const locked = report.status === "locked";
   const amendable = locked && reviewer?.canReview && !reviewer.archived;
-  if (amendable && (await searchParams).view === "amendment") return <>
-    <WorkspaceHeader current="reports" title="Add an amendment" project={source.project.name} detail/>
-    <AmendmentForm id={id}/>
-    <Link href={`/reports/${id}`} className="text-link">Back to report</Link>
-  </>;
+  // Amendments always open as the scrollable sheet (toolbar below) with
+  // Confirm pinned — never as a separate inline page. The old
+  // ?view=amendment inline form is removed.
 
   const history = await privateHistory(source.project.id).catch(() => null);
   const sameDay = history?.submissions.filter(note => note.date === source.date && note.total_cost != null).toReversed() ?? [];

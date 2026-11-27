@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PublicSite } from "@/components/public-site";
 import { LandingAccountLink } from "@/components/landing-account-link";
 import { DiaryIcon } from "@/components/diary-icon";
@@ -31,6 +32,14 @@ export default function Home() {
           <li><DiaryIcon name="history" size={18}/>Locked originals and a separate amendment history.</li>
           <li><DiaryIcon name="team" size={18}/>Private projects with owner-controlled access.</li>
         </ul>
+      </section>
+      <section className="stitch-card" aria-labelledby="sample-title">
+        <h2 id="sample-title">See a sample</h2>
+        <p>Open the fictional Lekki duplex demonstration — a locked daily report and its dispute log, exactly as a client would see them.</p>
+        <div className="stitch-menu-list">
+          <Link href="/reports/demo" className="stitch-button" data-primary><DiaryIcon name="reports" size={18}/>Open the sample report</Link>
+          <Link href="/log/demo" className="stitch-button"><DiaryIcon name="lock" size={18}/>Open the sample dispute log</Link>
+        </div>
       </section>
     </div>
   </PublicSite>;

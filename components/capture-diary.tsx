@@ -31,7 +31,7 @@ export function CaptureDiary() {
   const search = useSearchParams();
   const [capturing,setCapturing]=useState(search.get("capture")==="1");
   const [person,setPerson]=useState<string|null>(null);
-  const {confirm,confirmation}=useActionConfirmation();
+  const {confirmation}=useActionConfirmation();
   const [gate,setGate]=useState<"sign-in"|"project"|null>(null);
   const [summary,setSummary]=useState<TodaySummary|null>(null),[summaryError,setSummaryError]=useState(false);
   const [readOnly,setReadOnly]=useState(false);
@@ -166,9 +166,11 @@ export function CaptureDiary() {
     }catch(e){setError(e instanceof Error ? e.message:"Could not queue this note. Your files are still on this page.");}finally{savePending.current=false;setSaving(false);}
   }
   async function closeCapture() {
-    if ((audio||photos.length||recording)&&!await confirm({title:"Leave this recording?",description:"Save a draft to keep these attachments, or discard them to return to Today.",confirmLabel:"Discard attachments",danger:true})) return;
+    // Leaving with attachments never discards them: the note is saved
+    // as a draft first, so it waits in Awaiting review exactly as left.
+    if (recorder.current?.state === "recording") recorder.current.stop();
+    if (audio || photos.length) { await save(true); return; }
     recordingCancelled.current=true;
-    if(recorder.current?.state==="recording")recorder.current.stop();
     setAudio(null);setPhotos([]);setCapturing(false);setError("");scope.current=null;setCaptureProject(null);captured.current="";
     window.scrollTo(0,0);
   }
