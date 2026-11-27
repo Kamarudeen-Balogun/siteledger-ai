@@ -187,7 +187,13 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
       navigation?.selectProject(id);
       await projectAction("select", { project_id: id });
       sheet.current?.close();
-      const path = current === "today" ? "/today" : current === "boq" ? `/projects/${id}/boq` : current === "reports" ? "/reports" : `/projects/${id}/team`;
+      // Stay in the section the switch was opened from. Switching from the
+      // Projects list or a project overview must land on the project
+      // overview — landing on the team page instead made its role-gated
+      // Invite button appear and vanish as the project changed. Switching
+      // from a team page stays on the team page.
+      const onTeam = /^\/projects\/[a-f0-9-]{36}\/team/.test(navigation?.pathname ?? "");
+      const path = current === "today" ? "/today" : current === "boq" ? `/projects/${id}/boq` : current === "reports" ? "/reports" : onTeam ? `/projects/${id}/team` : `/projects/${id}`;
       router.push(path);
       router.refresh();
     } catch (error) {

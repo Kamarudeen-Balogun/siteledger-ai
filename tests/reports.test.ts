@@ -1,7 +1,7 @@
 import { secretHash } from "../lib/auth/session";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildDocument, reportFromInput, displayProductivity, ReportStateError, type ReportSource, type ReportInput } from "../lib/reports/model";
+import { buildDocument, reportFromInput, displayProductivity, truncateAtWord, ReportStateError, type ReportSource, type ReportInput } from "../lib/reports/model";
 import { POST } from "../app/api/reports/[id]/route";
 
 const id = "70000000-0000-4000-8000-000000000071", secret = "test-report-secret";
@@ -115,4 +115,10 @@ test("report API gates access, rejects caller money, blocks unfinished work, and
     assert.equal((await POST(request({}), context)).status, 200);
     assert.equal((saves[1].p_document as ReturnType<typeof buildDocument>).weather, "Rain, 2 hrs");
   } finally { globalThis.fetch = originalFetch; names.forEach((name,i) => { if (savedEnv[i] === undefined) delete process.env[name]; else process.env[name] = savedEnv[i]; }); }
+});
+test("display text shortens at a word boundary, never mid-word", () => {
+  assert.equal(truncateAtWord("Blockwork on the east elevation", 20), "Blockwork on the…");
+  assert.equal(truncateAtWord("eighteen square metres of blockwork", 18), "eighteen square…");
+  assert.equal(truncateAtWord("Short text", 20), "Short text");
+  assert.equal(truncateAtWord("Blockwork", 5), "Block…");
 });

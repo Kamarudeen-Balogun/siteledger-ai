@@ -49,4 +49,11 @@ export const displayTimestamp = (date: string, timezone = "Africa/Lagos") => new
 export const lockDate = (report: ReportView) => report.locked_at ? new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: report.document.source.project.timezone ?? "Africa/Lagos" }).format(new Date(report.locked_at)) : report.document.source.date;
 export const moneyDisplayNote = (currency: string) => currency === "NGN" ? "Amounts rounded to the nearest ₦10 for display. Exact values retained in the record." : `Amounts displayed at ${currency} currency precision. Exact values retained in the record.`;
 export const displayRatio = (value: string, digits = 1) => new Intl.NumberFormat("en-NG", { maximumFractionDigits: digits }).format(Number(value));
+// Shorten display text at a word boundary, never mid-word. A truncated
+// value always ends with an ellipsis so the reader knows more was there.
+export const truncateAtWord = (value: string, maxLength: number) => {
+  if (value.length <= maxLength) return value;
+  const cut = value.slice(0, maxLength).replace(/\s+\S*$/, "").trimEnd();
+  return (cut || value.slice(0, maxLength)) + "…";
+};
 export const displayProductivity = (value: string) => new Intl.NumberFormat("en-NG", { maximumSignificantDigits: 3 }).format(Number(value));

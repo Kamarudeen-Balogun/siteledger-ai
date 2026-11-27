@@ -52,7 +52,7 @@ async function Report({ params }: Props) {
     <WorkspaceHeader current="reports" project={source.project.name} projectId={source.project.id}/>
     <ReportDocument report={report} actions={<>
       <nav aria-label="Report actions" className="stitch-report-actions report-toolbar">
-        {locked && reviewer?.canApprove && <ReportShare id={id} primary/>}
+        {locked && reviewer?.canView && <ReportShare id={id} primary/>}
         {!report.stale && <a download href={`/api/reports/${id}/pdf`} className="stitch-button" data-tour="download-pdf"><DiaryIcon name="pdf" size={19}/>Download Client PDF</a>}
         {amendable && <AmendmentForm id={id} sheet/>}
       </nav>

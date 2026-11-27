@@ -61,9 +61,9 @@ export function ReportDocument({ report, trial = false, guestOriginal = false, s
       </figure>)}</div>
     </section>
     {source.guest_origin && !sharedPath && <section><h2>Original guest capture</h2><p>{source.guest_origin.recorded_by} · {displayTimestamp(source.guest_origin.created_at,source.project.timezone)}</p><p>Saved to this account {displayTimestamp(source.guest_origin.handover_at,source.project.timezone)}. Original guest edits and attribution are preserved.</p></section>}
-    <section className="report-signatures"><div><h2>{trial || guestOriginal ? "Guest trial / unverified" : source.submitted_role === "pm" ? "Site record / PM" : "Site foreman / site engineer"}</h2><p>Recorded by {source.submitted_by}</p><p className="report-signature-line">Signature / date</p></div>
+    <section className="report-signatures"><div><h2>{trial || guestOriginal ? "Guest trial / unverified" : source.submitted_role === "pm" ? "Site record / PM" : "Site foreman / site engineer"}</h2><p>{`Recorded by ${source.submitted_by}`}</p><p className="report-signature-line">Signature / date</p></div>
       <div><h2>Project manager / QS</h2><p>{report.approved_by || "Awaiting approval"}</p><p className="report-signature-line">Signature / date</p></div></section>
-    <footer>{source.confirmed_by && <p>Quantities confirmed by {source.confirmed_by}{source.confirmed_role ? ` / ${source.confirmed_role === "pm" ? "PM" : "Foreman"}` : ""}{source.confirmed_at ? ` · ${displayTimestamp(source.confirmed_at, source.project.timezone)}` : ""}</p>}
+    <footer>{source.confirmed_by && <p>{`Quantities confirmed by ${source.confirmed_by}`}{source.confirmed_role ? ` / ${source.confirmed_role === "pm" ? "PM" : "Foreman"}` : ""}{source.confirmed_at ? ` · ${displayTimestamp(source.confirmed_at, source.project.timezone)}` : ""}</p>}
       <p>{source.project.name} · {source.project.client}</p>
       {report.locked_at && <p>Locked {displayTimestamp(report.locked_at, source.project.timezone)}</p>}
       <p>{moneyDisplayNote(doc.currency)}</p>

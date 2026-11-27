@@ -9,7 +9,7 @@ import { suggestedPhotoNote, validatePhotoAnalysis } from "../ai/photo-schema";
 import { createReport, getReport } from "../reports/data";
 import { approveReport, reportVersion } from "../log/data";
 import { formatMoney } from "../costing/format-money";
-import { displayUnit } from "../reports/model";
+import { displayUnit, truncateAtWord } from "../reports/model";
 import { suppliedDecimal } from "../projects/boq-input";
 import { recordActor } from "../auth/record";
 
@@ -42,7 +42,7 @@ export async function sendTelegramProjectList(telegram: number): Promise<boolean
   const data=await intakeRpc<{name:string;selected:boolean;code:string}[]|null>("telegram_project_choices",{p_telegram:telegram});
   if(!data?.length)return false;
   await send(telegram,"Your projects. Choose where to record today's work.",data.map(item=>({
-    text:`${item.selected?"✓ ":""}${item.name.slice(0,54)}`,
+    text:`${item.selected?"✓ ":""}${truncateAtWord(item.name,54)}`,
     callback_data:`slp:${item.code}`,
   })));
   return true;
@@ -72,7 +72,7 @@ function siteLink(path:string) {return new URL(path,appOrigin()).toString();}
 
 function reportSummary(report: NonNullable<Awaited<ReturnType<typeof getReport>>>) {
   const {source,currency,costing}=report.document;
-  const items=costing.items.slice(0,12).map((item,index)=>`• ${source.items[index].description.slice(0,88)} · ${item.quantity_done} ${displayUnit(item.unit)} · ${formatMoney(item.cost_today,currency)}`);
+  const items=costing.items.slice(0,12).map((item,index)=>`• ${truncateAtWord(source.items[index].description,88)} · ${item.quantity_done} ${displayUnit(item.unit)} · ${formatMoney(item.cost_today,currency)}`);
   return [`${report.status==="locked"?"Locked report":"Draft report"} · ${formatMoney(costing.total_cost,currency)}`,...items].join("\n");
 }
 
@@ -144,15 +144,15 @@ export async function handleChatReview(request:ChatReview) {
       await send(telegram,`${reportSummary(report)}\nCheck the report before approving it.`,[
         action.can_approve?await button(telegram,id,"lock","Approve & lock",{version:reportVersion(report)}):null,{text:"Open draft",url:siteLink(`/reports/${id}`)}]);return;
     }
-    const lines=confirmation.values.work_items.slice(0,12).map((item,index)=>`${index+1}. ${item.description.slice(0,95)} · ${item.quantity??"Check quantity"} ${displayUnit(item.unit??"")}${item.confidence<.6?" · Check":""}`);
-    const materials=confirmation.values.materials.slice(0,5).map(item=>`${item.name.slice(0,60)} · ${item.quantity??"Check quantity"} ${item.unit??""}`);
-    const delays=confirmation.values.delays.slice(0,3).map(item=>`${item.reason.slice(0,60)} · ${item.hours??"Check duration"} hr`);
-    const issues=confirmation.values.issues.slice(0,3).map(item=>item.slice(0,85));
-    const photoNotes=confirmation.photo_notes.map((photo,index)=>`Photo ${index+1}: ${photo.note.slice(0,85)||"No observation drafted"}`);
+    const lines=confirmation.values.work_items.slice(0,12).map((item,index)=>`${index+1}. ${truncateAtWord(item.description,95)} · ${item.quantity??"Check quantity"} ${displayUnit(item.unit??"")}${item.confidence<.6?" · Check":""}`);
+    const materials=confirmation.values.materials.slice(0,5).map(item=>`${truncateAtWord(item.name,60)} · ${item.quantity??"Check quantity"} ${item.unit??""}`);
+    const delays=confirmation.values.delays.slice(0,3).map(item=>`${truncateAtWord(item.reason,60)} · ${item.hours??"Check duration"} hr`);
+    const issues=confirmation.values.issues.slice(0,3).map(item=>truncateAtWord(item,85));
+    const photoNotes=confirmation.photo_notes.map((photo,index)=>`Photo ${index+1}: ${truncateAtWord(photo.note,85)||"No observation drafted"}`);
     const sizes=confirmation.values.work_items.length<=12&&confirmation.values.materials.length<=5&&confirmation.values.delays.length<=3&&confirmation.values.issues.length<=3;
     const abbreviated=confirmation.photo_notes.some(photo=>photo.note.length>85)||confirmation.values.issues.some(issue=>issue.length>85);
     const canConfirm=valid&&sizes&&!abbreviated&&(action.action==="edit"||confirmation.values.work_items.every(item=>item.confidence>=.6)||Boolean(record.confirmed_at));
-    await send(telegram,[`Review · ${record.project_name.slice(0,120)}`,record.transcript?`Voice note: ${record.transcript.slice(0,260)}`:"",...lines,...(materials.length?["Materials recorded",...materials]:[]),...delays,...issues,...photoNotes,canConfirm?"Confirm only after checking the quantities and observations.":"Review the missing or uncertain details before costing."].filter(Boolean).join("\n"),[
+    await send(telegram,[`Review · ${truncateAtWord(record.project_name,120)}`,record.transcript?`Voice note: ${truncateAtWord(record.transcript,260)}`:"",...lines,...(materials.length?["Materials recorded",...materials]:[]),...delays,...issues,...photoNotes,canConfirm?"Confirm only after checking the quantities and observations.":"Review the missing or uncertain details before costing."].filter(Boolean).join("\n"),[
       canConfirm?await button(telegram,id,"confirm","Confirm & cost",{confirmation}):null,lines.length?await button(telegram,id,"edit","Edit quantities",{confirmation}):null,{text:"Full review",url:siteLink(`/confirm/${id}`)}]);
   }catch{await send(telegram,"Could not finish this step. Your saved site records are still available. Use /today to reopen the project.").catch(()=>undefined);}
   finally{await intakeRpc("account_logout",{p_hash:hash,p_all:false}).catch(()=>undefined);}
