@@ -120,5 +120,5 @@ async function MockContent({ query }: { query: Promise<{ view?: string; note?: s
   </>;
 }
 export default function Page({ searchParams }: { searchParams: Promise<{ view?: string; note?: string }> }) {
-  return <main className="mx-auto max-w-7xl px-5 py-7 sm:px-10"><Suspense fallback={<PageLoading title="Opening mock project…" variant="rows" header={<WorkspaceHeader current="today" title={headerTitle} project={headerTitle} />} />}> <MockContent query={searchParams} /></Suspense></main>;
+  return <main className="mx-auto max-w-7xl px-5 py-7 sm:px-10"><Suspense fallback={<PageLoading title="Opening mock project…" variant="split" split="6-6" header={<WorkspaceHeader current="today" title={headerTitle} project={headerTitle} />} />}> <MockContent query={searchParams} /></Suspense></main>;
 }

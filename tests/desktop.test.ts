@@ -370,3 +370,108 @@ test("the BoQ item label no longer runs into the item name, and the mock project
   const mockProject = read("components", "mock-project.tsx");
   assert.match(mockProject, /<div className="mt-4 flex flex-col items-start gap-3"><Link href="\/projects\/mock" className="work-button work-button-primary">Open mock project<\/Link><button type="button" className="text-link" onClick=\{\(\)=>void remove\(\)\}>Delete mock project<\/button><\/div>/);
 });
+
+test("the reload skeleton takes the shape of the page it loads and spans the full page on desktop", () => {
+  const loading = read("components", "page-loading.tsx");
+  // A "split" variant renders two skeleton columns on the
+  // destination page's split (Today 6+6, Team 8+4, Account and
+  // Project detail 5+7), with an entry count mirroring the real
+  // page's blocks — not a generic single-column stack of rows.
+  assert.match(loading, /export type PageLoadingVariant = "rows" \| "report" \| "form" \| "table" \| "split";/);
+  assert.match(loading, /export type PageLoadingSplit = "6-6" \| "8-4" \| "5-7";/);
+  assert.match(loading, /"6-6": \[3, 2\]/);
+  assert.match(loading, /"8-4": \[3, 3\]/);
+  assert.match(loading, /"5-7": \[2, 2\]/);
+  assert.match(loading, /variant === "split"/);
+  assert.match(loading, /data-split=\{split\}/);
+  // The two-column pages carry the split variant on their split;
+  // the sealed logs carry the report shape; BoQ keeps the table
+  // and forms keep the form shape.
+  assert.match(read("app", "today", "page.tsx"), /variant="split" split="6-6"/);
+  assert.match(read("app", "projects", "[id]", "team", "page.tsx"), /variant="split" split="8-4"/);
+  assert.match(read("app", "account", "page.tsx"), /variant="split" split="5-7"/);
+  assert.match(read("app", "projects", "[id]", "page.tsx"), /variant="split" split="5-7"/);
+  // The mock's fallback cannot know its view (searchParams is a
+  // promise), so it takes the default view's split — Today 6+6.
+  assert.match(read("app", "projects", "mock", "page.tsx"), /variant="split" split="6-6"/);
+  assert.match(read("app", "reports", "page.tsx"), /variant="report"/);
+  assert.match(read("app", "log", "[id]", "page.tsx"), /variant="report"/);
+  assert.match(read("app", "projects", "[id]", "boq", "page.tsx"), /variant="table"/);
+  // The desktop layer grids the split skeleton on the same
+  // 12-column grid as the real pages, per data-split.
+  const css = read("components", "transplant-desktop.css");
+  assert.match(css, /\.diary-skeleton--split \{[^}]*grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.diary-skeleton--split\[data-split="6-6"\] > \.diary-skeleton__column:first-child \{ grid-column: 1 \/ span 6; \}/);
+  assert.match(css, /\.diary-skeleton--split\[data-split="6-6"\] > \.diary-skeleton__column:last-child \{ grid-column: 7 \/ span 6; \}/);
+  assert.match(css, /\.diary-skeleton--split\[data-split="8-4"\] > \.diary-skeleton__column:first-child \{ grid-column: 1 \/ span 8; \}/);
+  assert.match(css, /\.diary-skeleton--split\[data-split="8-4"\] > \.diary-skeleton__column:last-child \{ grid-column: 9 \/ span 4; \}/);
+  assert.match(css, /\.diary-skeleton--split\[data-split="5-7"\] > \.diary-skeleton__column:first-child \{ grid-column: 1 \/ span 5; \}/);
+  assert.match(css, /\.diary-skeleton--split\[data-split="5-7"\] > \.diary-skeleton__column:last-child \{ grid-column: 6 \/ span 7; \}/);
+  // Below 1024px the columns stack (base rule in globals.css), so
+  // mobile is untouched: the split has no top rule of its own
+  // (each column carries one, like a card) and a 24px gap.
+  const globals = read("app", "globals.css");
+  assert.match(globals, /\.diary-skeleton--split \{ border-top: 0; gap: 24px; \}/);
+  assert.match(globals, /\.diary-skeleton__column \{ display: grid; gap: 4px; align-content: start; border-top: 3px solid var\(--accent\); \}/);
+  // The top-left-corner causes are fixed: the root loading (shown
+  // on every navigation first) spans the workspace width instead
+  // of a narrower 5xl column, and the Help fallback — the only
+  // one with no <main> wrapper at all, so its skeleton rendered
+  // flush to the top-left edge — now renders inside the same
+  // max-w-5xl main the signed-in Help content uses.
+  const rootLoading = read("app", "loading.tsx");
+  assert.match(rootLoading, /<main className="mx-auto min-h-svh max-w-7xl px-5 py-7 sm:px-10">/);
+  assert.doesNotMatch(rootLoading, /max-w-5xl/);
+  const help = read("app", "help", "page.tsx");
+  assert.match(help, /<Suspense fallback=\{<main className="mx-auto min-h-svh max-w-5xl px-5 py-7"><PageLoading title="Opening help…" header=\{<div className="diary-skeleton__nav"/);
+  // The loading copy is unchanged.
+  assert.match(read("app", "today", "page.tsx"), /title="Opening your diary…"/);
+  assert.match(read("app", "help", "page.tsx"), /title="Opening help…"/);
+});
+
+test("the Add Amendment bar docks to the bottom edge on desktop instead of floating 64px up", () => {
+  const css = read("components", "transplant-desktop.css");
+  // .stitch-log-actions sits 64px above the viewport bottom to
+  // clear the mobile dock (stitch.css). On desktop the dock is
+  // hidden, so the 64px is dead space: the bar floats above the
+  // bottom edge and covers page content. At desktop it docks to
+  // the bottom edge — which also clears Ada's 78px desktop rest
+  // position (dock-height 68px + 10px) — and the page gets bottom
+  // clearance so the last content scrolls fully above the bar.
+  assert.match(css, /\.stitch-log-actions \{ bottom: 0; \}/);
+  assert.match(css, /main:has\(\.stitch-log-actions\) \{ padding-bottom: 120px; \}/);
+  // The button itself, its label and the mobile rule are untouched.
+  const stitch = read("app", "stitch.css");
+  assert.match(stitch, /\.stitch-log-actions \{ position: sticky; bottom: calc\(64px \+ env\(safe-area-inset-bottom\)\);/);
+  assert.match(stitch, /\.stitch-log-actions > \.stitch-button \{ width: 100%; \}/);
+  const form = read("components", "amendment-form.tsx");
+  assert.match(form, /\+ Add Amendment/);
+});
+
+test("the Team page's right half is filled by the menu list (members view only)", () => {
+  const css = read("components", "transplant-desktop.css");
+  // The members view's bottom links and the "What can each role
+  // do?" disclosure were full-width grid items below the two
+  // columns, so the right half ended at the Telegram card and
+  // sat empty for the rest of the page. Stitch puts both in the
+  // LEFT column (team_ajah: under the members, inside the 8-col
+  // div) — but Stitch's own right column is the same three short
+  // cards, so its right half is empty too. To fill the right half
+  // with existing content, the menu list moves into the right
+  // rail below the Telegram card and the role explainer moves
+  // into the left column where Stitch has it. Both are scoped
+  // with :has(> section.stitch-team-members) so the
+  // invitations/settings views keep their full-width layout; the
+  // mock has no menu list, so it is unaffected.
+  assert.match(css, /\.team-workspace:has\(> section\.stitch-team-members\) > \.stitch-menu-list \{ grid-column: 9 \/ span 4; margin-top: 0; \}/);
+  assert.match(css, /\.team-workspace:has\(> section\.stitch-team-members\) > details\.work-disclosure \{ grid-column: 1 \/ span 8; \}/);
+  // The 8+4 split itself is unchanged.
+  assert.match(css, /\.team-workspace > section\.stitch-team-members \{ grid-column: 1 \/ span 8; \}/);
+  assert.match(css, /\.team-workspace > section\.stitch-team-overview,\s*\.team-workspace > a\.stitch-team-report,\s*\.team-workspace > section\.stitch-team-telegram \{ grid-column: 9 \/ span 4; \}/);
+  // The menu list and the explainer are still rendered by the
+  // team page / TeamManagement (real content, nothing invented).
+  const team = read("app", "projects", "[id]", "team", "page.tsx");
+  assert.match(team, /className="stitch-menu-list mt-4"/);
+  const forms = read("components", "project-forms.tsx");
+  assert.match(forms, /What can each role do\?/);
+});

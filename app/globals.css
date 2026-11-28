@@ -109,6 +109,15 @@ button[aria-pressed="true"] { background: var(--foreground); color: var(--backgr
 .diary-skeleton i { display: block; height: 16px; border-radius: 2px; background: linear-gradient(90deg, var(--skeleton) 25%, var(--skeleton-light) 50%, var(--skeleton) 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite; }
 .diary-skeleton__entry i:first-child { height: 12px; }
 .diary-skeleton--form .diary-skeleton__entry i:last-child { height: 48px; }
+/* Two-column skeleton (PageLoading variant="split"): the two
+   columns stack below 1024px, exactly like the mobile pages, and
+   the desktop layer grids them onto the 12-column layout. Each
+   column carries its own accent top rule, so the pair reads as
+   the destination page's two cards, not one ruled band. The
+   parent's own top rule is dropped for the split so the columns
+   do not double it. */
+.diary-skeleton--split { border-top: 0; gap: 24px; }
+.diary-skeleton__column { display: grid; gap: 4px; align-content: start; border-top: 3px solid var(--accent); }
 .diary-skeleton__total { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0; border-top: 2px solid var(--accent); border-bottom: 1px solid var(--rule); }
 .diary-skeleton__total i { height: 14px; }
 .diary-skeleton__nav { display: flex; justify-content: space-between; align-items: center; min-height: 56px; border-bottom: 1px solid var(--rule); }

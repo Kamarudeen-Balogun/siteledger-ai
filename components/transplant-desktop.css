@@ -313,6 +313,20 @@
   .stitch-log-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
   .stitch-log-entries { gap: 16px; }
   .stitch-log-entry .stitch-log-time { text-align: left; }
+  /* The sticky Add Amendment bar (.stitch-log-actions, stitch.css)
+     sits 64px above the viewport bottom to clear the mobile dock.
+     On desktop the dock is hidden (globals.css: display:none at
+     ≥1024px), so the 64px clearance is dead space: the bar floats
+     above the bottom edge and covers page content. At desktop it
+     docks to the bottom edge (bottom: 0), which also clears Ada's
+     78px rest position on desktop (globals.css: --dock-height
+     68px + 10px — the dock is display:none but still in the DOM,
+     so the :has(.workspace-dock) reserve applies and Ada sits
+     above the 64px-tall bar). The page gets bottom clearance so
+     the last content scrolls fully above the bar. The button
+     itself, its label and the mobile behaviour are untouched. */
+  .stitch-log-actions { bottom: 0; }
+  main:has(.stitch-log-actions) { padding-bottom: 120px; }
 
   /* ---- 5. Locked / sample report ----------------------------------- */
   /* A single-column legal record, wider, with the table full-width
@@ -395,6 +409,27 @@
     gap: 12px 24px;
   }
   .stitch-team-overview .stitch-boq-values > div { min-width: 0; }
+  /* The members view's bottom links (Project overview / Site team
+     / Manage pending invitations / Project settings) and the "What
+     can each role do?" disclosure are full-width grid items below
+     the two columns, so the right half ends at the Telegram card
+     and sits empty for the rest of the page. Stitch puts both in
+     the LEFT column (team_ajah: the links and the role explainer
+     sit under the members, inside the 8-column div) — but Stitch's
+     own right column is the same three short cards, so its right
+     half is empty too. To fill the right half with existing
+     content, the menu list moves into the right rail (9 / span 4)
+     below the Telegram card, and the role explainer moves into
+     the left column (1 / span 8) where Stitch has it. Both are
+     scoped with :has(> section.stitch-team-members) so the
+     invitations/settings views (which have no members section)
+     keep their full-width layout. The mock has no menu list, so
+     it is unaffected. The trade-off is the mirror image: the
+     shorter left column now ends before the right rail, which
+     reads as the page ending — the normal two-column pattern —
+     instead of a hole in the right half. */
+  .team-workspace:has(> section.stitch-team-members) > .stitch-menu-list { grid-column: 9 / span 4; margin-top: 0; }
+  .team-workspace:has(> section.stitch-team-members) > details.work-disclosure { grid-column: 1 / span 8; }
 
   /* ---- 8. Account, settings & feedback ----------------------------- */
   /* Stitch Account is 5+7 (the spans in code.html, DOM order:
@@ -532,4 +567,26 @@
   /* The mock uses the same Today / BoQ / Log / Team classes as the
      real project, so the rules above cover its views. Its main is
      widened to the workspace width in the page markup. */
+
+  /* ---- 13. Loading skeletons ---------------------------------------- */
+  /* The reload skeleton takes the shape of the page it is loading:
+     the two-column pages get a two-column skeleton on the same
+     12-column grid as the real page — Today 6+6, Team 8+4,
+     Account and Project detail 5+7 — so the reload reads as the
+     destination page, not a single-column stack of rows. Below
+     1024px the columns stack (the base rule in globals.css), so
+     mobile is untouched. The split is carried on data-split so
+     one rule set covers all three splits. */
+  .diary-skeleton--split {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 24px;
+    row-gap: 24px;
+    align-items: start;
+  }
+  .diary-skeleton--split[data-split="6-6"] > .diary-skeleton__column:first-child { grid-column: 1 / span 6; }
+  .diary-skeleton--split[data-split="6-6"] > .diary-skeleton__column:last-child { grid-column: 7 / span 6; }
+  .diary-skeleton--split[data-split="8-4"] > .diary-skeleton__column:first-child { grid-column: 1 / span 8; }
+  .diary-skeleton--split[data-split="8-4"] > .diary-skeleton__column:last-child { grid-column: 9 / span 4; }
+  .diary-skeleton--split[data-split="5-7"] > .diary-skeleton__column:first-child { grid-column: 1 / span 5; }
+  .diary-skeleton--split[data-split="5-7"] > .diary-skeleton__column:last-child { grid-column: 6 / span 7; }
 }

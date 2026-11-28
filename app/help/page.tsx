@@ -63,5 +63,12 @@ async function HelpContent({searchParams}:{searchParams:Promise<{topic?:string}>
   </main><div className="transplant"><PublicFooter current="/help" /></div></>;
 }
 export default function Help(props:{searchParams:Promise<{topic?:string}>}) {
-  return <Suspense fallback={<PageLoading title="Opening help…" />}><HelpContent {...props}/></Suspense>;
+  /* The fallback had no <main> wrapper at all, so the skeleton
+     rendered flush to the top-left edge of the viewport with no
+     container padding or width — a small block at the top-left
+     instead of the full page. It now renders inside the same
+     max-w-5xl main the signed-in Help content uses, with a neutral
+     header-bar skeleton (the fallback cannot know whether the
+     public or the signed-in branch will render). */
+  return <Suspense fallback={<main className="mx-auto min-h-svh max-w-5xl px-5 py-7"><PageLoading title="Opening help…" header={<div className="diary-skeleton__nav" aria-hidden="true"><i style={{ width: 120, height: 18 }} /><i style={{ width: 44, height: 18 }} /></div>} /></main>}><HelpContent {...props}/></Suspense>;
 }

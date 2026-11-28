@@ -30,5 +30,5 @@ async function Log(props: Props) {
   </>;
 }
 export default function Page(props: Props) {
-  return <main className="mx-auto max-w-5xl px-5 py-7 sm:px-10"><Suspense fallback={<PageLoading title="Opening the dispute log…" variant="rows" header={<WorkspaceHeader current="reports"/>}/>}> <Log {...props} /></Suspense></main>;
+  return <main className="mx-auto max-w-5xl px-5 py-7 sm:px-10"><Suspense fallback={<PageLoading title="Opening the dispute log…" variant="report" header={<WorkspaceHeader current="reports"/>}/>}> <Log {...props} /></Suspense></main>;
 }
