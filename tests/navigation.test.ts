@@ -296,3 +296,66 @@ test("public Help page has no tour button; the tour routes by sign-in state", ()
   assert.ok(read("app", "account", "page.tsx").includes("<ReplayTour signedIn/>"), "account page tour declares signedIn");
   assert.ok(read("components", "mock-project.tsx").includes("<ReplayTour label=\"Replay the intro tour\" inPlace signedIn/>"), "mock-project tour declares signedIn");
 });
+
+test("landing page shows a real sample record, not the illustrative card, and has no About section", () => {
+  // The landing "Illustrative daily record" card (Lekki duplex, LOG
+  // #2025-084, Demo Rev C) was hand-built copy, not a real record. It is
+  // replaced by a screenshot of the real locked sample report, and the
+  // About write-up moved off the landing page entirely — it lives on
+  // /about now, which is also where the account settings link points.
+  const home = read("app", "page.tsx");
+  assert.ok(!home.includes("Illustrative daily record"), "no illustrative card copy");
+  assert.ok(!home.includes("LOG #2025-084"), "no illustrative log number");
+  assert.ok(!home.includes("Demo Rev C"), "no illustrative demo revision");
+  assert.ok(!home.includes('id="about"'), "no About section on the landing page");
+  assert.ok(!home.includes("About SiteLedger"), "no About write-up on the landing page");
+  assert.match(home, /src="\/sample-record\.webp"/, "landing shows the sample-record screenshot");
+  assert.match(home, /alt="Sample locked daily site report/, "screenshot has real alt text");
+  assert.ok(home.includes('href="/reports/demo"'), "screenshot links to the sample report");
+  const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+  assert.ok(existsSync(join(root, "public", "sample-record.webp")), "sample screenshot exists in public/");
+  assert.ok(existsSync(join(root, "app", "about", "page.tsx")), "the About page still exists");
+  const account = read("app", "account", "page.tsx");
+  assert.ok(account.includes('["info","/about","About"'), "account settings About points at /about");
+  assert.ok(!account.includes("/#about"), "no dead #about anchor remains");
+});
+
+test("one SL logo throughout; no ledger mark anywhere", () => {
+  // The workspace header used the Stitch ledger-document mark while the
+  // public header used the simple SL box — the owner wants one logo, the
+  // SL mark, everywhere. The mark PNG is deleted and every logo is the
+  // shared SiteLedgerMark component (orange box + "SL").
+  const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+  assert.ok(!existsSync(join(root, "public", "stitch-siteledger-mark.png")), "ledger mark file is gone");
+  const header = read("components", "workspace-header.tsx");
+  assert.ok(!header.includes("stitch-siteledger-mark"), "workspace header has no ledger mark");
+  assert.ok(header.includes("SiteLedgerMark"), "workspace header uses the SL mark");
+  const pub = read("components", "public-site.tsx");
+  assert.ok(!pub.includes("stitch-siteledger-mark"), "public header has no ledger mark");
+  assert.ok(pub.includes("SiteLedgerMark"), "public header uses the SL mark");
+  const mark = read("components", "siteledger-mark.tsx");
+  assert.ok(mark.includes(">SL<"), "the mark is the letters SL");
+  assert.ok(mark.includes("bg-primary-container"), "the mark is the orange box");
+  assert.ok(existsSync(join(root, "app", "icon.svg")), "the SL favicon stays");
+});
+
+test("page-change loading is a diary page-turn, not an Opening notice", () => {
+  // The page-change loader led with a big "Opening…" DiaryNotice — the
+  // old effect. It now leads with a subtle orange top line and the ruled
+  // skeleton rows; the destination title stays only as a small status
+  // line. The workspace transition line sweeps for as long as the change
+  // is in flight instead of flashing and fading in 280ms.
+  const loading = read("components", "page-loading.tsx");
+  assert.ok(!loading.includes("DiaryNotice"), "no Opening notice in the page loader");
+  assert.match(loading, /<div className="diary-loading-top" aria-hidden="true"><i \/><\/div>/, "top loading line first");
+  assert.match(loading, /role="status"/, "loading title stays as an accessible status line");
+  assert.match(loading, /<div className="stitch-skeleton-stack" aria-hidden="true"><i \/><i \/><i \/><\/div>/, "skeleton bars still first");
+  const css = read("app", "globals.css");
+  assert.match(css, /\.diary-loading-top \{ height: 3px;/, "top line style exists");
+  assert.match(css, /@keyframes diary-loading-wide \{ from \{ transform: translateX\(-100%\); \} to \{ transform: translateX\(250%\); \} \}/, "top line sweeps fully across");
+  assert.match(css, /\.diary-loading-top i \{ animation: none; \}/, "reduced motion covers the top line");
+  const stitch = read("app", "stitch.css");
+  assert.ok(!stitch.includes("@keyframes stitch-transition {"), "no more 280ms flash keyframe");
+  assert.match(stitch, /@keyframes stitch-transition-sweep/, "transition sweeps while changing");
+  assert.match(stitch, /@media \(prefers-reduced-motion: reduce\) \{ \.stitch-transition \{ display: none; \} \}/, "reduced motion still hides the transition line");
+});

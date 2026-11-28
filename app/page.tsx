@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { PublicSite } from "@/components/public-site";
 import { LandingAccountLink } from "@/components/landing-account-link";
 import { DiaryIcon } from "@/components/diary-icon";
@@ -18,32 +19,15 @@ export default function Home() {
 
       <section className="mt-6 flex flex-col" aria-labelledby="sample-record-title">
         <div className="relative flex flex-col gap-2 overflow-hidden rounded-xl bg-surface-container-lowest p-4 shadow-md">
-          <div className="pointer-events-none absolute right-3 top-3 rotate-[-4deg] select-none rounded bg-primary-fixed/60 px-2 py-0.5"><span className="font-stamp-label text-[10px] font-bold uppercase leading-tight tracking-widest text-primary-container">Sample record</span></div>
-          <div className="flex flex-col">
-            <span className="font-stamp-label text-stamp-label uppercase text-on-surface-variant">Illustrative daily record</span>
-            <div className="mt-0.5 flex items-baseline justify-between">
-              <h2 id="sample-record-title" className="font-headline-sm text-headline-sm text-on-surface">Lekki duplex</h2>
-              <span className="font-code-entry text-code-entry text-on-surface-variant">LOG #2025-084</span>
-            </div>
-            <p className="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">Confirmed site quantities, reconciled against Bill of Quantities (Demo Rev C).</p>
+          <div className="flex items-center justify-between">
+            <span className="font-stamp-label text-stamp-label uppercase text-on-surface-variant">Sample record</span>
+            <span className="rotate-[-4deg] select-none rounded bg-primary-fixed/60 px-2 py-0.5 font-stamp-label text-[10px] font-bold uppercase leading-tight tracking-widest text-primary-container">Locked · 23 Nov 2026</span>
           </div>
-          <div className="mt-1 flex flex-col rounded-lg bg-surface-container-low p-1">
-            <div className="flex items-center justify-between px-2 py-1 font-stamp-label text-stamp-label uppercase text-on-surface-variant"><span>Item / Scope</span><span>Qty · Amount</span></div>
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between rounded bg-surface-container-lowest p-2">
-                <div className="flex min-w-0 flex-col pr-2"><span className="truncate font-label-ledger text-label-ledger text-on-surface">Blockwork · East elev.</span><span className="font-body-sm text-body-sm text-on-surface-variant">9-inch hollow sandcrete</span></div>
-                <div className="flex shrink-0 flex-col items-end pl-2"><span className="font-code-entry text-code-entry font-semibold text-on-surface">18 m²</span><span className="font-code-entry text-code-entry text-on-surface-variant">₦261,000</span></div>
-              </div>
-              <div className="flex items-center justify-between rounded bg-surface-container-lowest p-2">
-                <div className="flex min-w-0 flex-col pr-2"><span className="truncate font-label-ledger text-label-ledger text-on-surface">Concrete · Beams/Cols</span><span className="font-body-sm text-body-sm text-on-surface-variant">Grade 25 structural pour</span></div>
-                <div className="flex shrink-0 flex-col items-end pl-2"><span className="font-code-entry text-code-entry font-semibold text-on-surface">2 m³</span><span className="font-code-entry text-code-entry text-on-surface-variant">₦290,000</span></div>
-              </div>
-            </div>
-            <div className="mt-1 flex items-center justify-between rounded bg-primary-fixed/40 px-2 py-2">
-              <div className="flex items-center gap-1.5"><DiaryIcon name="seal" size={18} /><span className="font-label-ledger text-label-ledger font-semibold uppercase text-on-primary-fixed">Daily Value</span></div>
-              <span className="font-headline-sm text-headline-sm font-bold tracking-tight text-primary">₦551,000</span>
-            </div>
-          </div>
+          <h2 id="sample-record-title" className="font-headline-sm text-headline-sm text-on-surface">A real costed day, locked.</h2>
+          <Link href="/reports/demo" aria-label="Open the sample report">
+            <Image src="/sample-record.webp" alt="Sample locked daily site report: 18 square metres of blockwork costed at 261,000 naira, approved and locked on 23 November 2026" width={390} height={810} className="h-auto w-full rounded-lg" />
+          </Link>
+          <p className="font-body-sm text-body-sm text-on-surface-variant">A locked daily record from the public demonstration — quantities checked, costed against the BoQ, and approved. <Link href="/reports/demo" className="text-link">Open the sample report</Link></p>
           <div className="flex items-start gap-2 pt-1">
             <DiaryIcon name="history" size={16} />
             <p className="font-body-sm text-body-sm text-on-surface-variant"><strong className="font-medium text-on-surface">Immutable audit trail:</strong> Voice note → human check → BoQ cost. Approval is locked; adjustments post as signed amendments.</p>
@@ -144,29 +128,6 @@ export default function Home() {
           </div>
           <p className="mt-1 font-body-md text-body-md text-on-surface-variant">Receive crisp, client-ready PDF summaries complete with itemized Naira valuations and engineer stamps—no complex platform logins required.</p>
         </div>
-      </section>
-
-      <section id="about" className="mt-6 flex flex-col gap-3 rounded-xl bg-surface-container-lowest p-4 shadow-md" aria-labelledby="about-title">
-        <div>
-          <span className="font-stamp-label text-stamp-label uppercase text-primary">About</span>
-          <h2 id="about-title" className="mt-0.5 font-headline-lg-mobile text-headline-lg-mobile font-semibold text-on-surface">About SiteLedger</h2>
-        </div>
-        <p className="font-body-md text-body-md leading-relaxed text-on-surface-variant">A voice note tells you what happened. A costed, confirmed record helps explain what that work means for the project.</p>
-        <h3 className="font-headline-sm text-headline-sm font-semibold text-on-surface">From verbal updates to dated proof</h3>
-        <p className="font-body-md text-body-md leading-relaxed text-on-surface-variant">A foreman’s update, a phone gallery and a price list often live in separate places. SiteLedger brings them into a daily report: work items, quantities, supplied rates, photos and the people who confirmed and approved it.</p>
-        <p className="font-body-md text-body-md leading-relaxed text-on-surface-variant">The Nigerian demonstration uses naira, Nigerian English and Pidgin site terms. Private projects select their own currency and timezone; prices always come from that project’s BoQ.</p>
-        <h3 className="font-headline-sm text-headline-sm font-semibold text-on-surface">The person stays in charge</h3>
-        <p className="font-body-md text-body-md leading-relaxed text-on-surface-variant">AI transcribes and suggests structured work items and possible photo findings. A person checks the quantities and observations before costing. A PM then approves the report in a separate action, including on a one-person project.</p>
-        <p className="font-body-md text-body-md leading-relaxed text-on-surface-variant">A locked original cannot be silently rewritten. A correction becomes an amendment with its own author and timestamp. Your reports are locked once approved.</p>
-        <h3 className="font-headline-sm text-headline-sm font-semibold text-on-surface">About the builder</h3>
-        <p className="font-body-md text-body-md text-on-surface">Built by Balogun Kamarudeen Ayomide — Civil Engineer &amp; AI Automation Specialist</p>
-        <div className="flex flex-wrap gap-x-5 gap-y-1">
-          <a className="flex min-h-[44px] items-center font-label-ledger text-label-ledger text-primary underline" href="https://codeflowx.dev" target="_blank" rel="noreferrer">codeflowx.dev</a>
-          <a className="flex min-h-[44px] items-center font-label-ledger text-label-ledger text-primary underline" href="mailto:kamarudeen@codeflowx.dev">kamarudeen@codeflowx.dev</a>
-          <a className="flex min-h-[44px] items-center font-label-ledger text-label-ledger text-primary underline" href="https://github.com/Kamarudeen-Balogun/siteledger-ai" target="_blank" rel="noreferrer">GitHub</a>
-          <a className="flex min-h-[44px] items-center font-label-ledger text-label-ledger text-primary underline" href="https://t.me/SiteLedgerNGbot" target="_blank" rel="noreferrer">Telegram @SiteLedgerNGbot</a>
-        </div>
-        <p className="font-body-sm text-body-sm leading-relaxed text-on-surface-variant">The public Lekki duplex and its client are fictional. Its rates are illustrative. Synthetic demonstration photos are labelled; the public sample never includes a user’s private uploads.</p>
       </section>
 
       <section className="mt-6 flex flex-col" aria-labelledby="sample-title">
