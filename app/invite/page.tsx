@@ -4,7 +4,7 @@ import { currentAccount } from "@/lib/auth/session";
 import { AccountLogin, EmailProof } from "@/components/account-forms";
 import { InvitationAcceptance } from "@/components/project-forms";
 import { PublicSite } from "@/components/public-site";
-import { DiaryNotice } from "@/components/diary-notice";
+import { PageLoading } from "@/components/page-loading";
 export const metadata = { title: "Project invitation — SiteLedger", referrer: "no-referrer" as const, robots: { index: false, follow: false } };
 async function Invitation() {
   const account = await currentAccount(), siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
@@ -13,5 +13,5 @@ async function Invitation() {
     <InvitationAcceptance verified={account.email_verified} nameConfirmed={Boolean(account.name_confirmed_at)} /></>;
 }
 export default function InvitePage() {
-  return <PublicSite current="/invite"><div className="public-column pb-10 pt-4"><Link href="/account" className="inline-flex min-h-12 items-center font-label-ledger text-label-ledger text-primary underline">Your account</Link><h1 className="mt-2 font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Accept a project invitation</h1><Suspense fallback={<DiaryNotice busy title="Opening your account…">Checking the session before invitation acceptance.</DiaryNotice>}><Invitation /></Suspense></div></PublicSite>;
+  return <PublicSite current="/invite"><div className="public-column pb-10 pt-4"><Link href="/account" className="inline-flex min-h-12 items-center font-label-ledger text-label-ledger text-primary underline">Your account</Link><h1 className="mt-2 font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Accept a project invitation</h1><Suspense fallback={<PageLoading title="Opening your account…" detail="Checking the session before invitation acceptance." variant="form"/>}><Invitation /></Suspense></div></PublicSite>;
 }

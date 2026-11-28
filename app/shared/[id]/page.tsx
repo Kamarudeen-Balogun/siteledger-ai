@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { readSharedReport } from "@/lib/reports/sharing";
-import { DiaryNotice } from "@/components/diary-notice";
+import { PageLoading } from "@/components/page-loading";
 import { ReportDocument } from "@/components/report-document";
 
 export const metadata = { title: "Shared site report — SiteLedger", referrer: "no-referrer" as const, robots: { index: false, follow: false } };
@@ -18,5 +18,5 @@ async function SharedReport({ params }: { params: Promise<{ id: string }> }) {
 }
 
 export default function Page(props: { params: Promise<{ id: string }> }) {
-  return <main className="mx-auto max-w-5xl px-4 py-7 sm:px-10"><Suspense fallback={<DiaryNotice busy title="Opening shared report…"/>}><SharedReport {...props}/></Suspense></main>;
+  return <main className="mx-auto max-w-5xl px-4 py-7 sm:px-10"><Suspense fallback={<PageLoading title="Opening shared report…" variant="report"/>}><SharedReport {...props}/></Suspense></main>;
 }

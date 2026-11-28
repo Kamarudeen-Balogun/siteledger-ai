@@ -11,11 +11,13 @@
   --paper: #fffdf9;
   --paper-raised: #f3ede3;
   --rule-strong: #d6cebe;
-  /* Loading skeleton bars: a mid-tone warm taupe that reads on paper.
-     The old bars used the hairline rule colour, which is nearly
-     invisible on paper — a page change looked blank. */
-  --skeleton: #d8cbb4;
-  --skeleton-light: #f0e8d7;
+  /* Loading skeleton bars: a clearly visible warm taupe that reads on
+     paper. The earlier bars (#d8cbb4) were still too pale — the live
+     audit read PageLoading pages as mostly blank — so round 9 deepened
+     them. The old bars used the hairline rule colour, which is nearly
+     invisible on paper. */
+  --skeleton: #b9a583;
+  --skeleton-light: #dccfb4;
   --secondary-ink: #57534e;
   --accent-ink: #a1380b;
   --olive: #3f6212;
@@ -93,7 +95,7 @@ button[aria-pressed="true"] { background: var(--foreground); color: var(--backgr
 @keyframes diary-loading-wide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 /* Motion: skeletons, spinners, upload progress, press states, sheets, bot example. */
 .stitch-skeleton-stack { display: grid; gap: 10px; margin-top: 12px; }
-.stitch-skeleton-stack i { display: block; height: 18px; border-radius: 2px; background: linear-gradient(90deg, var(--skeleton) 25%, var(--skeleton-light) 50%, var(--skeleton) 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite; }
+.stitch-skeleton-stack i { display: block; height: 20px; border-radius: 2px; background: linear-gradient(90deg, var(--skeleton) 25%, var(--skeleton-light) 50%, var(--skeleton) 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite; }
 .stitch-skeleton-stack i:nth-child(2) { width: 82%; }
 .stitch-skeleton-stack i:nth-child(3) { width: 64%; }
 /* Diary loading skeleton — shaped like the destination content (ruled
@@ -104,8 +106,8 @@ button[aria-pressed="true"] { background: var(--foreground); color: var(--backgr
 .diary-skeleton { display: grid; gap: 4px; margin-top: 20px; border-top: 3px solid var(--accent); }
 .diary-skeleton__entry { display: grid; gap: 8px; align-content: start; padding: 16px 0; border-bottom: 1px solid var(--rule); }
 .diary-skeleton__entry:last-child { border-bottom: 0; }
-.diary-skeleton i { display: block; height: 14px; border-radius: 2px; background: linear-gradient(90deg, var(--skeleton) 25%, var(--skeleton-light) 50%, var(--skeleton) 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite; }
-.diary-skeleton__entry i:first-child { height: 10px; }
+.diary-skeleton i { display: block; height: 16px; border-radius: 2px; background: linear-gradient(90deg, var(--skeleton) 25%, var(--skeleton-light) 50%, var(--skeleton) 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite; }
+.diary-skeleton__entry i:first-child { height: 12px; }
 .diary-skeleton--form .diary-skeleton__entry i:last-child { height: 48px; }
 .diary-skeleton__total { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0; border-top: 2px solid var(--accent); border-bottom: 1px solid var(--rule); }
 .diary-skeleton__total i { height: 14px; }

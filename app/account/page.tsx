@@ -7,7 +7,7 @@ import { PublicSite } from "@/components/public-site";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { ThemeSettings } from "@/components/diary-theme";
 import { ReplayTour } from "@/components/diary-tour";
-import { DiaryNotice } from "@/components/diary-notice";
+import { PageLoading } from "@/components/page-loading";
 import { AccountSecurity } from "@/components/account-security";
 import { UUID } from "@/lib/confirm/access";
 import { intakeRpc } from "@/lib/telegram/storage";
@@ -59,5 +59,5 @@ async function AccountContent({ searchParams }: { searchParams: Promise<{ sectio
   </div></main>;
 }
 export default function AccountPage(props: { searchParams: Promise<{section?:string;project?:string}> }) {
-  return <Suspense fallback={<main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><WorkspaceHeader current="account"/><DiaryNotice busy title="Opening your account…"/></main>}><AccountContent {...props}/></Suspense>;
+  return <Suspense fallback={<main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><PageLoading title="Opening your account…" header={<WorkspaceHeader current="account"/>}/></main>}><AccountContent {...props}/></Suspense>;
 }

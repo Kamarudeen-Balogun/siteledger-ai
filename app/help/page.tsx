@@ -6,6 +6,7 @@ import { ReplayTour } from "@/components/diary-tour";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { DiaryIcon } from "@/components/diary-icon";
 import { MockProjectControl } from "@/components/mock-project";
+import { PageLoading } from "@/components/page-loading";
 import { currentAccount } from "@/lib/auth/session";
 export const metadata={title:"Help & FAQ — SiteLedger AI",description:"Get started with accounts, Telegram commands, site voice notes, human confirmation, reports and offline uploads."};
 const questions: HelpQuestion[] = [
@@ -58,5 +59,5 @@ async function HelpContent({searchParams}:{searchParams:Promise<{topic?:string}>
   </main>;
 }
 export default function Help(props:{searchParams:Promise<{topic?:string}>}) {
-  return <Suspense fallback={null}><HelpContent {...props}/></Suspense>;
+  return <Suspense fallback={<PageLoading title="Opening help…" />}><HelpContent {...props}/></Suspense>;
 }
