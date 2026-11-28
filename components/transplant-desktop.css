@@ -8,6 +8,33 @@
    no static Stitch HTML is pasted in, and no Stitch data is copied.
    All figures come from the real data the mobile pages already use.
 
+   Column splits follow Stitch's signed-in pages, which use a
+   12-column grid (`grid grid-cols-1 lg:grid-cols-12 gap-6
+   items-start`, Account gap-8):
+   - Today: two lg:col-span-6 (6+6). Left: Awaiting review, Today's
+     submissions, Daily ledger entry. Right: Work Progress —
+     Measured, Telegram example. (today_test_duplex_ajah)
+   - Team: lg:col-span-8 + lg:col-span-4 (8+4). Left: Site Team &
+     Access. Right: Current Site, Reports & Log, Connect Telegram.
+     (team_ajah)
+   - Account: lg:col-span-5 + lg:col-span-7 (7+5). Left: profile
+     card. Right: Settings. (account_profile_settings)
+   - Project detail: lg:col-span-5 + lg:col-span-7 (7+5). Left:
+     Next step + Site records / Work progress / BoQ / Site team.
+     Right: Project summary (dashboard). (project_detail)
+   - BoQ rows: each row is a 12-column grid — item 5, values 4,
+     measured progress 3 (boq_mock_project). The Ajah page uses a
+     flex row with the same three groups; the 12-column row keeps
+     both pages' rows aligned the same way.
+   - BoQ & Rates and Reports & Log are NOT two-column — full-width
+     (max-w-7xl / max-w-5xl). Confirm, My feedback, Help, Projects
+     list and the locked report are single-column in Stitch too, so
+     they stay single-column here.
+   - The locked/sample report stays a single-column legal record:
+     Stitch's mock locked report is itself single-column, and the
+     sample page's 7+5 inspection split would pull the photos,
+     weather and signatures out of the sealed document.
+
    Diary tokens ONLY (paper #FAF7F2, ink #1C1917, orange #C2410C,
    brick #B91C1C, olive #3f6212, rule #E7E0D4, Source Serif/Fraunces
    headings, Public Sans body, JetBrains Mono figures). Old-design
@@ -121,31 +148,42 @@
   .stitch-today > .stitch-status { grid-column: 1 / -1; }
 
   /* ---- 2. Today ----------------------------------------------------- */
-  /* Two columns: Awaiting review + Today's submissions + Daily ledger
-     entry on the left; Work Progress — Measured + the Telegram
-     example on the right. The action bar spans both columns. */
+  /* Stitch's 12-column grid, two lg:col-span-6 halves. The header,
+     save state, action bar, demo notice, capture form, gate/receipt
+     panels and the queued-notes disclosure span the full width.
+     Left (columns 1-6): Awaiting review, Today's submissions, Daily
+     ledger entry. Right (columns 7-12): Work Progress — Measured,
+     Telegram example. The columns are placed by explicit line
+     (1 / span 6 and 7 / span 6), not bare `span 6`: with bare spans
+     the left items would fill the row side by side instead of
+     stacking in the left column. The mock Today gets the same grid
+     from its `stitch-today` wrapper (its <main> has no such class). */
   .stitch-today {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: repeat(12, minmax(0, 1fr));
     column-gap: 24px;
+    row-gap: 24px;
     align-items: start;
   }
-  .stitch-today > .diary-today-actions { grid-column: 1 / -1; }
+  .stitch-today > .workspace-header,
+  .stitch-today > .stitch-status,
+  .stitch-today > .diary-today-actions,
+  .stitch-today > p.stitch-card,
+  .stitch-today > .diary-record,
+  .stitch-today > section.diary-panel,
+  .stitch-today > details.work-disclosure:not([data-tour="bot-example"]) { grid-column: 1 / -1; }
+  .stitch-today > section.stitch-drafts,
+  .stitch-today > section.stitch-ledger { grid-column: 1 / span 6; }
+  .stitch-today > section.diary-progress,
+  .stitch-today > details.work-disclosure[data-tour="bot-example"] { grid-column: 7 / span 6; }
+  /* The grid supplies the row gap, so the cards' own vertical
+     margins (and the 720px cap) are dropped at desktop. */
+  .stitch-today > .stitch-card { margin-block: 0; max-width: none; }
+  .stitch-today > .diary-today-actions { margin-block: 0; }
   .stitch-today > .diary-today-actions .diary-primary {
     min-height: 56px;
     font-size: 18px;
   }
-  .stitch-today > section.stitch-drafts,
-  .stitch-today > section.stitch-ledger { grid-column: 1; }
-  .stitch-today > section.diary-progress,
-  .stitch-today > details.work-disclosure { grid-column: 2; }
-  /* The capture form and the gate/receipt panels span both columns. */
-  .stitch-today > .diary-record,
-  .stitch-today > section.diary-panel { grid-column: 1 / -1; }
-  /* The Telegram example sits in the right column; the queued-notes
-     disclosure (also a details.work-disclosure) spans both columns. */
-  .stitch-today > details.work-disclosure[data-tour="bot-example"] { grid-column: 2; }
-  .stitch-today > details.work-disclosure:not([data-tour="bot-example"]) { grid-column: 1 / -1; }
   .stitch-today > section.diary-progress progress { width: 100%; }
   .stitch-today .diary-progress-summary { font-size: 18px; }
 
@@ -167,13 +205,34 @@
   .boq-table.ledger-table th:first-child { min-width: 220px; }
   /* BoQ heading row: title left, actions right. */
   .stitch-boq-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
-  /* The mock BoQ rows use the same ruled table; keep them full-width. */
-  .stitch-boq-items { width: 100%; }
+  /* BoQ rows: each card becomes a 12-column grid — item 5, values 4,
+     measured progress 3 (Stitch boq_mock_project). The rows stay
+     cards; only the inside is gridded, with the three value figures
+     aligned across rows. The progress column gets Stitch's left
+     rule. The Adjust button sits under the progress in the same
+     column. The mock's opener button and the real Adjust button are
+     told apart by their hook classes. */
+  .stitch-boq-items > li.stitch-card {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 16px;
+    row-gap: 8px;
+    align-items: center;
+  }
+  .stitch-boq-items > li > .stitch-boq-item-head,
+  .stitch-boq-items > li > .stitch-boq-item-open { grid-column: 1 / span 5; }
+  .stitch-boq-items > li > dl.stitch-boq-values { grid-column: 6 / span 4; margin: 0; }
+  .stitch-boq-items > li > .stitch-boq-progress {
+    grid-column: 10 / span 3;
+    border-left: 1px solid var(--rule);
+    padding-left: 16px;
+  }
+  .stitch-boq-items > li > .stitch-boq-adjust { grid-column: 10 / span 3; margin-top: 0; }
 
   /* ---- 4. Reports & Log -------------------------------------------- */
   /* Single-column sealed record log (Stitch: max-w-5xl). The summary
      strip becomes one row; entry cards keep their diary layout. */
-  .stitch-log-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+  .stitch-log-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
   .stitch-log-entries { gap: 16px; }
   .stitch-log-entry .stitch-log-time { text-align: left; }
 
@@ -188,20 +247,62 @@
   .report-photos figure:first-child:last-child { grid-column: 1 / -1; }
 
   /* ---- 6. Projects list & project detail --------------------------- */
-  /* Project cards are full-width rows with a stats strip; the detail
-     page keeps its 1.2fr/1fr columns (already in globals.css). */
+  /* Projects list is single-column in Stitch (max-w-6xl); the cards
+     stay full-width rows. Project detail is Stitch's 7+5: the
+     overview title spans the full width, Next step + the Site
+     records / Work progress / BoQ / Site team links sit left
+     (5 cols), and the Project summary dashboard sits right
+     (7 cols). The grid only applies to the overview view (the
+     next-step section is its marker); records and progress views
+     keep their single-column layout. */
+  .project-workspace:has(> section[data-project-step]) {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 24px;
+    row-gap: 24px;
+    align-items: start;
+  }
+  .project-workspace:has(> section[data-project-step]) > * { grid-column: 1 / -1; }
+  .project-workspace:has(> section[data-project-step]) > section[data-project-step],
+  .project-workspace:has(> section[data-project-step]) > .stitch-menu-list { grid-column: 1 / span 5; margin-top: 0; }
+  .project-workspace:has(> section[data-project-step]) > section.project-ledger { grid-column: 6 / span 7; margin-top: 0; }
 
   /* ---- 7. Team & access -------------------------------------------- */
-  /* Two columns (members left, overview/invitations right) are
-     already in globals.css (.team-layout). The repo renders role
-     names as text, never as coloured badges, so Stitch's blue
-     "Field Access" badge has no counterpart here and is not copied. */
+  /* Stitch Team is 8+4: the members list left (8 cols), Current
+     Site + Reports & Log + Connect Telegram right (4 cols). Every
+     other direct child (header, title row, back link, menu list)
+     spans the full width. The mock team is a demo view and keeps
+     its single-column layout. */
+  .team-workspace {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 24px;
+    row-gap: 24px;
+    align-items: start;
+  }
+  .team-workspace > * { grid-column: 1 / -1; }
+  .team-workspace > section.stitch-team-members { grid-column: 1 / span 8; }
+  .team-workspace > section.stitch-team-overview,
+  .team-workspace > a.stitch-team-report,
+  .team-workspace > section.stitch-team-telegram { grid-column: 9 / span 4; }
 
   /* ---- 8. Account, settings & feedback ----------------------------- */
-  /* Settings keep the sidebar + content layout (globals.css), with
-     a wider sidebar. Feedback stays a single readable column. */
-  .settings-layout { grid-template-columns: 260px minmax(0, 1fr); gap: 64px; }
-  .settings-content { max-width: none; }
+  /* Stitch Account is 7+5: profile card left (5 cols), Settings
+     right (7 cols), sign-out full-width below. The grid only
+     applies to the overview (the profile card is its marker); the
+     profile / email / telegram edit forms keep their single-column
+     layout. Feedback stays a single readable column. */
+  .stitch-profile:has(> section.stitch-profile-card) {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 32px;
+    row-gap: 24px;
+    align-items: start;
+    max-width: none;
+  }
+  .stitch-profile:has(> section.stitch-profile-card) > section.stitch-profile-card { grid-column: 1 / span 5; }
+  .stitch-profile:has(> section.stitch-profile-card) > section.stitch-profile-settings { grid-column: 6 / span 7; margin: 0; }
+  .stitch-profile:has(> section.stitch-profile-card) > div[data-tour="sign-out"] { grid-column: 1 / -1; }
 
   /* ---- 9. Help & FAQ ------------------------------------------------ */
   /* The help topic rows become a two-column card grid (Stitch:
@@ -221,10 +322,34 @@
      already read well at desktop width, so no extra rules here. */
 
   /* ---- 11. Public pages --------------------------------------------- */
-  /* Landing: the workflow steps become four columns; the principles
-     and roles are already three columns at 1024px (globals.css). */
-  .workflow-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; }
-  .workflow-list li { display: block; }
+  /* Landing: the principles are three columns, the routine four,
+     the roles three, and the legal items two — the earlier layer
+     only gridded the routine (and matched no element: the landing
+     uses no `.workflow-list` class until this fix adds it), while
+     the comment claimed principles/roles were "already three
+     columns at 1024px (globals.css)" — they were not; they are
+     `flex flex-col` stacks. The section headings span the full
+     width; the routine steps stack their icon above the text so
+     the four columns read cleanly. Copy and figures are untouched. */
+  .landing-principles,
+  .landing-roles {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+  .landing-principles > div:first-child,
+  .landing-roles > div:first-child { grid-column: 1 / -1; }
+  .workflow-list {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 24px;
+  }
+  .workflow-list > div { flex-direction: column; align-items: flex-start; }
+  .landing-legal-items {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 24px;
+  }
   /* About / Privacy / Terms / Contact (all InformationPage): a wider
      readable column. The contact desk and form stack in that column,
      which suits a form; no new layout is invented for them. */

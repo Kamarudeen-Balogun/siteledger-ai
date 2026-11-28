@@ -46,12 +46,15 @@ async function MockContent({ query }: { query: Promise<{ view?: string; note?: s
   const overall = allocation.gt(0) ? earnedTotal.times(100).div(allocation).toNumber() : 0;
   const dayTotal = demoTodayNotes.reduce((sum, note) => note.total_cost ? sum.plus(decimal(note.total_cost, "demo day total")) : sum, decimal("0", "day total"));
   const awaiting = demoTodayNotes.filter(note => note.state === "draft");
-  const demoDay = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric" }).format(new Date("2026-11-06T00:00:00+01:00"));
+  // The demo day is a Lagos date: pin the formatter to Africa/Lagos so
+  // the heading reads 6 Nov 2026 in every timezone. Without a timeZone
+  // the midnight +01:00 instant formats as 5 Nov in UTC and west of it.
+  const demoDay = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Lagos" }).format(new Date("2026-11-06T00:00:00+01:00"));
   // The bottom navigation switches mock views (Today / Reports & Log /
   // BoQ & Rates / Projects & Team), so there is no tab bar here. The header
   // carries the mock project itself, never the previous real project.
   return <><WorkspaceHeader current={viewArea[view ?? "today"]} title={headerTitle} project={headerTitle} />
-    {view === "today" && <>
+    {view === "today" && <div className="stitch-today">
       <div className="diary-today-actions"><MockAddWork/><a href="https://t.me/SiteLedgerNGbot" className="diary-row-link" target="_blank" rel="noreferrer"><DiaryIcon name="send" size={20} /><strong>Send via Telegram</strong><span className="stitch-chip">@SiteLedgerNGbot</span></a></div>
       <p className="stitch-card">Demo data — this project is a safe copy to explore. Record work in your own project.</p>
       <section className="stitch-card stitch-drafts" aria-labelledby="today-drafts" data-tour="drafts"><div className="stitch-title-row">
@@ -79,7 +82,7 @@ async function MockContent({ query }: { query: Promise<{ view?: string; note?: s
         <progress max={100} value={Math.min(100, overall)} aria-label="Measured project progress" />
         <dl>{sample.document.costing.items.map((item, index) => <div key={index}><dt>{displayWorkTitle(sample.document.source.price_list.find(price => price.id === item.boq_item_id)?.description, sample.document.source.items[index].description)}</dt><dd>{formatQuantityWithUnit(item.cumulative_quantity, item.unit)} · {displayRatio(item.percentage_complete)}%</dd></div>)}</dl>
         <Link className="text-link" href="/projects/mock?view=boq">View all work progress</Link></section>
-    </>}
+    </div>}
     {view === "note" && <MockNoteDetail note={demoTodayNotes[1]} report={note2Report} priceList={sample.document.source.price_list} currency={currency} />}
     {view === "confirm" && <MockConfirmView note={demoTodayNotes[2]} priceList={sample.document.source.price_list} currency={currency} />}
     {view === "report" && <ReportDocument report={sample} demoPhotos actions={<MockReportActions />} />}

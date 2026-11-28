@@ -167,7 +167,7 @@ test("BoQ add and adjust open as bottom sheets, not inline forms", () => {
   assert.match(editor, /const formDialog = useRef<HTMLDialogElement>\(null\);/);
   assert.match(editor, /<dialog ref=\{formDialog\} className="action-dialog stitch-sheet"/);
   assert.ok(!editor.includes('className="my-7 max-w-3xl diary-panel"'), "The add/edit form must not render inline on the page");
-  assert.match(editor, /className="text-link mt-3"[^>]*onClick=\{\(\) => edit\(row\)\}[^>]*>Adjust item<\/button>/);
+  assert.match(editor, /className="text-link stitch-boq-adjust mt-3"[^>]*onClick=\{\(\) => edit\(row\)\}[^>]*>Adjust item<\/button>/);
 });
 
 test("BoQ version history is a small button opening a sheet, never an inline expansion", () => {

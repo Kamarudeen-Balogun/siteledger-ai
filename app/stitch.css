@@ -237,6 +237,10 @@ nav.work-flow { margin: 0; }
 .stitch-boq-values dd { white-space: nowrap; font-weight: 700; }
 .stitch-boq-items { display: grid; gap: 12px; }
 .stitch-boq-items .stitch-card h3 { margin: 3px 0 8px; font: 600 17px/1.35 var(--stitch-serif); }
+/* The mock BoQ item opener stacks its code label above the item name:
+   as an inline-flex row the two ran together with no gap
+   ("ITEM 01 · BLOCKWORKSandcrete blocks…"). */
+.stitch-boq-items .stitch-boq-item-open { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
 .stitch-compact-disclosure { min-width: 0; flex: 1; }
 .stitch-compact-disclosure summary { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 12px; border-radius: 18px; background: var(--stitch-inset); cursor: pointer; font: 500 11px/1.4 var(--stitch-mono); }
 .stitch-compact-disclosure p, .stitch-compact-disclosure ul { padding: 8px 0; }

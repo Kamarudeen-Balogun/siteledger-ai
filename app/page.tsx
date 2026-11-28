@@ -61,7 +61,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mt-6 flex flex-col gap-2" aria-labelledby="principles-title">
+      <section className="landing-principles mt-6 flex flex-col gap-2" aria-labelledby="principles-title">
         <div className="flex items-center justify-between">
           <span className="font-stamp-label text-stamp-label uppercase text-on-surface-variant">Core Ledger Principles</span>
           <span className="font-stamp-label text-stamp-label font-semibold uppercase text-secondary">Field Tested</span>
@@ -88,7 +88,7 @@ export default function Home() {
           <span className="font-stamp-label text-stamp-label uppercase text-primary">The Site Routine</span>
           <h2 id="workflow-title" className="mt-0.5 font-headline-lg-mobile text-headline-lg-mobile font-semibold text-on-surface">How a day gets recorded</h2>
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="workflow-list flex flex-col gap-2">
           {([
             ["01", "mic", "Send what happened", "Foreman records a 60-second voice note and uploads 4 site snapshots in Telegram or the mobile diary browser."],
             ["02", "check", "Check the quantities", "AI transcribes audio and extracts crew tallies & measurements. Human review inspects photo findings before anything touches cost."],
@@ -111,7 +111,7 @@ export default function Home() {
             <h2 id="legal-title" className="mt-0.5 font-headline-lg-mobile text-headline-lg-mobile font-semibold text-on-surface">Built for the questions that come later.</h2>
           </div>
           <p className="font-body-md text-body-md text-on-surface-variant">When billings are queried weeks down the road, clear forensic proof ends disputes before they stall the project.</p>
-          <div className="flex flex-col gap-2 pt-1">
+          <div className="landing-legal-items flex flex-col gap-2 pt-1">
             {([
               ["Registered Professional Names & Roles", "Clear attribution for who logged, who reviewed, and who approved."],
               ["Dismissible Photo Findings", "Flag defects, weather interruptions, or low delivery supplies transparently."],
@@ -128,7 +128,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mt-6 flex flex-col gap-2" aria-labelledby="roles-title">
+      <section className="landing-roles mt-6 flex flex-col gap-2" aria-labelledby="roles-title">
         <div className="flex flex-col">
           <span className="font-stamp-label text-stamp-label uppercase text-on-surface-variant">Roles &amp; access</span>
           <h2 id="roles-title" className="mt-0.5 font-headline-lg-mobile text-headline-lg-mobile font-semibold text-on-surface">Structured for the entire project team</h2>
