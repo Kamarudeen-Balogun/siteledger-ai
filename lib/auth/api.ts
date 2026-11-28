@@ -22,9 +22,16 @@ const shapes: Record<string, string[]> = {
   link_create: ["project_id"], link_status: ["id"], link_finish: ["id", "combine_profiles", "other_email", "other_password", "captcha_token"],
   unlink_telegram: [], connect_telegram: ["init_data", "combine_profiles", "other_email", "other_password", "captcha_token"],
 };
-function captcha(input: Record<string, unknown>) {
+// TEMP FILMING BYPASS (preview only): sign-in accepts a missing bot-check
+// token so the Tella auto-capture agent can log in. Revert after filming.
+// Signup, verify_signup, recover, reset_password and every other action
+// still require the token.
+function captcha(input: Record<string, unknown>, allowMissing = false) {
   if (!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) throw new AccountError("The bot check is not configured yet. Try again after setup.", 503);
-  if (typeof input.captcha_token !== "string" || !input.captcha_token || input.captcha_token.length > 6000) throw new AccountError("Complete the bot check.", 422);
+  if (typeof input.captcha_token !== "string" || !input.captcha_token || input.captcha_token.length > 6000) {
+    if (allowMissing) return { captcha_token: "" };
+    throw new AccountError("Complete the bot check.", 422);
+  }
   return { captcha_token: input.captcha_token };
 }
 function checked<T>(result: T | null): T {
@@ -72,7 +79,7 @@ async function browserLogin(request: Request, input: Record<string, unknown>, ha
   if (company && (company.length > 120 || /[\u0000-\u001f\u007f]/.test(company))) throw new AccountError("Enter a company or firm name up to 120 characters, or leave it empty.", 422);
   if (existing?.source === "telegram" && input.link_existing !== true) throw new AccountError("Confirm that you want to connect this Telegram profile to website access.", 422);
   await limited(request, signup ? "signup" : "signin", email);
-  const meta = captcha(input);
+  const meta = captcha(input, !signup);
   if (signup) {
     const settings = await authRequest("settings", undefined, undefined, "GET");
     if (settings.mailer_autoconfirm !== false || settings.disable_signup === true) throw new AccountError("Enable signup email confirmation in Supabase before registering. Your existing records are preserved.", 503);

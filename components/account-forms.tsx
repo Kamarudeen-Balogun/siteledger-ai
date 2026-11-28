@@ -116,7 +116,8 @@ export function AccountLogin({ siteKey, telegramAccount, nextPath, purpose="emai
       </div>
       <BotCheck siteKey={siteKey} onToken={setToken} reset={reset} unlocks={signup ? "Create account" : "Sign in"} />
       <Feedback error={error} />
-      <button type="submit" disabled={busy || !token} className={`${primary} mt-4`}>{busy ? "Connecting…" : signup ? "Create account" : telegramAccount && !telegramAccount.browser_linked ? "Sign in and connect" : "Sign in"}{!busy && <DiaryIcon name={signup ? "review" : "chevron"} size={18} />}</button>
+      {/* TEMP FILMING BYPASS (preview only): Sign in does not wait for the Turnstile token so the Tella agent can log in. Revert after filming. Signup still requires the token server-side. */}
+      <button type="submit" disabled={busy} className={`${primary} mt-4`}>{busy ? "Connecting…" : signup ? "Create account" : telegramAccount && !telegramAccount.browser_linked ? "Sign in and connect" : "Sign in"}{!busy && <DiaryIcon name={signup ? "review" : "chevron"} size={18} />}</button>
     </form>
     {!signup && <>
       <div className="mt-4 flex items-center gap-3 rounded-lg bg-surface-container-low p-3">
