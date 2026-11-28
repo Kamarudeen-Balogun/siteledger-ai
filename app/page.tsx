@@ -6,10 +6,15 @@ export const metadata={title:"SiteLedger AI — From site voice note to costed r
 export default function Home() {
   return <PublicSite current="/">
     <div className="public-column flex flex-col pb-12">
+      {/* Stitch's landing hero is a 12-column grid: headline + CTAs
+          left (6), the sample-record preview card right (6). On
+          mobile the wrapper is a plain block, so the two sections
+          stack exactly as before. */}
+      <div className="landing-hero-grid">
       <section className="flex flex-col gap-2 pt-4" aria-labelledby="hero-title">
         <h1 id="hero-title" className="mt-2 font-headline-lg-mobile text-headline-lg-mobile font-semibold tracking-tight text-balance text-on-surface">The day’s work. With the money attached.</h1>
         <p className="font-body-md text-body-md leading-relaxed text-on-surface-variant">Turn a foreman’s voice note and photos into a daily report, costed against the Bill of Quantities. Check the quantities. Approve the record. Keep the proof.</p>
-        <div className="flex flex-col gap-2 pt-2">
+        <div className="landing-hero-actions flex flex-col gap-2 pt-2">
           <LandingAccountLink trial className="flex h-12 w-full items-center justify-center gap-1 rounded bg-primary-container px-4 font-label-ledger text-label-ledger text-on-primary shadow-sm transition-all hover:bg-primary active:translate-x-0.5 active:translate-y-0.5" anonymousLabel="Try a private site record" />
           <LandingAccountLink className="flex h-12 w-full items-center justify-center rounded bg-surface-container-high px-4 font-label-ledger text-label-ledger text-on-surface transition-all hover:bg-surface-container-highest active:translate-x-0.5 active:translate-y-0.5" anonymousLabel="Sign in / Create account" />
           <Link href="/reports/demo" className="flex min-h-[48px] items-center justify-center gap-1 py-1 text-center font-label-ledger text-label-ledger text-primary transition-transform hover:text-primary-container active:scale-95">View a sample report<DiaryIcon name="chevron" size={18} /></Link>
@@ -60,8 +65,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+      </div>
 
-      <section className="mt-6 flex flex-col gap-2" aria-labelledby="principles-title">
+      <section className="landing-principles mt-6 flex flex-col gap-2" aria-labelledby="principles-title">
         <div className="flex items-center justify-between">
           <span className="font-stamp-label text-stamp-label uppercase text-on-surface-variant">Core Ledger Principles</span>
           <span className="font-stamp-label text-stamp-label font-semibold uppercase text-secondary">Field Tested</span>
@@ -88,7 +94,7 @@ export default function Home() {
           <span className="font-stamp-label text-stamp-label uppercase text-primary">The Site Routine</span>
           <h2 id="workflow-title" className="mt-0.5 font-headline-lg-mobile text-headline-lg-mobile font-semibold text-on-surface">How a day gets recorded</h2>
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="workflow-list flex flex-col gap-2">
           {([
             ["01", "mic", "Send what happened", "Foreman records a 60-second voice note and uploads 4 site snapshots in Telegram or the mobile diary browser."],
             ["02", "check", "Check the quantities", "AI transcribes audio and extracts crew tallies & measurements. Human review inspects photo findings before anything touches cost."],
@@ -105,13 +111,13 @@ export default function Home() {
       </section>
 
       <section className="mt-6 flex flex-col gap-2" aria-labelledby="legal-title">
-        <div className="flex flex-col gap-2 rounded-xl bg-surface-container-lowest p-4 shadow-md">
+        <div className="landing-legal-card flex flex-col gap-2 rounded-xl bg-surface-container-lowest p-4 shadow-md">
           <div className="flex flex-col">
             <span className="font-stamp-label text-stamp-label font-bold uppercase text-secondary">Legal clarity</span>
             <h2 id="legal-title" className="mt-0.5 font-headline-lg-mobile text-headline-lg-mobile font-semibold text-on-surface">Built for the questions that come later.</h2>
           </div>
           <p className="font-body-md text-body-md text-on-surface-variant">When billings are queried weeks down the road, clear forensic proof ends disputes before they stall the project.</p>
-          <div className="flex flex-col gap-2 pt-1">
+          <div className="landing-legal-items flex flex-col gap-2 pt-1">
             {([
               ["Registered Professional Names & Roles", "Clear attribution for who logged, who reviewed, and who approved."],
               ["Dismissible Photo Findings", "Flag defects, weather interruptions, or low delivery supplies transparently."],
@@ -128,7 +134,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mt-6 flex flex-col gap-2" aria-labelledby="roles-title">
+      <section className="landing-roles mt-6 flex flex-col gap-2" aria-labelledby="roles-title">
         <div className="flex flex-col">
           <span className="font-stamp-label text-stamp-label uppercase text-on-surface-variant">Roles &amp; access</span>
           <h2 id="roles-title" className="mt-0.5 font-headline-lg-mobile text-headline-lg-mobile font-semibold text-on-surface">Structured for the entire project team</h2>

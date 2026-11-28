@@ -13,6 +13,7 @@ async function SharedReport({ params }: { params: Promise<{ id: string }> }) {
   if (!report) notFound();
   return <>
     <header className="report-toolbar mb-5 flex items-center justify-between gap-3"><Link href="/" className="font-serif text-xl">SiteLedger AI</Link><a href={`/api/shared/${id}/pdf`} download className="work-button work-button-primary">Download PDF</a></header>
+    <Link href="/" className="text-link">Back to home</Link>
     <ReportDocument report={report} sharedPath={`/api/shared/${id}/photos`}/>
   </>;
 }

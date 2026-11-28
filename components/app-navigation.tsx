@@ -253,7 +253,7 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
   </>;
 }
 
-export function WorkspaceNavigation({ current }: { current: WorkspaceArea }) {
+export function WorkspaceNavigation({ current, onBack }: { current: WorkspaceArea; onBack?: () => void }) {
   const navigation = useContext(Navigation);
   const path = navigation?.pathname ?? "/";
   // On the mock project the dock stays on the mock: its Today, Reports,
@@ -268,12 +268,53 @@ export function WorkspaceNavigation({ current }: { current: WorkspaceArea }) {
     { href: isMock ? "/projects/mock?view=team" : projectHref ? `${projectHref}/team` : "/projects", label: "Projects & Team", area: "projects", icon: "team" },
   ] as const;
   function back() {
+    // A caller-supplied back action wins: during "Add today's work"
+    // the header Back closes the capture sheet instead of leaving
+    // the page (the icon button in the title already does this).
+    if (onBack) { onBack(); return; }
     if (navigation) navigation.back();
     else window.location.assign(navigationFallback(window.location.pathname));
   }
+  // Desktop top nav (Stitch desktop adaptation): the workspace areas
+  // as a tab bar — Today / Projects / BoQ & Rates / Reports & Log /
+  // Team / Settings. The mobile dock keeps its four tabs; the desktop
+  // bar splits Projects & Team and adds Settings. The active item is
+  // derived from the path (and the workspace area for the mock, whose
+  // view lives in the query string): mock team is the only mock view
+  // whose area is "projects", so that area means Team on the mock.
+  const desktopLinks: [string, string][] = navigation?.active ? (isMock ? [
+    ["/projects/mock?view=today", "Today"],
+    ["/projects", "Projects"],
+    ["/projects/mock?view=boq", "BoQ & Rates"],
+    ["/projects/mock?view=log", "Reports & Log"],
+    ["/projects/mock?view=team", "Team"],
+    ["/account", "Settings"],
+  ] : [
+    ["/today", "Today"],
+    ["/projects", "Projects"],
+    [projectHref ? `${projectHref}/boq` : "/projects", "BoQ & Rates"],
+    ["/reports", "Reports & Log"],
+    [projectHref ? `${projectHref}/team` : "/projects", "Team"],
+    ["/account", "Settings"],
+  ]) : [["/", "Home"], ["/account", "Sign in"], ["/help", "Help"]];
+  function desktopActive(label: string): boolean {
+    if (isMock) {
+      if (current === "boq") return label === "BoQ & Rates";
+      if (current === "reports") return label === "Reports & Log";
+      if (current === "projects") return label === "Team";
+      return label === "Today";
+    }
+    if (label === "Settings") return path.startsWith("/account");
+    if (label === "Today") return path === "/today";
+    if (label === "Reports & Log") return path === "/reports" || path.startsWith("/reports/") || path.startsWith("/log/");
+    if (label === "BoQ & Rates") return /\/boq(?:\/|$)/.test(path) || current === "boq";
+    if (label === "Team") return /\/team(?:\/|$)/.test(path);
+    if (label === "Projects") return path === "/projects" || /^\/projects\/[a-f0-9-]{36}/.test(path);
+    return false;
+  }
   return <div className="workspace-navigation">
     <button type="button" className="workspace-back" onClick={back}><DiaryIcon name="back" size={18}/>Back</button>
-    <nav aria-label="Workspace navigation" className="workspace-desktop-nav">{(navigation?.ready ? navigation.active ? [["/today", "Today"], ["/projects", "Projects"], ["/account", "Account"], ["/help", "Help"]] : [["/", "Home"], ["/account", "Sign in"], ["/help", "Help"]] : []).map(([href,label]) => <Link key={href} href={href} aria-current={href === `/${current}` ? "page" : undefined}>{label}</Link>)}</nav>
+    <nav aria-label="Workspace navigation" className="workspace-desktop-nav">{(navigation?.ready ? navigation.active ? desktopLinks : [["/", "Home"], ["/account", "Sign in"], ["/help", "Help"]] : []).map(([href,label]) => <Link key={href} href={href} aria-current={desktopActive(label) ? "page" : undefined}>{label}</Link>)}</nav>
     {navigation?.active && <nav aria-label="Mobile workspace navigation" className="workspace-dock">{links.map(({href,label,area,icon}) => <Link key={area} href={href} prefetch={false} aria-current={area === current ? "page" : undefined}><DiaryIcon name={icon}/><span>{label}</span></Link>)}</nav>}
   </div>;
 }

@@ -56,5 +56,5 @@ async function History({ params, searchParams }: { params: Promise<{ id: string 
   </>;
 }
 export default function ProjectPage(props: { params: Promise<{ id: string }>; searchParams: Promise<{view?:string}> }) {
-  return <main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><Suspense fallback={<PageLoading title="Opening project records…" variant="rows" header={<WorkspaceHeader current="projects"/>}/>}> <History {...props} /></Suspense></main>;
+  return <main className="project-workspace mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><Suspense fallback={<PageLoading title="Opening project records…" variant="split" split="5-7" header={<WorkspaceHeader current="projects"/>}/>}> <History {...props} /></Suspense></main>;
 }
