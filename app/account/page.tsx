@@ -49,7 +49,7 @@ async function AccountContent({ searchParams }: { searchParams: Promise<{ sectio
       </section>
       <section className="stitch-card stitch-profile-settings" data-tour="profile-settings"><h2>Settings</h2><ThemeSettings/>
         <ul className="stitch-menu-list">{settings.map(([icon,href,label,subtitle])=><li key={href}><Link href={href} className="stitch-menu-row"><DiaryIcon name={icon} size={20}/><span><strong>{label}</strong><small>{subtitle}</small></span><DiaryIcon name="chevron" size={18}/></Link></li>)}</ul>
-        <MockProjectControl person={account.profile_id} restore/><ReplayTour/>
+        <MockProjectControl person={account.profile_id} restore/><ReplayTour signedIn/>
       </section>
       <div data-tour="sign-out"><AccountSignOut account={account}/></div>
     </>}

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { displayDate, formatMoneyPerUnit, formatQuantityWithUnit } from "@/lib/reports/model";
+import { displayDate, displayTimestamp, formatMoneyPerUnit, formatQuantityWithUnit } from "@/lib/reports/model";
 import type { BoqVersion } from "@/lib/projects/boq-data";
 import { DiaryIcon } from "./diary-icon";
 
@@ -33,8 +33,8 @@ export function BoqVersions({ versions, currency }: { versions: BoqVersion[] | n
   {selected && <dialog ref={sheet} className="action-dialog stitch-sheet" aria-label={`BoQ version ${selected.version}`} onClose={() => setSelected(null)}>
     <div className="action-dialog__body">
       <h2>Version {selected.version}{selected.version===active?" · Active":""}</h2>
-      <p>{displayDate(selected.effective_date)} · {selected.items} {selected.items===1?"item":"items"}</p>
-      <ul className="boq-versions__rows">{selected.rows.map((row,index)=><li key={row.item_code ?? index}><span>{row.description}</span><span>{formatQuantityWithUnit(row.boq_quantity, row.unit)} @ {formatMoneyPerUnit(row.rate, currency, row.unit)}</span></li>)}</ul>
+      <p>{selected.created_at ? <>Saved {displayTimestamp(selected.created_at)} · </> : ""}Effective {displayDate(selected.effective_date)} · {selected.items} {selected.items===1?"item":"items"}</p>
+      <ul className="boq-versions__rows">{selected.rows.map((row,index)=><li key={row.item_code ?? index}><span className="boq-versions__description">{row.description}</span><span className="boq-versions__value"><span>{formatQuantityWithUnit(row.boq_quantity, row.unit)}</span><span>@</span><span>{formatMoneyPerUnit(row.rate, currency, row.unit)}</span></span></li>)}</ul>
       <p>Locked reports keep the version they were locked with.</p>
     </div>
     <div className="action-dialog__actions stitch-sheet-actions"><button type="button" className="stitch-button" onClick={() => { sheet.current?.close(); setSelected(null); }}>Close</button></div>

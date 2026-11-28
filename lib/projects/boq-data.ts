@@ -7,7 +7,7 @@ export type BoqChange = { id: string; timestamp: string; action: string; actor: 
 export async function privateBoqHistory(id: string): Promise<BoqChange[] | null> {
   return intakeRpc("account_boq_history", { p_hash: await currentSessionHash(), p_project: id });
 }
-export type BoqVersion = { version: number; effective_date: string; items: number; rows: { description: string; unit: string; boq_quantity: string | number; rate: string | number; item_code?: string; section?: string }[] };
+export type BoqVersion = { version: number; effective_date: string; created_at?: string; items: number; rows: { description: string; unit: string; boq_quantity: string | number; rate: string | number; item_code?: string; section?: string }[] };
 // Version rows are the raw BoQ row (to_jsonb), so rate and boq_quantity
 // arrive as JSON numbers, not strings — every consumer must coerce before
 // calling string methods on them.

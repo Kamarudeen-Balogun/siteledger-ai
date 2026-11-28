@@ -255,8 +255,11 @@ button[aria-pressed="true"] { background: var(--foreground); color: var(--backgr
 .boq-versions__row strong { font-family: "Report Serif", Georgia, serif; font-size: 17px; }
 .boq-versions__row small { font-size: 13px; color: #57534e; }
 .boq-versions__rows { list-style: none; margin: 0 0 12px; padding: 0; }
-.boq-versions__rows li { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-top: 1px solid var(--rule); font-size: 14px; line-height: 1.6; }
+.boq-versions__rows li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; padding: 8px 0; border-top: 1px solid var(--rule); font-size: 14px; line-height: 1.6; }
 .boq-versions__rows li span:last-child { flex: none; text-align: right; font-variant-numeric: tabular-nums; }
+.boq-versions__description { min-width: 0; overflow-wrap: anywhere; }
+.boq-versions__value { display: flex; flex-wrap: wrap; gap: 2px 6px; justify-content: flex-end; }
+.boq-versions__value span { white-space: nowrap; }
 .attachment-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-block: 24px 14px; }
 .attachment-heading h2 { font-weight: 600; }
 .attachment-status { font-family: var(--font-mono); font-size: 12px; padding: 4px 8px; background: #eee9e1; }

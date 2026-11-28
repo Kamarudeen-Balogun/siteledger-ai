@@ -17,7 +17,7 @@ export type ReportSource = {
   items: (ConfirmedCostItem & { description: string; confidence: string })[];
   price_list: (BoqPrice & { item_code: string; description: string; section: string })[];
   materials: SiteExtraction["materials"]; delays: SiteExtraction["delays"]; issues: string[];
-  photos: { id: string; storage_url: string; note: string }[];
+  photos: { id: string; storage_url: string; note: string; captured_at?: string }[];
 };
 export type ReportDocument = { source: ReportSource; costing: CostedReport; firm_name: string; currency: string; weather: string | null };
 export type ReportInput = { source: ReportSource; report: {

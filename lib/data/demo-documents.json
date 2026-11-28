@@ -81,7 +81,26 @@
           }
         ],
         "issues": [],
-        "photos": [],
+        "photos": [
+          {
+            "id": "demo-photo-excavation",
+            "storage_url": "/demo/photos/demo-excavation.webp",
+            "note": "Foundation trenches open, excavation in progress.",
+            "captured_at": "2026-11-06T10:25:00+01:00"
+          },
+          {
+            "id": "demo-photo-blockwork",
+            "storage_url": "/demo/photos/synthetic-blockwork.jpg",
+            "note": "Blockwork, east elevation — courses level, joints filled.",
+            "captured_at": "2026-11-06T14:12:00+01:00"
+          },
+          {
+            "id": "demo-photo-column-voids",
+            "storage_url": "/demo/photos/synthetic-column-voids.jpg",
+            "note": "Possible honeycombing on the column face. Check before recording a finding.",
+            "captured_at": "2026-11-06T15:40:00+01:00"
+          }
+        ],
         "status": "locked",
         "project": {
           "id": "10000000-0000-4000-8000-000000000001",
@@ -547,5 +566,233 @@
       "id": "10000000-0000-4000-8000-000000000001",
       "name": "4-Bedroom Duplex, Lekki Phase 1, Lagos"
     }
-  }
+  },
+  "todayNotes": [
+    {
+      "id": "30000000-0000-4000-8000-000000000004",
+      "state": "locked",
+      "captured_at": "2026-11-06T14:12:00+01:00",
+      "audio_url": "/demo/audio/note-1-locked.mp3",
+      "transcript": "Good afternoon. Today we excavate twenty-seven cubic metres for the foundation trenches, fill fifteen cubic metres of hardcore, and cast twenty-five square metres of oversite concrete. We lay ten square metres of blockwork for the east elevation and six square metres for the internal partitions, pour half a cubic metre of concrete, and fix the reinforcement. Rain stop external work for two hours.",
+      "total_cost": "1495300",
+      "href": "/projects/mock?view=report",
+      "photos": [
+        {
+          "id": "demo-photo-excavation",
+          "storage_url": "/demo/photos/demo-excavation.webp",
+          "note": "Foundation trenches open, excavation in progress.",
+          "captured_at": "2026-11-06T10:25:00+01:00"
+        },
+        {
+          "id": "demo-photo-blockwork",
+          "storage_url": "/demo/photos/synthetic-blockwork.jpg",
+          "note": "Blockwork, east elevation — courses level, joints filled.",
+          "captured_at": "2026-11-06T14:12:00+01:00"
+        },
+        {
+          "id": "demo-photo-column-voids",
+          "storage_url": "/demo/photos/synthetic-column-voids.jpg",
+          "note": "Possible honeycombing on the column face. Check before recording a finding.",
+          "captured_at": "2026-11-06T15:40:00+01:00"
+        }
+      ],
+      "items": [
+        {
+          "boq_item_id": "20000000-0000-4000-8000-000000000001",
+          "description": "Excavation, foundation trenches",
+          "quantity_done": "27.0000",
+          "unit": "m3",
+          "crew": 4
+        },
+        {
+          "boq_item_id": "20000000-0000-4000-8000-000000000007",
+          "description": "Blockwork — Internal partitions",
+          "quantity_done": "6.0000",
+          "unit": "m2",
+          "crew": 6
+        },
+        {
+          "boq_item_id": "20000000-0000-4000-8000-000000000004",
+          "description": "In-situ concrete, columns and beams",
+          "quantity_done": "0.5000",
+          "unit": "m3",
+          "crew": 6
+        },
+        {
+          "boq_item_id": "20000000-0000-4000-8000-000000000002",
+          "description": "Hardcore filling, compacted",
+          "quantity_done": "15.0000",
+          "unit": "m3",
+          "crew": 4
+        },
+        {
+          "boq_item_id": "20000000-0000-4000-8000-000000000005",
+          "description": "Reinforcement, high-yield bars, cut and fixed",
+          "quantity_done": "0.1000",
+          "unit": "tonne",
+          "crew": 6
+        },
+        {
+          "boq_item_id": "20000000-0000-4000-8000-000000000003",
+          "description": "Oversite concrete (German floor), 150mm",
+          "quantity_done": "25.0000",
+          "unit": "m2",
+          "crew": 4
+        },
+        {
+          "boq_item_id": "20000000-0000-4000-8000-000000000006",
+          "description": "Blockwork — East elevation",
+          "quantity_done": "10.0000",
+          "unit": "m2",
+          "crew": 6
+        }
+      ],
+      "materials": [],
+      "delays": [
+        {
+          "hours": 2,
+          "reason": "Rain stopped external work",
+          "confidence": 1
+        }
+      ],
+      "issues": [],
+      "summary": "Excavation 27 m³ · Hardcore 15 m³ · Oversite 25 m² · Blockwork 16 m² · Concrete 0.5 m³ · Reinforcement 0.1 t"
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000001",
+      "state": "costed",
+      "captured_at": "2026-11-06T08:42:00+01:00",
+      "audio_url": "/demo/audio/note-2-costed.mp3",
+      "transcript": "Good morning, today we lay 18 square metres of 225mm blockwork with six workers. We pour 2 cubic metres of concrete with four workers. We use 40 bags of cement. Rain delay us for two hours, and the concrete curing get issue.",
+      "total_cost": "551000",
+      "href": "/projects/mock?view=note&note=2",
+      "photos": [
+        {
+          "id": "demo-photo-note2-blockwork",
+          "storage_url": "/demo/photos/demo-blockwork.webp",
+          "note": "Blockwork laid this morning, east elevation.",
+          "captured_at": "2026-11-06T08:55:00+01:00"
+        },
+        {
+          "id": "demo-photo-note2-pour",
+          "storage_url": "/demo/photos/demo-concrete-pour.webp",
+          "note": "Concrete pour in progress.",
+          "captured_at": "2026-11-06T09:20:00+01:00"
+        }
+      ],
+      "items": [
+        {
+          "boq_item_id": "20000000-0000-4000-8000-000000000006",
+          "description": "Blockwork — East elevation",
+          "quantity_done": "18.0000",
+          "unit": "m2",
+          "crew": 6
+        },
+        {
+          "boq_item_id": "20000000-0000-4000-8000-000000000004",
+          "description": "In-situ concrete, columns and beams",
+          "quantity_done": "2.0000",
+          "unit": "m3",
+          "crew": 4
+        }
+      ],
+      "materials": [
+        {
+          "name": "Cement",
+          "quantity": 40,
+          "unit": "bags",
+          "action": "delivered",
+          "confidence": 0.9
+        }
+      ],
+      "delays": [
+        {
+          "hours": 2,
+          "reason": "Rain stopped external work",
+          "confidence": 0.7
+        }
+      ],
+      "issues": [
+        "Curing not done on yesterday's slab"
+      ],
+      "summary": "Blockwork 18 m² · Concrete 2 m³ · 40 bags cement delivered"
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000002",
+      "state": "draft",
+      "captured_at": "2026-11-06T11:15:00+01:00",
+      "audio_url": "/demo/audio/note-3-draft.mp3",
+      "transcript": "We receive forty bags of cement this morning. We lay twelve square metres of blockwork for the internal partitions. The edge of the first floor slab is not protected. Workers need harness before they continue.",
+      "total_cost": null,
+      "href": "/projects/mock?view=confirm&note=3",
+      "photos": [
+        {
+          "id": "demo-photo-note3-cement",
+          "storage_url": "/demo/photos/demo-cement-bags.webp",
+          "note": "Forty bags of cement delivered this morning.",
+          "captured_at": "2026-11-06T11:15:00+01:00"
+        },
+        {
+          "id": "demo-photo-note3-edge",
+          "storage_url": "/demo/photos/synthetic-unprotected-edge.jpg",
+          "note": "Open slab edge, no protection. Possible safety issue.",
+          "captured_at": "2026-11-06T11:40:00+01:00"
+        }
+      ],
+      "items": [],
+      "suggested_items": [
+        {
+          "boq_item_id": "20000000-0000-4000-8000-000000000007",
+          "description": "Blockwork — Internal partitions",
+          "quantity": 12,
+          "unit": "m2",
+          "crew": 6
+        }
+      ],
+      "materials": [
+        {
+          "name": "Cement",
+          "quantity": 40,
+          "unit": "bags",
+          "action": "delivered",
+          "confidence": 0.9
+        }
+      ],
+      "delays": [],
+      "issues": [
+        "First floor slab edge is not protected — workers need a harness"
+      ],
+      "summary": "Cement 40 bags delivered · Blockwork 12 m² to confirm · Slab edge unprotected"
+    }
+  ],
+  "team": [
+    {
+      "name": "Engr. Tola Adeyemi",
+      "role": "PM/QS",
+      "access": "Owner",
+      "permissions": "Full write · Authorized signatory · Approves and locks reports",
+      "status": "active"
+    },
+    {
+      "name": "Musa Bello",
+      "role": "Foreman",
+      "access": "Site intake",
+      "permissions": "Voice & photo intake · Confirms own records · Amends own records",
+      "status": "active"
+    },
+    {
+      "name": "Adebayo Family",
+      "role": "Client",
+      "access": "Viewer",
+      "permissions": "Read-only locked reports & PDF logs",
+      "status": "active"
+    },
+    {
+      "name": "Site Engineer",
+      "role": "Site Engineer",
+      "access": "Invite pending",
+      "permissions": "Invitation sent · Expires in 48 hours",
+      "status": "pending"
+    }
+  ]
 }
