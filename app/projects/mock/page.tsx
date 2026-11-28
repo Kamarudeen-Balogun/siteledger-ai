@@ -14,7 +14,7 @@ import { MockReportActions } from "@/components/mock-report-actions";
 import { DisputeLogDocument } from "@/components/dispute-log";
 import { BoqReview } from "@/components/boq-review";
 import { BoqVersions } from "@/components/boq-versions";
-import { MockBoqActions } from "@/components/mock-project";
+import { MockAddWork, MockBoqActions } from "@/components/mock-project";
 import { DiaryIcon } from "@/components/diary-icon";
 import { DemoVoicePlayer, MockBoqRows, MockConfirmView, MockNoteDetail, MockTeamMembers } from "@/components/mock-demo";
 
@@ -52,7 +52,7 @@ async function MockContent({ query }: { query: Promise<{ view?: string; note?: s
   // carries the mock project itself, never the previous real project.
   return <><WorkspaceHeader current={viewArea[view ?? "today"]} title={headerTitle} project={headerTitle} />
     {view === "today" && <>
-      <div className="diary-today-actions"><Link href="/today" className="diary-primary" data-tour="add-work"><DiaryIcon name="plus" size={26} />Add today&apos;s work</Link><a href="https://t.me/SiteLedgerNGbot" className="diary-row-link" target="_blank" rel="noreferrer"><DiaryIcon name="send" size={20} /><strong>Send via Telegram</strong><span className="stitch-chip">@SiteLedgerNGbot</span></a></div>
+      <div className="diary-today-actions"><MockAddWork/><a href="https://t.me/SiteLedgerNGbot" className="diary-row-link" target="_blank" rel="noreferrer"><DiaryIcon name="send" size={20} /><strong>Send via Telegram</strong><span className="stitch-chip">@SiteLedgerNGbot</span></a></div>
       <p className="stitch-card">Demo data — this project is a safe copy to explore. Record work in your own project.</p>
       <section className="stitch-card stitch-drafts" aria-labelledby="today-drafts" data-tour="drafts"><div className="stitch-title-row">
         <h2 id="today-drafts"><DiaryIcon name="pending" size={20} />Awaiting review <span className="stitch-chip">{awaiting.length}</span></h2><span className="stitch-kicker">Not costed yet</span></div>

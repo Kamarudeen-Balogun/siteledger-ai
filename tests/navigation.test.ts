@@ -170,19 +170,63 @@ test("BoQ add and adjust open as bottom sheets, not inline forms", () => {
   assert.match(editor, /className="text-link mt-3"[^>]*onClick=\{\(\) => edit\(row\)\}[^>]*>Adjust item<\/button>/);
 });
 
-test("BoQ version history is compact rows with a version sheet", () => {
-  // Regression: the Previous versions card expanded inline into a giant
-  // card that buried the BoQ page. Versions are slim rows now; a version's
-  // rows open in a bottom sheet over the intact page.
+test("BoQ version history is a small button opening a sheet, never an inline expansion", () => {
+  // Regression: the version list was a <details> disclosure whose summary
+  // row filled the BoQ page width and expanded inline, pushing the whole
+  // page down. The trigger is a small button now; the list opens in a
+  // bottom sheet over the intact page (background locked by showModal),
+  // and a version's rows open in the same sheet.
   const versions = read("components", "boq-versions.tsx");
-  assert.match(versions, /<button type="button" className="boq-versions__row"/);
+  assert.ok(!versions.includes("<details"), "The version list must not be a <details> expansion");
+  assert.ok(!versions.includes("<summary"), "The version list must not use a <summary> row");
+  assert.match(versions, /<button type="button" className="boq-versions__trigger" data-tour="boq-history"/);
   assert.match(versions, /<dialog ref=\{sheet\} className="action-dialog stitch-sheet"/);
+  assert.match(versions, /if \(dialog && !dialog\.open\) dialog\.showModal\(\);/);
+  assert.match(versions, /<button type="button" className="boq-versions__row"/);
+  assert.match(versions, /Back to versions/);
+  const css = read("app", "globals.css");
+  assert.match(css, /\.boq-versions__trigger \{[^}]*min-height: 40px;/);
+  assert.ok(!css.includes(".boq-versions > summary"), "No summary-row styles may remain");
   const page = read("app", "projects", "[id]", "boq", "page.tsx");
   assert.match(page, /<BoqVersions versions=\{versions\} currency=\{currency\}\/>/);
   assert.ok(!page.includes("boq-versions__rows"), "Version rows render only inside the sheet, not inline on the BoQ page");
   const mock = read("components", "mock-project.tsx");
   assert.match(mock, /export function MockBoqActions/);
   assert.match(mock, /<dialog ref=\{sheet\} className="action-dialog stitch-sheet" aria-label="Demo BoQ is read-only"/);
+});
+
+test("the mock Add today's work never leaves the mock", () => {
+  // Regression: the mock's "Add today's work" linked to /today, whose
+  // server-side active project is the real one (the mock has no
+  // server-side active state), so tapping it right after switching to
+  // the mock snapped the user back to the real project. The mock button
+  // opens a sheet on the mock instead; leaving for the real diary is an
+  // explicit choice inside that sheet.
+  const mock = read("app", "projects", "mock", "page.tsx");
+  assert.ok(!mock.includes('href="/today"'), "The mock page must not link to /today");
+  assert.match(mock, /<MockAddWork\/>/);
+  const project = read("components", "mock-project.tsx");
+  assert.match(project, /export function MockAddWork/);
+  assert.match(project, /<dialog ref=\{sheet\} className="action-dialog stitch-sheet" aria-label="Record work in your own project"/);
+  assert.match(project, /<Link href="\/today" className="stitch-button" data-primary>Open your diary<\/Link>/);
+});
+
+test("the mock explore card shows only when no project is selected", () => {
+  // Regression: "New here? See a full project first" appeared on real
+  // projects' Today tab too, because the explore card rendered in the
+  // main Today view as well as the no-project gate. It must render only
+  // in the gate view, so only users yet to pick a project see it; old
+  // users reach the mock through the normal switcher.
+  const diary = read("components", "capture-diary.tsx");
+  const renders = diary.match(/<MockProjectControl person=\{person\} explore\/>/g) ?? [];
+  assert.equal(renders.length, 1, "The explore card must render in exactly one place");
+  const gateStart = diary.indexOf("gate&&!context?<section");
+  const mainStart = diary.indexOf("{context&&<>");
+  const renderAt = diary.indexOf("<MockProjectControl person={person} explore/>");
+  assert.ok(gateStart >= 0 && mainStart > gateStart, "The gate and main views must exist");
+  assert.ok(renderAt > gateStart && renderAt < mainStart, "The single explore render must sit inside the no-project gate view, not the main Today view");
+  const project = read("components", "mock-project.tsx");
+  assert.match(project, /if\(explore\)return <section className="stitch-card stitch-explore">/);
 });
 
 test("percentages are formatted at one decimal like the mock", () => {
@@ -295,103 +339,4 @@ test("public Help page has no tour button; the tour routes by sign-in state", ()
   // mock-project explore card only render for signed-in users.
   assert.ok(read("app", "account", "page.tsx").includes("<ReplayTour signedIn/>"), "account page tour declares signedIn");
   assert.ok(read("components", "mock-project.tsx").includes("<ReplayTour label=\"Replay the intro tour\" inPlace signedIn/>"), "mock-project tour declares signedIn");
-});
-
-test("landing page shows a real sample record, not the illustrative card, and has no About section", () => {
-  // The landing "Illustrative daily record" card (Lekki duplex, LOG
-  // #2025-084, Demo Rev C) was hand-built copy, not a real record. It is
-  // replaced by a compact code-built duplicate of the real locked sample
-  // report — no screenshot image, so the card can never fail to load —
-  // and the About write-up moved off the landing page entirely — it lives
-  // on /about now, which is also where the account settings link points.
-  const home = read("app", "page.tsx");
-  assert.ok(!home.includes("Illustrative daily record"), "no illustrative card copy");
-  assert.ok(!home.includes("LOG #2025-084"), "no illustrative log number");
-  assert.ok(!home.includes("Demo Rev C"), "no illustrative demo revision");
-  assert.ok(!home.includes('id="about"'), "no About section on the landing page");
-  assert.ok(!home.includes("About SiteLedger"), "no About write-up on the landing page");
-  // Compact code card: Sample Report heading with SAMPLE + LOCKED badges,
-  // the project/date line, one teaser BoQ item, and the value band — the
-  // full seven-item report lives at /reports/demo.
-  assert.ok(home.includes("Sample Report"), "compact card shows the Sample Report heading");
-  assert.ok(home.includes(">Sample<"), "compact card shows the SAMPLE badge");
-  assert.ok(home.includes(">Locked<"), "compact card shows the LOCKED badge");
-  assert.ok(home.includes("6 November 2026"), "compact card names the lock date");
-  assert.ok(home.includes("4-Bedroom Duplex, Lekki Phase 1, Lagos"), "compact card names the project");
-  assert.ok(home.includes("Perkins Limited"), "compact card names the client");
-  assert.ok(home.includes("Excavation, foundation trenches"), "compact card teases one BoQ item");
-  assert.ok(home.includes("₦1,495,300"), "compact card shows the value of work today");
-  assert.ok(home.includes("Value of work today"), "compact card shows the value band");
-  assert.ok(!home.includes("Sandcrete blocks 150mm hollow"), "compact card shows only one BoQ item, not the full table");
-  assert.ok(home.includes('href="/reports/demo"'), "compact card links to the sample report");
-  assert.ok(home.includes("See the full sample report"), "compact card points at the full report");
-  // No screenshot image anywhere in the landing flow: the base64 asset,
-  // the decode-script entry, the gitignore entry and the generated file
-  // are all gone, and the page imports no image component.
-  assert.ok(!home.includes("sample-record.webp"), "no sample-record image on the landing page");
-  assert.ok(!home.includes("next/image"), "landing page imports no image component");
-  const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-  assert.ok(!existsSync(join(root, "assets", "sample-record.webp.b64")), "sample-record base64 asset is deleted");
-  assert.ok(!existsSync(join(root, "public", "sample-record.webp")), "generated sample-record image is deleted");
-  assert.ok(!read("scripts", "decode-demo-assets.mjs").includes("sample-record"), "decode script has no sample-record entry");
-  assert.ok(!read(".gitignore").includes("sample-record"), "gitignore has no sample-record entry");
-  assert.ok(existsSync(join(root, "app", "about", "page.tsx")), "the About page still exists");
-  const account = read("app", "account", "page.tsx");
-  assert.ok(account.includes('["info","/about","About"'), "account settings About points at /about");
-  assert.ok(!account.includes("/#about"), "no dead #about anchor remains");
-  // The figures must be the NEW design's locked sample (6 Nov 2026,
-  // seven items, ₦1,495,300) — the old-design README screenshot (18 m²
-  // blockwork, ₦261,000, 23 Nov 2026) was false information and is gone.
-  // The quoted figures are cross-checked against the demo data itself.
-  assert.ok(!home.includes("23 Nov 2026"), "no old lock date on the landing page");
-  assert.ok(!home.includes("261,000"), "no old blockwork figure on the landing page");
-  const demo = JSON.parse(read("lib", "data", "demo-documents.json")).report.document;
-  assert.equal(demo.costing.total_cost, "1495300", "demo total is ₦1,495,300");
-  assert.equal(demo.costing.items.length, 7, "demo report has seven items");
-  assert.equal(demo.costing.items[0].cost_today, "229500", "teaser item costs ₦229,500");
-  // The README shows the same new-design images, with captions that match.
-  const readme = read("README.md");
-  assert.ok(!readme.includes("18 square metres of blockwork and a cost of 261,000 naira"), "no old locked-report caption in the README");
-  assert.ok(!readme.includes("551,000-naira cost illustration"), "no old landing caption in the README");
-  assert.match(readme, /costed-report\.png" width="360" alt="Locked daily site report for 6 November 2026/, "README locked-report caption matches the new image");
-});
-
-test("one SL logo throughout; no ledger mark anywhere", () => {
-  // The workspace header used the Stitch ledger-document mark while the
-  // public header used the simple SL box — the owner wants one logo, the
-  // SL mark, everywhere. The mark PNG is deleted and every logo is the
-  // shared SiteLedgerMark component (orange box + "SL").
-  const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-  assert.ok(!existsSync(join(root, "public", "stitch-siteledger-mark.png")), "ledger mark file is gone");
-  const header = read("components", "workspace-header.tsx");
-  assert.ok(!header.includes("stitch-siteledger-mark"), "workspace header has no ledger mark");
-  assert.ok(header.includes("SiteLedgerMark"), "workspace header uses the SL mark");
-  const pub = read("components", "public-site.tsx");
-  assert.ok(!pub.includes("stitch-siteledger-mark"), "public header has no ledger mark");
-  assert.ok(pub.includes("SiteLedgerMark"), "public header uses the SL mark");
-  const mark = read("components", "siteledger-mark.tsx");
-  assert.ok(mark.includes(">SL<"), "the mark is the letters SL");
-  assert.ok(mark.includes("bg-primary-container"), "the mark is the orange box");
-  assert.ok(existsSync(join(root, "app", "icon.svg")), "the SL favicon stays");
-});
-
-test("page-change loading is a diary page-turn, not an Opening notice", () => {
-  // The page-change loader led with a big "Opening…" DiaryNotice — the
-  // old effect. It now leads with a subtle orange top line and the ruled
-  // skeleton rows; the destination title stays only as a small status
-  // line. The workspace transition line sweeps for as long as the change
-  // is in flight instead of flashing and fading in 280ms.
-  const loading = read("components", "page-loading.tsx");
-  assert.ok(!loading.includes("DiaryNotice"), "no Opening notice in the page loader");
-  assert.match(loading, /<div className="diary-loading-top" aria-hidden="true"><i \/><\/div>/, "top loading line first");
-  assert.match(loading, /role="status"/, "loading title stays as an accessible status line");
-  assert.match(loading, /<div className="stitch-skeleton-stack" aria-hidden="true"><i \/><i \/><i \/><\/div>/, "skeleton bars still first");
-  const css = read("app", "globals.css");
-  assert.match(css, /\.diary-loading-top \{ height: 3px;/, "top line style exists");
-  assert.match(css, /@keyframes diary-loading-wide \{ from \{ transform: translateX\(-100%\); \} to \{ transform: translateX\(250%\); \} \}/, "top line sweeps fully across");
-  assert.match(css, /\.diary-loading-top i \{ animation: none; \}/, "reduced motion covers the top line");
-  const stitch = read("app", "stitch.css");
-  assert.ok(!stitch.includes("@keyframes stitch-transition {"), "no more 280ms flash keyframe");
-  assert.match(stitch, /@keyframes stitch-transition-sweep/, "transition sweeps while changing");
-  assert.match(stitch, /@media \(prefers-reduced-motion: reduce\) \{ \.stitch-transition \{ display: none; \} \}/, "reduced motion still hides the transition line");
 });

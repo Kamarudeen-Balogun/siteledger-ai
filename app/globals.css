@@ -127,7 +127,7 @@ button[aria-pressed="true"] { background: var(--foreground); color: var(--backgr
 .stitch-bot-bubble strong { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); }
 .stitch-bot-card { max-width: 92%; padding: 14px; border: 1px solid var(--accent); background: #fffdf9; }
 .stitch-bot-card p + p { margin-top: 8px; }
-@media (prefers-reduced-motion: reduce) { .stitch-skeleton-stack i, .stitch-spinner, .stitch-upload-progress i, .diary-notice, .diary-skeleton i, .diary-skeleton__nav i, .diary-loading-top i { animation: none; } .work-button, .stitch-button, .boq-versions > summary > svg:last-child { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .stitch-skeleton-stack i, .stitch-spinner, .stitch-upload-progress i, .diary-notice, .diary-skeleton i, .diary-skeleton__nav i, .diary-loading-top i { animation: none; } .work-button, .stitch-button { transition: none; } }
 .record-control { min-height: 88px; font-size: 20px; letter-spacing: -.02em; }
 .diary-capture-layout { display: grid; min-width: 0; }
 .diary-capture-layout > section { min-width: 0; }
@@ -242,17 +242,12 @@ button[aria-pressed="true"] { background: var(--foreground); color: var(--backgr
 .disclosure-mark { font-family: var(--font-mono); font-size: 22px; }
 .work-disclosure[open] .disclosure-mark { transform: rotate(45deg); }
 .work-disclosure-body { padding: 0 20px 20px; border-top: 1px solid var(--rule); }
-/* BoQ version history — the mock's "Version History (v1 Active)" row: a
-   pill row that opens a ruled list of versions, current version marked
-   Active, each version opening its item rows in diary type. */
-.boq-versions { flex: 1; min-width: 0; border: 1px solid var(--rule); background: var(--paper); }
-.boq-versions > summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; padding: 10px 14px; cursor: pointer; list-style: none; font-family: var(--font-mono); font-size: 13px; font-weight: 600; }
-.boq-versions > summary::-webkit-details-marker { display: none; }
-.boq-versions__label { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
-.boq-versions > summary > svg:last-child { flex: none; transition: transform 220ms ease-out; }
-.boq-versions[open] > summary > svg:last-child { transform: rotate(90deg); }
-.boq-versions__body { padding: 0 14px 14px; border-top: 1px solid var(--rule); }
-.boq-versions__body > p { margin-top: 12px; line-height: 1.7; }
+/* BoQ version history — a small trigger button that opens the version list
+   in a bottom sheet; the list never expands inline and pushes the page
+   down. Current version marked Active; each version opens its item rows
+   in the same sheet. */
+.boq-versions__trigger { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 12px; border: 1px solid var(--rule); background: var(--paper); color: inherit; font-family: var(--font-mono); font-size: 13px; font-weight: 600; cursor: pointer; }
+.boq-versions__trigger > svg:last-child { flex: none; }
 .boq-versions__list { list-style: none; margin: 0; padding: 0; }
 .boq-versions__version { border-bottom: 1px solid var(--rule); }
 .boq-versions__version:last-child { border-bottom: 0; }

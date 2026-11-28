@@ -39,6 +39,34 @@ export function MockBoqActions() {
   </>;
 }
 
+export function MockAddWork() {
+  // The mock is demo data and takes no new recordings — but its
+  // "Add today's work" button must not silently navigate to the real
+  // /today (which snaps back to the real project, because the mock has
+  // no server-side active state). It opens a bottom sheet that says
+  // recording happens in your own project, with an explicit link out.
+  const [open, setOpen] = useState(false);
+  const sheet = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const dialog = sheet.current;
+    if (dialog && !dialog.open) dialog.showModal();
+  }, [open ]);
+  return <>
+    <button type="button" className="diary-primary" data-tour="add-work" onClick={() => setOpen(true)}><DiaryIcon name="plus" size={26} />Add today&apos;s work</button>
+    {open && <dialog ref={sheet} className="action-dialog stitch-sheet" aria-label="Record work in your own project" onClose={() => setOpen(false)}>
+      <div className="action-dialog__body">
+        <h2>Record work in your own project</h2>
+        <p>This mock project is demo data. It takes no new recordings — record your work in your own project instead.</p>
+      </div>
+      <div className="action-dialog__actions stitch-sheet-actions">
+        <Link href="/today" className="stitch-button" data-primary>Open your diary</Link>
+        <button type="button" className="stitch-button" onClick={() => { sheet.current?.close(); setOpen(false); }}>Close</button>
+      </div>
+    </dialog>}
+  </>;
+}
+
 export function MockProjectControl({person,restore=false,explore=false}:{person:string;restore?:boolean;explore?:boolean}) {
   const hidden=useSyncExternalStore(listen,()=>{try{return localStorage.getItem(key+person)==="yes";}catch{return false;}},()=>false);
   const {confirm,confirmation}=useActionConfirmation();
