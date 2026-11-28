@@ -44,3 +44,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Decoded demo assets — the tracked sources are the .b64 files under
+# assets/demo/ (the push route cannot carry binaries); decode-demo-assets
+# materializes these at build/dev time. Do not commit the decoded bytes.
+public/demo/audio/note-1-locked.mp3
+public/demo/audio/note-2-costed.mp3
+public/demo/audio/note-3-draft.mp3
+public/demo/photos/demo-blockwork.webp
+public/demo/photos/demo-concrete-pour.webp
+public/demo/photos/demo-cement-bags.webp
+public/demo/photos/demo-excavation.webp

@@ -12,7 +12,7 @@ The Nigerian demonstration uses naira, Nigerian English and Pidgin. Private proj
 
 ## See the product
 
-<img src="docs/images/landing-desktop.png" width="760" alt="Desktop SiteLedger landing page with a warm-paper layout, product introduction and fictional 551,000-naira cost illustration">
+<img src="docs/images/landing-desktop.png" width="760" alt="SiteLedger landing page: headline 'The day's work. With the money attached.', with buttons to try a private site record, sign in or create an account, and view a sample report">
 
 The public landing page explains the workflow and opens the fictional sample or
 private account access. About, Help/FAQ, Contact, Privacy and Terms share its navigation.
@@ -24,7 +24,7 @@ The work diary shares the account/project navigation. Saved notes lead directly
 to review; recent device notes are expandable. Loading,
 unclear extraction, failed requests and offline work have visible guidance.
 
-<img src="docs/images/costed-report.png" width="360" alt="Mobile locked report showing 18 square metres of blockwork and a cost of 261,000 naira">
+<img src="docs/images/costed-report.png" width="360" alt="Locked daily site report for 6 November 2026: seven BoQ items costed against the Bill of Quantities, totalling 1,495,300 naira">
 <img src="docs/images/account-confirmation.png" width="360" alt="Mobile signup confirmation with email-code entry and professional-name confirmation">
 
 These screenshots use a disposable test project. Construction images are labelled synthetic demonstrations, not genuine site evidence. [Photo provenance](public/demo/photos/PROVENANCE.md).

@@ -97,11 +97,11 @@ export function DiaryTour({ path, person }: { path: string; person: string }) {
   </dialog>;
 }
 
-export function ReplayTour({ label = "Take the tour again", inPlace = false, help = false }: { label?: string; inPlace?: boolean; help?:boolean }) {
+export function ReplayTour({ label = "Take the tour again", inPlace = false, help = false, signedIn }: { label?: string; inPlace?: boolean; help?: boolean; signedIn: boolean }) {
   const router = useRouter();
   return <button type="button" className={help?"stitch-menu-row":"stitch-button"} data-primary={help||undefined} onClick={() => {
     try { for (const key of Object.keys(localStorage)) if (key.startsWith(prefix)) localStorage.removeItem(key); } catch { /* Continue to Today. */ }
     window.dispatchEvent(new Event(replay));
-    if (!inPlace) router.push("/today");
+    if (!inPlace) router.push(signedIn ? "/today" : "/account");
   }}><DiaryIcon name="tour" size={19}/>{help?<><span><strong>{label}</strong><small>Step-by-step highlights on each screen</small></span><DiaryIcon name="play" size={18}/></>:label}</button>;
 }

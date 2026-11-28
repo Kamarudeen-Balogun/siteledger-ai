@@ -16,7 +16,7 @@ import { projectAction } from "@/lib/projects/client-actions";
 
 type TelegramApp = { initData: string; ready: () => void; expand: () => void;
   BackButton: { show: () => void; hide: () => void; onClick: (callback: () => void) => void; offClick: (callback: () => void) => void } };
-const Navigation = createContext<{ back: () => void; active: boolean; projectId: string | null; selectProject: (id: string) => void; person: string | null; projects: PrivateProject[]; pathname: string; avatar: boolean; avatarVersion: number } | null>(null);
+const Navigation = createContext<{ back: () => void; active: boolean; ready: boolean; projectId: string | null; selectProject: (id: string) => void; person: string | null; projects: PrivateProject[]; pathname: string; avatar: boolean; avatarVersion: number } | null>(null);
 const marker = "siteledgerNavigation";
 const mockListen = (notify: () => void) => { window.addEventListener("siteledger-mock-change", notify); window.addEventListener("storage", notify); return () => { window.removeEventListener("siteledger-mock-change", notify); window.removeEventListener("storage", notify); }; };
 function recordedDepth(state: unknown) {
@@ -36,6 +36,10 @@ export function AppNavigation({ children }: { children: ReactNode }) {
   const [changing, setChanging] = useState(false);
   const [pathname, setPathname] = useState("/");
   const [active, setActive] = useState(false);
+  // The session check is async: until the first check settles, `active` is
+  // still its initial false and the header would flash a "Sign in" link
+  // for a signed-in user. Nothing session-dependent renders until ready.
+  const [ready, setReady] = useState(false);
   const [person, setPerson] = useState<string | null>(null);
   const [avatar,setAvatar]=useState(false),[avatarVersion,setAvatarVersion]=useState(0);
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -66,6 +70,7 @@ export function AppNavigation({ children }: { children: ReactNode }) {
         const data = response.ok ? await response.json() : null;
         if (request === accountRequest.current) { setProjectId(data?.active_project_id ?? null); setProjects(data?.projects ?? []); }
       } catch { if (request === accountRequest.current && navigator.onLine) { setActive(false); setPerson(null); setProjectId(null); setProjects([]); } }
+      finally { if (request === accountRequest.current) setReady(true); }
     })();
   }, [router]);
   useEffect(() => { checkAccount(); }, [pathname, checkAccount]);
@@ -139,7 +144,7 @@ export function AppNavigation({ children }: { children: ReactNode }) {
     else telegram.BackButton.hide();
   }, [telegram, pathname, canBack]);
   const workspace = isWorkspacePath(pathname) || (active && pathname === "/help");
-  return <Navigation.Provider value={{ back, active, projectId, selectProject, person, projects, pathname, avatar, avatarVersion }}>{children}{confirmation}{changing&&workspace&&<div className="stitch-transition" aria-hidden="true"/>}{workspace&&!pathname.endsWith("/demo")&&<AdaHelp projectId={projectId}/>} {person&&<DiaryTour key={`${person}/${pathname}`} person={person} path={pathname}/>}<Suspense fallback={null}><PathChanges changed={changed}/></Suspense>{(workspace||pathname==="/") &&
+  return <Navigation.Provider value={{ back, active, ready, projectId, selectProject, person, projects, pathname, avatar, avatarVersion }}>{children}{confirmation}{changing&&workspace&&<div className="stitch-transition" aria-hidden="true"/>}{workspace&&!pathname.endsWith("/demo")&&<AdaHelp projectId={projectId}/>} {person&&<DiaryTour key={`${person}/${pathname}`} person={person} path={pathname}/>}<Suspense fallback={null}><PathChanges changed={changed}/></Suspense>{(workspace||pathname==="/") &&
     <Script src="https://telegram.org/js/telegram-web-app.js" onReady={() => {
       const app = (window as Window & { Telegram?: { WebApp?: TelegramApp } }).Telegram?.WebApp;
       if (app?.initData && app.BackButton) { app.ready(); app.expand(); setTelegram(app); }
@@ -149,7 +154,11 @@ export function AppNavigation({ children }: { children: ReactNode }) {
 
 export function WorkspaceProfile({ onlyWhenActive = false }: { onlyWhenActive?: boolean } = {}) {
   const navigation = useContext(Navigation);
-  if (!navigation?.active) {
+  // Until the session check settles, render nothing rather than a "Sign in"
+  // link a signed-in user would see flash on every page load.
+  if (!navigation) return <Link href="/account" prefetch={false} className="public-button homepage-signin" data-tour="profile">Sign in</Link>;
+  if (!navigation.ready) return null;
+  if (!navigation.active) {
     // Public pages must show no sign of a signed-in user unless one is actually
     // signed in: logged-out visitors get a plain Sign in link, never a profile icon.
     if (onlyWhenActive) return null;
@@ -170,6 +179,11 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
   const id = projectId ?? navigation?.projectId;
   const projects = navigation?.projects ?? [];
   const selected = projects.find(item => item.id === id);
+  // The mock project is not a real project: it has no server-side active
+  // state, so "mock is current" is derived from the path, never from the
+  // server project id — the session check would otherwise overwrite it
+  // with the previous real project on every navigation.
+  const isMock = (navigation?.pathname ?? "").startsWith("/projects/mock");
   // The mock project is a demo-data entry in the switcher, not a real
   // project. It hides when the user deletes it (same per-person flag as
   // MockProjectControl) and returns via Restore in Help / Settings.
@@ -187,7 +201,16 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
       navigation?.selectProject(id);
       await projectAction("select", { project_id: id });
       sheet.current?.close();
-      const path = current === "today" ? "/today" : current === "boq" ? `/projects/${id}/boq` : current === "reports" ? "/reports" : `/projects/${id}/team`;
+      // Stay in the section the switch was opened from. Switching from the
+      // Projects list or a project overview must land on the project
+      // overview — landing on the team page instead made its role-gated
+      // Invite button appear and vanish as the project changed. Switching
+      // from a team page stays on the team page. Switching back from the
+      // mock project always lands on the new Today for that project —
+      // never on the old project page.
+      const fromMock = (navigation?.pathname ?? "").startsWith("/projects/mock");
+      const onTeam = /^\/projects\/[a-f0-9-]{36}\/team/.test(navigation?.pathname ?? "");
+      const path = fromMock ? "/today" : current === "today" ? "/today" : current === "boq" ? `/projects/${id}/boq` : current === "reports" ? "/reports" : onTeam ? `/projects/${id}/team` : `/projects/${id}`;
       router.push(path);
       router.refresh();
     } catch (error) {
@@ -196,20 +219,33 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
       setError(error instanceof Error ? error.message : "Could not switch projects.");
     } finally { setBusy(false); }
   }
+  function selectMock() {
+    // The mock is demo data, not a real project: there is no server-side
+    // select to run. It still counts as a project switch, so listeners
+    // refresh, and the path itself marks the mock as current. The landing
+    // is the mock's Today view, explicitly — tapping the current mock from
+    // a sub-view (BoQ, Team, log) must return to Today, exactly as
+    // tapping a current real project returns to its Today.
+    setError("");
+    sheet.current?.close();
+    window.dispatchEvent(new Event("siteledger-project-change"));
+    router.push("/projects/mock?view=today");
+    router.refresh();
+  }
   return <>
     <button type="button" className="stitch-project-switch" data-tour="switch-project" onClick={() => { setError(""); sheet.current?.showModal(); }}>
       <DiaryIcon name="building" size={18}/><strong>{project ?? selected?.name ?? "Choose a project"}</strong>
-      {selected?.client && <span className="stitch-kicker">{selected.client}</span>}<DiaryIcon name="switch" size={18}/>
+      {isMock ? <span className="stitch-kicker">Demo data</span> : selected?.client && <span className="stitch-kicker">{selected.client}</span>}<DiaryIcon name="switch" size={18}/>
     </button>
     <dialog ref={sheet} className="action-dialog stitch-sheet" aria-label="Switch project">
       <div className="action-dialog__body">
         <h2>Switch project</h2>
         {projects.length ? <ul>{projects.map(item => <li key={item.id}>
           <button type="button" className="stitch-menu-row" disabled={busy} onClick={() => void select(item.id)}>
-            <DiaryIcon name="building"/><span><strong>{item.name}</strong><small>{item.archived_at ? "Archived" : item.client}</small></span>{id===item.id ? <DiaryIcon name="verified" size={18}/> : <DiaryIcon name="chevron" size={18}/>}
+            <DiaryIcon name="building"/><span><strong>{item.name}</strong><small>{item.archived_at ? "Archived" : item.client}</small></span>{id===item.id && !isMock ? <span className="stitch-switch-current"><DiaryIcon name="verified" size={18}/><span className="stitch-kicker">Current</span></span> : <DiaryIcon name="chevron" size={18}/>}
           </button>
         </li>)}</ul> : <p>No projects to switch to yet.</p>}
-        {!mockHidden && <Link href="/projects/mock" className="stitch-menu-row" onClick={() => sheet.current?.close()}><DiaryIcon name="flask"/><span><strong>Mock project — Sample Duplex, Ikeja</strong><small>Demo data · not a real project</small></span><span className="stitch-chip">Demo</span></Link>}
+        {!mockHidden && <button type="button" className="stitch-menu-row" disabled={busy} onClick={() => selectMock()}><DiaryIcon name="flask"/><span><strong>Mock project — Sample Duplex, Ikeja</strong><small>Demo data · not a real project</small></span>{isMock ? <span className="stitch-switch-current"><DiaryIcon name="verified" size={18}/><span className="stitch-kicker">Current</span></span> : <span className="stitch-chip">Demo</span>}</button>}
         {error && <p role="alert">{error}</p>}
       </div>
       <div className="action-dialog__actions stitch-sheet-actions"><Link href="/projects" className="work-button" onClick={() => sheet.current?.close()}>All projects</Link><button type="button" className="work-button" onClick={() => sheet.current?.close()}>Close</button></div>
@@ -220,21 +256,61 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
 export function WorkspaceNavigation({ current }: { current: WorkspaceArea }) {
   const navigation = useContext(Navigation);
   const path = navigation?.pathname ?? "/";
-  const project = /^\/projects\/([a-f0-9-]{36})(?:\/|$)/.exec(path)?.[1] ?? navigation?.projectId;
-  const projectHref = project ? `/projects/${project}` : null;
+  // On the mock project the dock stays on the mock: its Today, Reports,
+  // BoQ and Team tabs are the mock views, never the real project's pages.
+  const isMock = path.startsWith("/projects/mock");
+  const project = isMock ? null : /^\/projects\/([a-f0-9-]{36})(?:\/|$)/.exec(path)?.[1] ?? navigation?.projectId;
+  const projectHref = isMock ? "/projects/mock" : project ? `/projects/${project}` : null;
   const links = [
-    { href: "/today", label: "Today", area: "today", icon: "today" },
-    { href: "/reports", label: "Reports & Log", area: "reports", icon: "reports" },
-    { href: projectHref ? `${projectHref}/boq` : "/projects", label: "BoQ & Rates", area: "boq", icon: "boq" },
-    { href: projectHref ? `${projectHref}/team` : "/projects", label: "Projects & Team", area: "projects", icon: "team" },
+    { href: isMock ? "/projects/mock?view=today" : "/today", label: "Today", area: "today", icon: "today" },
+    { href: isMock ? "/projects/mock?view=log" : "/reports", label: "Reports & Log", area: "reports", icon: "reports" },
+    { href: isMock ? "/projects/mock?view=boq" : projectHref ? `${projectHref}/boq` : "/projects", label: "BoQ & Rates", area: "boq", icon: "boq" },
+    { href: isMock ? "/projects/mock?view=team" : projectHref ? `${projectHref}/team` : "/projects", label: "Projects & Team", area: "projects", icon: "team" },
   ] as const;
   function back() {
     if (navigation) navigation.back();
     else window.location.assign(navigationFallback(window.location.pathname));
   }
+  // Desktop top nav (Stitch desktop adaptation): the workspace areas
+  // as a tab bar — Today / Projects / BoQ & Rates / Reports & Log /
+  // Team / Settings. The mobile dock keeps its four tabs; the desktop
+  // bar splits Projects & Team and adds Settings. The active item is
+  // derived from the path (and the workspace area for the mock, whose
+  // view lives in the query string): mock team is the only mock view
+  // whose area is "projects", so that area means Team on the mock.
+  const desktopLinks: [string, string][] = navigation?.active ? (isMock ? [
+    ["/projects/mock?view=today", "Today"],
+    ["/projects", "Projects"],
+    ["/projects/mock?view=boq", "BoQ & Rates"],
+    ["/projects/mock?view=log", "Reports & Log"],
+    ["/projects/mock?view=team", "Team"],
+    ["/account", "Settings"],
+  ] : [
+    ["/today", "Today"],
+    ["/projects", "Projects"],
+    [projectHref ? `${projectHref}/boq` : "/projects", "BoQ & Rates"],
+    ["/reports", "Reports & Log"],
+    [projectHref ? `${projectHref}/team` : "/projects", "Team"],
+    ["/account", "Settings"],
+  ]) : [["/", "Home"], ["/account", "Sign in"], ["/help", "Help"]];
+  function desktopActive(label: string): boolean {
+    if (isMock) {
+      if (current === "boq") return label === "BoQ & Rates";
+      if (current === "reports") return label === "Reports & Log";
+      if (current === "projects") return label === "Team";
+      return label === "Today";
+    }
+    if (label === "Settings") return path.startsWith("/account");
+    if (label === "Today") return path === "/today";
+    if (label === "Reports & Log") return path === "/reports" || path.startsWith("/reports/") || path.startsWith("/log/");
+    if (label === "BoQ & Rates") return /\/boq(?:\/|$)/.test(path) || current === "boq";
+    if (label === "Team") return /\/team(?:\/|$)/.test(path);
+    if (label === "Projects") return path === "/projects" || /^\/projects\/[a-f0-9-]{36}/.test(path);
+    return false;
+  }
   return <div className="workspace-navigation">
     <button type="button" className="workspace-back" onClick={back}><DiaryIcon name="back" size={18}/>Back</button>
-    <nav aria-label="Workspace navigation" className="workspace-desktop-nav">{(navigation?.active ? [["/today", "Today"], ["/projects", "Projects"], ["/account", "Account"], ["/help", "Help"]] : [["/", "Home"], ["/account", "Sign in"], ["/help", "Help"]]).map(([href,label]) => <Link key={href} href={href} aria-current={href === `/${current}` ? "page" : undefined}>{label}</Link>)}</nav>
+    <nav aria-label="Workspace navigation" className="workspace-desktop-nav">{(navigation?.ready ? navigation.active ? desktopLinks : [["/", "Home"], ["/account", "Sign in"], ["/help", "Help"]] : []).map(([href,label]) => <Link key={href} href={href} aria-current={desktopActive(label) ? "page" : undefined}>{label}</Link>)}</nav>
     {navigation?.active && <nav aria-label="Mobile workspace navigation" className="workspace-dock">{links.map(({href,label,area,icon}) => <Link key={area} href={href} prefetch={false} aria-current={area === current ? "page" : undefined}><DiaryIcon name={icon}/><span>{label}</span></Link>)}</nav>}
   </div>;
 }

@@ -30,6 +30,12 @@ export async function POST(request:Request) {
     const input=await smallJson(request,2850000);
     const text=(value:unknown)=>typeof value==="string"&&value.trim().length>0&&value.length<=5000?value.trim():null;
     if(typeof input.id==="string"&&UUID.test(input.id)){
+      if(input.delete===true){
+        if(Object.keys(input).some(key=>!["id","delete"].includes(key)))return reply({error:"Check the delete request."},422);
+        const result=await intakeRpc<{deleted:boolean}|null>("account_feedback",{p_hash:hash,p_admin_email:admin(),p_id:input.id,p_input:{delete:true}});
+        if(!result)return reply({error:"Feedback unavailable."},404);
+        return reply({saved:true,deleted:true});
+      }
       const message=text(input.reply),status=input.status;
       if(Object.keys(input).some(key=>!["id","status","reply"].includes(key))||(!message&&typeof status!=="string")||(status!==undefined&&!(["New","In progress","Resolved"] as unknown[]).includes(status)))return reply({error:"Check the reply or select a status."},422);
       const result=await intakeRpc<{recipient:string|null}|null>("account_feedback",{p_hash:hash,p_admin_email:admin(),p_id:input.id,p_input:{...(message?{reply:message}:{}),...(status?{status}:{})}});

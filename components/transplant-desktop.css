@@ -1,0 +1,237 @@
+/* Desktop layer — Stitch desktop adaptation (preview branch).
+   ------------------------------------------------------------------
+   A responsive layer that restyles the existing mobile diary pages
+   into the Stitch desktop layout. EVERY rule lives inside
+   `@media (min-width: 1024px)`, so the 390px mobile design is
+   untouched. The Stitch `code.html` files are references only; this
+   file translates the layout into the repo's own React/diary CSS —
+   no static Stitch HTML is pasted in, and no Stitch data is copied.
+   All figures come from the real data the mobile pages already use.
+
+   Diary tokens ONLY (paper #FAF7F2, ink #1C1917, orange #C2410C,
+   brick #B91C1C, olive #3f6212, rule #E7E0D4, Source Serif/Fraunces
+   headings, Public Sans body, JetBrains Mono figures). Old-design
+   parts found in Stitch's set and EXCLUDED here:
+   - Inter as the body font (6 pages) — Public Sans is used instead.
+   - Blue palette badges/tiles (Team page "Field Access") — diary
+     olive/stone tones are used instead.
+   - Playfair Display / Newsreader / Georgia-only serif headings —
+     Fraunces / Source Serif 4 is used instead.
+   - Stock-photo avatars (lh3.googleusercontent.com placeholders) —
+     the real profile photo (WorkspaceProfile) or initials are used.
+   - The amber/stone gradient avatar circle and the 1px gradient
+     strips — solid diary colours are used instead.
+   - The "ALL CHANGES SAVED" header indicator is NOT added: the
+     real sync state already renders in Today (`.stitch-status`,
+     "All changes saved" / "N waiting to send" / "Offline") and that
+     is the only save indicator, so it is never faked.
+   - The left sidebar on Stitch's no-project Today is NOT used: the
+     top nav is the pattern on the other 17 signed-in pages, so the
+     top nav is used consistently.
+   - BoQ stays a ruled table (brief §12: "Do not turn BoQ data into
+     floating cards"). Stitch's card-per-item BoQ shows the same
+     data the ruled table already shows, so the table is kept and
+     made full-width instead.
+   - The locked/sample report stays a single-column legal record
+     (Stitch's locked report is single-column max-w-5xl); the table
+     goes full-width and photos/signatures go two-column.
+   Bottom-sheet dialogs are NOT changed: the brief keeps them docked
+   to the bottom at every width. */
+@media (min-width: 1024px) {
+
+  /* ---- 1. Shared workspace chrome ---------------------------------- */
+  /* Header becomes two rows: [brand | project switcher | actions]
+     over a full-width top tab bar. The header row is display:contents
+     on desktop only, so its brand and actions become grid items;
+     the mobile sticky header (max-width 1023px) is untouched. */
+  .workspace-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: 24px;
+    row-gap: 0;
+    align-items: center;
+    margin-bottom: 32px;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+  .workspace-header .stitch-header-row { display: contents; }
+  .workspace-header .diary-desktop-brand { grid-column: 1; grid-row: 1; }
+  .workspace-header .diary-header-actions { grid-column: 3; grid-row: 1; }
+  /* The project switcher is display:none on desktop in the base
+     styles (mobile only). Stitch's desktop shows it in the top bar,
+     so it is shown here as a compact centred button. */
+  .workspace-header .stitch-project-switch {
+    display: flex;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: center;
+    width: auto;
+    min-width: 280px;
+    max-width: 460px;
+    min-height: 48px;
+    margin-top: 0;
+  }
+  .workspace-header .workspace-navigation {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+    border-bottom: 1px solid var(--rule);
+  }
+  /* Top tab bar: Today / Projects / BoQ & Rates / Reports & Log /
+     Team / Settings. Active item gets the orange underline. */
+  .workspace-header .workspace-desktop-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 28px;
+  }
+  .workspace-header .workspace-desktop-nav a {
+    min-height: 52px;
+    padding: 6px 2px;
+    border-bottom: 2px solid transparent;
+    font-size: 15px;
+    color: var(--secondary-ink);
+    text-decoration: none;
+  }
+  .workspace-header .workspace-desktop-nav a:hover { color: var(--foreground); }
+  .workspace-header .workspace-desktop-nav a[aria-current="page"] {
+    color: var(--foreground);
+    font-weight: 700;
+    border-bottom-color: var(--accent);
+    text-decoration: none;
+  }
+  /* The nav-row Back button becomes a quiet text link at the left of
+     the tab bar (Stitch detail pages show a Back link, not a button). */
+  .workspace-header .workspace-navigation > .workspace-back {
+    min-height: 52px;
+    padding: 6px 12px 6px 0;
+    border: 0;
+    background: transparent;
+    font-size: 15px;
+    color: var(--secondary-ink);
+  }
+  .workspace-header .workspace-navigation > .workspace-back:hover { color: var(--accent); }
+  /* Detail pages (account, feedback, help) have no project switcher
+     and no tab bar: the header collapses to brand + actions. */
+  .workspace-header[data-detail] .workspace-navigation { display: none; }
+  .workspace-header[data-detail] { border-bottom: 1px solid var(--rule); padding-bottom: 16px; }
+  /* The save indicator lives in Today's content (real state). On
+     desktop it reads as a full-width strip above the two columns. */
+  .stitch-today > .stitch-status { grid-column: 1 / -1; }
+
+  /* ---- 2. Today ----------------------------------------------------- */
+  /* Two columns: Awaiting review + Today's submissions + Daily ledger
+     entry on the left; Work Progress — Measured + the Telegram
+     example on the right. The action bar spans both columns. */
+  .stitch-today {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 24px;
+    align-items: start;
+  }
+  .stitch-today > .diary-today-actions { grid-column: 1 / -1; }
+  .stitch-today > .diary-today-actions .diary-primary {
+    min-height: 56px;
+    font-size: 18px;
+  }
+  .stitch-today > section.stitch-drafts,
+  .stitch-today > section.stitch-ledger { grid-column: 1; }
+  .stitch-today > section.diary-progress,
+  .stitch-today > details.work-disclosure { grid-column: 2; }
+  /* The capture form and the gate/receipt panels span both columns. */
+  .stitch-today > .diary-record,
+  .stitch-today > section.diary-panel { grid-column: 1 / -1; }
+  /* The Telegram example sits in the right column; the queued-notes
+     disclosure (also a details.work-disclosure) spans both columns. */
+  .stitch-today > details.work-disclosure[data-tour="bot-example"] { grid-column: 2; }
+  .stitch-today > details.work-disclosure:not([data-tour="bot-example"]) { grid-column: 1 / -1; }
+  .stitch-today > section.diary-progress progress { width: 100%; }
+  .stitch-today .diary-progress-summary { font-size: 18px; }
+
+  /* ---- 3. BoQ & Rates ---------------------------------------------- */
+  /* Allocation summary: the three figures sit in a row, and the item
+     table goes full-width with no horizontal scroll. */
+  .stitch-boq-allocation .stitch-boq-values {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+  .stitch-boq-allocation .stitch-boq-values > div + div {
+    border-left: 1px solid var(--rule);
+    padding-left: 24px;
+  }
+  .ledger-scroll { overflow-x: visible; }
+  .ledger-table { min-width: 0; }
+  .ledger-table th:first-child { min-width: 0; }
+  .boq-table.ledger-table th:first-child { min-width: 220px; }
+  /* BoQ heading row: title left, actions right. */
+  .stitch-boq-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+  /* The mock BoQ rows use the same ruled table; keep them full-width. */
+  .stitch-boq-items { width: 100%; }
+
+  /* ---- 4. Reports & Log -------------------------------------------- */
+  /* Single-column sealed record log (Stitch: max-w-5xl). The summary
+     strip becomes one row; entry cards keep their diary layout. */
+  .stitch-log-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+  .stitch-log-entries { gap: 16px; }
+  .stitch-log-entry .stitch-log-time { text-align: left; }
+
+  /* ---- 5. Locked / sample report ----------------------------------- */
+  /* A single-column legal record, wider, with the table full-width
+     and photos/signatures in two columns (already 2-col from 640px;
+     the padding grows here). */
+  .report-document { padding: 48px 56px; }
+  .report-table-scroll { overflow-x: visible; }
+  .report-table { min-width: 0; }
+  .report-photos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .report-photos figure:first-child:last-child { grid-column: 1 / -1; }
+
+  /* ---- 6. Projects list & project detail --------------------------- */
+  /* Project cards are full-width rows with a stats strip; the detail
+     page keeps its 1.2fr/1fr columns (already in globals.css). */
+
+  /* ---- 7. Team & access -------------------------------------------- */
+  /* Two columns (members left, overview/invitations right) are
+     already in globals.css (.team-layout). The repo renders role
+     names as text, never as coloured badges, so Stitch's blue
+     "Field Access" badge has no counterpart here and is not copied. */
+
+  /* ---- 8. Account, settings & feedback ----------------------------- */
+  /* Settings keep the sidebar + content layout (globals.css), with
+     a wider sidebar. Feedback stays a single readable column. */
+  .settings-layout { grid-template-columns: 260px minmax(0, 1fr); gap: 64px; }
+  .settings-content { max-width: none; }
+
+  /* ---- 9. Help & FAQ ------------------------------------------------ */
+  /* The help topic rows become a two-column card grid (Stitch:
+     2-col topics); the Contact row spans both columns. The FAQ
+     list stays a single readable column. */
+  .stitch-help .stitch-menu-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 24px;
+  }
+  .stitch-help .stitch-menu-list > a:last-child { grid-column: 1 / -1; }
+  .faq-list { max-width: 820px; }
+
+  /* ---- 10. Confirm & trial ------------------------------------------ */
+  /* The confirm/costed-draft flow uses the capture two-column layout
+     (globals.css) and the trial stays a single centred column; both
+     already read well at desktop width, so no extra rules here. */
+
+  /* ---- 11. Public pages --------------------------------------------- */
+  /* Landing: the workflow steps become four columns; the principles
+     and roles are already three columns at 1024px (globals.css). */
+  .workflow-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; }
+  .workflow-list li { display: block; }
+  /* About / Privacy / Terms / Contact (all InformationPage): a wider
+     readable column. The contact desk and form stack in that column,
+     which suits a form; no new layout is invented for them. */
+  .information-body { max-width: 960px; }
+
+  /* ---- 12. Mock project --------------------------------------------- */
+  /* The mock uses the same Today / BoQ / Log / Team classes as the
+     real project, so the rules above cover its views. Its main is
+     widened to the workspace width in the page markup. */
+}

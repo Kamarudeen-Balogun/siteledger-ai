@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { DiaryIcon } from "./diary-icon";
+import { SiteLedgerMark } from "./siteledger-mark";
 import { WorkspaceProfile } from "./app-navigation";
 import { LandingAccountLink } from "./landing-account-link";
 
@@ -49,7 +50,7 @@ function PublicMenu() {
       <div className="absolute right-0 top-0 flex h-full w-[300px] max-w-[85vw] flex-col bg-surface shadow-xl">
         <div className="flex h-16 items-center justify-between px-4 pt-safe">
           <span className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded bg-primary-container"><span className="font-stamp-label text-stamp-label text-on-primary">SL</span></span>
+            <SiteLedgerMark size={36} />
             <span className="font-headline-sm text-headline-sm font-bold text-on-surface">SiteLedger AI</span>
           </span>
           <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded text-on-surface-variant hover:bg-surface-container-high active:scale-95"><DiaryIcon name="close" size={22} /></button>
@@ -72,7 +73,7 @@ export function PublicSite({ children, current }: { children: ReactNode; current
     <header className="fixed top-0 z-40 w-full bg-surface/90 pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)] backdrop-blur-xl">
       <div className="public-column flex h-16 items-center justify-between gap-2">
         <Link href="/" className="flex min-h-[48px] items-center gap-2 active:scale-95" aria-label="SiteLedger AI home">
-          <span className="flex h-9 w-9 items-center justify-center rounded bg-primary-container"><span className="font-stamp-label text-stamp-label text-on-primary">SL</span></span>
+          <SiteLedgerMark size={36} />
           <span className="font-headline-sm text-headline-sm font-bold tracking-tight text-on-surface">SiteLedger AI</span>
         </Link>
         <div className="flex items-center gap-1">

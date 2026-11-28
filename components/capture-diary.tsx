@@ -8,10 +8,12 @@ import { audioType,describeFiles,photoForUpload } from "@/lib/web/files";
 import { validManifest,type CaptureContext,type QueueEntry } from "@/lib/web/types";
 import { WorkspaceHeader } from "./workspace-header";
 import { DiaryNotice } from "./diary-notice";
+import { PageLoading } from "./page-loading";
 import { WorkFlow, WorkDisclosure } from "./work-flow";
 import { DiaryIcon } from "./diary-icon";
 import { MockProjectControl } from "./mock-project";
 import { useActionConfirmation } from "./action-confirmation";
+import { formatMoneyLabel, formatQuantityWithUnit } from "@/lib/reports/model";
 
 const button="min-h-12 border border-rule px-4 py-3 text-base disabled:opacity-50";
 type TodaySummary = {
@@ -48,6 +50,7 @@ export function CaptureDiary() {
   const savePending=useRef(false);
   const recordingCancelled=useRef(false);
   const connecting=useRef(false);
+  const reconnectQueued=useRef(false);
   const refresh=async()=>{const values=await listQueue();if(alive.current)setRows(values.filter(row=>active.current&&belongsToActor(row,active.current)));};
   const send=async()=>{
     if(!readyToSend.current||sending.current||!active.current||!navigator.onLine)return;
@@ -74,14 +77,24 @@ export function CaptureDiary() {
       if(!response.ok)throw new Error(data.error);
       if(data.read_only&&typeof data.project_id==="string"){
         const display={...data,expires:Number.POSITIVE_INFINITY};
+        if(active.current?.project_id!==display.project_id){setSummary(null);setSummaryError(false);}
         active.current=display;readyToSend.current=false;setReadOnly(true);setContext(display);setCapturing(false);setError("");void loadSummary(display.project_id);return;
       }
       if(typeof data.access!=="string"||typeof data.project_id!=="string"||typeof data.actor_id!=="string")throw new Error("Project access is unavailable.");
-      const authorized={...data};await saveContext(authorized);active.current=authorized;readyToSend.current=true;
+      const authorized={...data};await saveContext(authorized);
+      // The previous project's figures must never render under the new
+      // project: clear the summary before the new context lands, so the
+      // diary shows its loading state instead of stale numbers.
+      if(active.current?.project_id!==authorized.project_id){setSummary(null);setSummaryError(false);}
+      active.current=authorized;readyToSend.current=true;
       setReadOnly(false);setContext(authorized);setError("");await refresh();void send();
       void loadSummary(authorized.project_id);
     } catch(e){setError(e instanceof Error?e.message:"Could not connect. Your files are kept.");}
-    finally{connecting.current=false;if(alive.current)setOpening(false);}
+    finally{connecting.current=false;if(alive.current)setOpening(false);
+      // A project switch that arrived while this connect was in flight
+      // was previously dropped by the guard above; run it now instead.
+      if(reconnectQueued.current){reconnectQueued.current=false;if(alive.current&&navigator.onLine)void connect();}
+    }
   }
   async function loadSummary(projectId:string) {
     try {
@@ -103,6 +116,10 @@ export function CaptureDiary() {
     })();
     const retry=()=>{setOnline(navigator.onLine);setNow(Date.now());if(navigator.onLine)void send();};
     const reconnect=()=>{setOnline(navigator.onLine);setNow(Date.now());if(navigator.onLine)void connect();};
+    // A project switch must clear the old project's figures at once —
+    // before the new connect resolves — and must not be lost if a
+    // connect is already in flight (the queued flag re-runs it).
+    const projectChanged=()=>{setOnline(navigator.onLine);setNow(Date.now());setSummary(null);setSummaryError(false);reconnectQueued.current=true;if(navigator.onLine)void connect();};
     const incoming=()=>{
       const parameters=new URLSearchParams(window.location.hash.slice(1));
       if(parameters.has("tgWebAppData")){
@@ -114,13 +131,13 @@ export function CaptureDiary() {
     };
     window.addEventListener("online",reconnect);window.addEventListener("offline",retry);window.addEventListener("focus",reconnect);
     window.addEventListener("hashchange",incoming);
-    window.addEventListener("siteledger-project-change",reconnect);
+    window.addEventListener("siteledger-project-change",projectChanged);
     const interval=setInterval(retry,15000);
     if("serviceWorker" in navigator)void navigator.serviceWorker.register("/siteledger-worker.js",{scope:"/"}).then(async()=>{
       const registration=await navigator.serviceWorker.ready;
       registration.active?.postMessage({type:"CACHE_STATIC",urls:performance.getEntriesByType("resource").map(resource=>resource.name)});
     }).catch(()=>undefined);
-    return()=>{alive.current=false;clearInterval(interval);window.removeEventListener("online",reconnect);window.removeEventListener("offline",retry);window.removeEventListener("focus",reconnect);window.removeEventListener("hashchange",incoming);window.removeEventListener("siteledger-project-change",reconnect);
+    return()=>{alive.current=false;clearInterval(interval);window.removeEventListener("online",reconnect);window.removeEventListener("offline",retry);window.removeEventListener("focus",reconnect);window.removeEventListener("hashchange",incoming);window.removeEventListener("siteledger-project-change",projectChanged);
       if(timer.current)clearInterval(timer.current);if(recorder.current?.state==="recording")recorder.current.stop();stream.current?.getTracks().forEach(track=>track.stop());};
   // Bootstrap once; current authorization is held in active.current for retries.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -130,20 +147,17 @@ export function CaptureDiary() {
     if(recording){recorder.current?.stop();return;}
     if(starting)return;setStarting(true);setError("");bindCapture();
     try {
-      if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error("Recording is unavailable. Choose a saved voice file instead.");
+      if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error("Recording is unavailable on this device. Send the voice note in Telegram instead.");
       const media=await navigator.mediaDevices.getUserMedia({audio:true});stream.current=media;
       const type=["audio/webm;codecs=opus","audio/ogg;codecs=opus","audio/mp4"].find(value=>MediaRecorder.isTypeSupported(value));
-      if(!type){media.getTracks().forEach(track=>track.stop());throw new Error("Recording is unavailable. Choose a saved voice file instead.");}
+      if(!type){media.getTracks().forEach(track=>track.stop());throw new Error("Recording is unavailable on this device. Send the voice note in Telegram instead.");}
       const record=new MediaRecorder(media,{mimeType:type,audioBitsPerSecond:64000}),chunks:Blob[]=[];recorder.current=record;recordingCancelled.current=false;
       record.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
       record.onstop=()=>{if(timer.current)clearInterval(timer.current);media.getTracks().forEach(track=>track.stop());if(!alive.current)return;
         if(!recordingCancelled.current){const blob=new Blob(chunks,{type:type.split(";")[0]});try{audioType(blob);setAudio(blob);}catch(e){setError((e as Error).message);}}setRecording(false);};
       record.start();setSeconds(0);setRecording(true);const began=Date.now();
       timer.current=setInterval(()=>{const value=Math.floor((Date.now()-began)/1000);setSeconds(value);if(value>=90&&record.state==="recording")record.stop();},500);
-    }catch(e){setError(e instanceof Error ? e.message:"Microphone access is unavailable. Choose a saved voice file instead.");}finally{setStarting(false);}
-  }
-  async function chooseAudio(event:ChangeEvent<HTMLInputElement>) {
-    const file=event.target.files?.[0];if(!file)return;setError("");try{const type=audioType(file);bindCapture();setAudio(new Blob([file],{type}));}catch(e){setError((e as Error).message);}event.target.value="";
+    }catch(e){setError(e instanceof Error ? e.message:"Microphone access is unavailable. Send the voice note in Telegram instead.");}finally{setStarting(false);}
   }
   async function choosePhotos(event:ChangeEvent<HTMLInputElement>) {
     const files=[...event.target.files??[]];event.target.value="";if(!files.length)return;
@@ -176,8 +190,14 @@ export function CaptureDiary() {
   }
   const visible=rows.filter(row=>context&&belongsToActor(row,context)).sort((a,b)=>b.manifest.captured_at.localeCompare(a.manifest.captured_at));
   const currentSummary=summary?.projectId===context?.project_id?summary:null;
+  // The Awaiting review count must be strictly this project's: while the
+  // summary is still loading, the capture context can still name the
+  // previous project after a switch, so local sent rows are gated on the
+  // summary's project whenever one is loaded — and the count chip shows
+  // "—" until the summary arrives instead of a stale number.
+  const reviewProjectId=currentSummary?.projectId??context?.project_id;
   const pending=visible.filter(row=>row.status!=="sent");
-  const localReviews=visible.filter(row=>row.status==="sent"&&row.manifest.project_id===context?.project_id&&!currentSummary?.notes.some(note=>note.id===row.manifest.id)).slice(0,5);
+  const localReviews=visible.filter(row=>row.status==="sent"&&row.manifest.project_id===reviewProjectId&&!currentSummary?.notes.some(note=>note.id===row.manifest.id)).slice(0,5);
   const drafts=currentSummary?.notes.filter(note=>note.amount==null)??[];
   const lastLocked=currentSummary?.notes.find(note=>note.stage==="approved");
   const daily=currentSummary?.notes.filter(note=>note.today).toReversed()??[];
@@ -189,7 +209,7 @@ export function CaptureDiary() {
   return <main className="mx-auto min-h-svh max-w-7xl px-5 py-7 sm:px-10 today-workspace stitch-today">
     <WorkspaceHeader current="today" title={capturing?"Add Today's Work":undefined} project={project} projectId={context?.project_id} detail={capturing} hideProfile={capturing} onBack={capturing?()=>void closeCapture():undefined}/>
     {confirmation}
-    {opening?<DiaryNotice busy title="Opening your diary…"/>:gate&&!context?<section className="diary-panel diary-gate">
+    {opening?<PageLoading title="Opening your diary…" variant="rows"/>:gate&&!context?<section className="diary-panel diary-gate">
       <h1>{gate==="sign-in"?"Sign in to open your diary":"Choose a project"}</h1>
       <p>{gate==="sign-in"?"Open your account to record work and review your site notes.":"Open a project to record work or check its reports."}</p>
       <Link href={gate==="sign-in"?"/account":"/projects"} className="work-button work-button-primary">{gate==="sign-in"?"Sign in":"Your projects"}</Link>
@@ -222,13 +242,11 @@ export function CaptureDiary() {
           <button type="button" disabled={busy||recording||(!audio&&!photos.length)} onClick={()=>void save()} className="stitch-button stitch-review-button" data-primary><DiaryIcon name="check" size={20}/>{saving?"Saving…":online?"Review & cost it":"Save offline"}</button>
           <p className="diary-capture-hint">{!audio&&!photos.length?"Add a voice note or at least one photo to continue.":"You can check quantities and observations before costing."}</p>
           <button type="button" disabled={busy||recording||(!audio&&!photos.length)} onClick={()=>void save(true)} className="stitch-button"><DiaryIcon name="bookmark" size={20}/>Save draft — finish later</button>
-          <label className="text-link justify-center cursor-pointer">Choose a saved voice file<input className="sr-only" type="file" accept="audio/ogg,audio/mpeg,audio/mp4,audio/webm,audio/wav,.m4a,.mp3,.ogg,.webm,.wav" disabled={busy||recording} onChange={event=>void chooseAudio(event)}/></label>
         </section>:<>
           <div className="stitch-status"><span className="stitch-kicker"><i/>{pending.length?`${pending.length} waiting to send`:online?"All changes saved":"Offline"}</span><DiaryIcon name="saved" size={18}/></div>
           {!readOnly&&<div className="diary-today-actions"><button type="button" className="diary-primary" onClick={()=>{setCapturing(true);setError("");window.scrollTo(0,0);}} data-tour="add-work"><DiaryIcon name="plus" size={26}/>Add today&apos;s work</button><a href="https://t.me/SiteLedgerNGbot" className="diary-row-link" target="_blank" rel="noreferrer"><DiaryIcon name="send" size={20}/><strong>Send via Telegram</strong><span className="stitch-chip">@SiteLedgerNGbot</span></a></div>}
-          {person&&<MockProjectControl person={person} explore/>}
           <section className="stitch-card stitch-drafts" aria-labelledby="today-drafts" data-tour="drafts"><div className="stitch-title-row">
-            <h2 id="today-drafts"><DiaryIcon name="pending" size={20}/>Awaiting review <span className="stitch-chip">{drafts.length+localReviews.length}</span></h2><span className="stitch-kicker">Not costed yet</span></div>
+            <h2 id="today-drafts"><DiaryIcon name="pending" size={20}/>Awaiting review <span className="stitch-chip">{!currentSummary&&online?"—":drafts.length+localReviews.length}</span></h2><span className="stitch-kicker">Not costed yet</span></div>
             <p>Open a draft to check the details, edit quantities, or finish costing it later.</p>
             {summaryError?<div><p>Could not open the daily ledger.</p><button type="button" className="text-link" onClick={()=>void loadSummary(context.project_id)}>Try again</button></div>:!currentSummary&&online?<div className="stitch-skeleton-stack" role="status" aria-label="Loading drafts"><i/><i/><i/></div>:!drafts.length&&!localReviews.length?<p>No notes waiting for review.</p>:<ul className="diary-list">
               {drafts.map(note=><li key={note.id}><Link href={note.href} prefetch={false}><span><strong>{note.label}</strong><small>{note.capturedAt?new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeStyle:"short",timeZone:context.timezone}).format(new Date(note.capturedAt)):note.date}</small></span><DiaryIcon name="chevron" size={18}/></Link></li>)}
@@ -237,15 +255,15 @@ export function CaptureDiary() {
           </section>
           <section className="stitch-card stitch-drafts" data-tour="day-submissions"><div className="stitch-title-row"><h2><DiaryIcon name="receipt" size={20}/>Today&apos;s submissions</h2></div>
             <p>{daily.length?"Every note and upload from today, in time order.":"No site notes have been submitted today."}</p>
-            <ul className="diary-list">{daily.map(note=><li key={note.id}><Link href={note.href} prefetch={false}><span><strong>{note.stage==="approved"?"Locked report":note.amount?"Draft report":"Awaiting review"}</strong><small>{note.capturedAt?new Intl.DateTimeFormat("en-GB",{timeStyle:"short",timeZone:context.timezone}).format(new Date(note.capturedAt)):note.date}</small>{note.items?.map((item,index)=><small key={index}>{item}</small>)}</span><strong>{note.amount}</strong></Link></li>)}</ul>
+            <ul className="diary-list">{daily.map(note=><li key={note.id}><Link href={note.href} prefetch={false}><span><strong>{note.stage==="approved"?"Locked report":note.amount?"Draft report":"Awaiting review"}</strong><small>{note.capturedAt?new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeStyle:"short",timeZone:context.timezone}).format(new Date(note.capturedAt)):note.date}</small>{note.items?.map((item,index)=><small key={index}>{item}</small>)}</span><strong>{note.amount}</strong></Link></li>)}</ul>
             <div className="stitch-day-total"><span className="stitch-kicker">Day total (costed so far)</span><strong>{currentSummary?.dayTotal??"—"}</strong></div>
           </section>
           <section className="stitch-card stitch-ledger"><span className="stitch-kicker" data-ink="orange">Daily ledger entry</span><h2>Today{date?`, ${date}`:""}</h2>{lastLocked&&<Link href={lastLocked.href} className="stitch-menu-row"><DiaryIcon name="lock"/>Open last locked report<DiaryIcon name="chevron" size={18}/></Link>}</section>
           <section className="stitch-card diary-progress" data-tour="measured-progress"><div className="stitch-title-row"><h2><DiaryIcon name="progress" size={20}/>Work Progress — Measured</h2></div><p className="stitch-kicker" data-ink="green">{currentSummary?.readScope??"Locked reports"}</p>
             {currentSummary?.percentage==null?(currentSummary||summaryError||!online?<p>{currentSummary?"Add a BoQ with rates to measure project progress.":summaryError?"Measured progress is unavailable.":"Reconnect to see measured progress."}</p>:<div className="stitch-skeleton-stack" role="status" aria-label="Loading measured progress"><i/><i/><i/></div>):<>
-              <div className="diary-progress-summary"><strong>{currentSummary.percentage}% complete</strong><span>{currentSummary.earned} earned</span></div>
+              <div className="diary-progress-summary"><strong>{currentSummary.percentage}% complete</strong><span>{formatMoneyLabel(currentSummary.earned, "earned")}</span></div>
               <progress max={100} value={currentSummary.percentage} aria-label="Measured project progress"/>
-              <dl>{currentSummary.rows.map(row=><div key={row.id}><dt>{row.description}</dt><dd>{row.done} / {row.scope} {row.unit} · {row.percentage}%</dd></div>)}</dl>
+              <dl>{currentSummary.rows.map(row=><div key={row.id}><dt>{row.description}</dt><dd>{formatQuantityWithUnit(row.done, row.unit)} / {formatQuantityWithUnit(row.scope, row.unit)} · {row.percentage}%</dd></div>)}</dl>
               <Link className="text-link" href={`/projects/${context.project_id}?view=progress`}>View all work progress</Link>
             </>}
           </section>

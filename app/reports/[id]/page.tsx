@@ -13,6 +13,7 @@ import { AmendmentForm } from "@/components/amendment-form";
 import { getReviewer, reportVersion } from "@/lib/log/data";
 import { TelegramAccountEntry } from "@/components/account-forms";
 import { WorkspaceHeader } from "@/components/workspace-header";
+import { PageLoading } from "@/components/page-loading";
 import { DiaryNotice } from "@/components/diary-notice";
 import { DiaryIcon } from "@/components/diary-icon";
 import { ReportShare } from "@/components/report-share";
@@ -52,7 +53,7 @@ async function Report({ params }: Props) {
     <WorkspaceHeader current="reports" project={source.project.name} projectId={source.project.id}/>
     <ReportDocument report={report} actions={<>
       <nav aria-label="Report actions" className="stitch-report-actions report-toolbar">
-        {locked && reviewer?.canApprove && <ReportShare id={id} primary/>}
+        {locked && reviewer?.canView && <ReportShare id={id} primary/>}
         {!report.stale && <a download href={`/api/reports/${id}/pdf`} className="stitch-button" data-tour="download-pdf"><DiaryIcon name="pdf" size={19}/>Download Client PDF</a>}
         {amendable && <AmendmentForm id={id} sheet/>}
       </nav>
@@ -77,5 +78,5 @@ async function Report({ params }: Props) {
 }
 
 export default function Page(props: Props) {
-  return <main className="mx-auto max-w-6xl px-5 py-7 sm:px-10"><Suspense fallback={<><WorkspaceHeader current="reports"/><DiaryNotice busy title="Opening your report…"/></>}><Report {...props}/></Suspense></main>;
+  return <main className="mx-auto max-w-6xl px-5 py-7 sm:px-10"><Suspense fallback={<PageLoading title="Opening your report…" variant="report" header={<WorkspaceHeader current="reports"/>}/>}> <Report {...props}/></Suspense></main>;
 }

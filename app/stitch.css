@@ -132,8 +132,13 @@ nav.work-flow { margin: 0; }
 .stitch-today .diary-capture-option strong { font-size: 14px; }
 .stitch-today .diary-capture-option small, .stitch-today .diary-capture-hint { color: var(--stitch-muted); font-size: 12px; }
 .stitch-review-button { min-height: 52px; }
-.stitch-transition { position: fixed; inset: env(safe-area-inset-top) 0 auto; z-index: 70; height: 2px; pointer-events: none; transform-origin: left; background: var(--stitch-primary); animation: stitch-transition 280ms ease-out both; }
-@keyframes stitch-transition { from { transform: scaleX(.08); opacity: .6; } to { transform: scaleX(1); opacity: 0; } }
+/* Page-change line: a subtle orange segment sweeping the top of the page
+   for as long as the change is in flight — the same diary-loading language
+   as the skeleton top line, no flash-and-vanish, no veil. The element
+   unmounts when the change finishes, so the line never lingers. */
+.stitch-transition { position: fixed; inset: env(safe-area-inset-top) 0 auto; z-index: 70; height: 3px; overflow: hidden; pointer-events: none; background: transparent; }
+.stitch-transition::after { content: ""; display: block; width: 40%; height: 3px; background: var(--stitch-primary); animation: stitch-transition-sweep 1.2s ease-in-out infinite; }
+@keyframes stitch-transition-sweep { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 @media (prefers-reduced-motion: reduce) { .stitch-transition { display: none; } }
 .stitch-confirm .stitch-human-gate { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 16px; background: var(--stitch-warning); }
 .stitch-human-gate > span { flex: none; display: grid; width: 32px; height: 32px; place-items: center; border-radius: 50%; background: var(--stitch-strong); color: #fff; }
@@ -143,6 +148,9 @@ nav.work-flow { margin: 0; }
 .stitch-transcript .stitch-title-row p { display: flex; align-items: center; gap: 9px; }
 .stitch-transcript .diary-symbol { color: var(--stitch-accent); }
 .stitch-audio { display: flex; align-items: center; gap: 12px; padding: 5px 8px; min-height: 56px; border-radius: 4px; background: var(--stitch-inset); }
+.stitch-audio-progress { height: 4px; margin-top: 8px; overflow: hidden; border-radius: 2px; background: var(--rule); }
+.stitch-audio-progress i { display: block; height: 100%; background: var(--stitch-primary); }
+.diary-photo-grid figcaption { margin-top: 6px; font-size: 13px; line-height: 1.5; color: var(--stitch-muted); }
 .stitch-audio .stitch-button { min-width: 44px; min-height: 44px; background: var(--stitch-strong); padding: 0; }
 .stitch-audio .stitch-kicker { margin-left: auto; }
 .stitch-transcript-block blockquote { padding: 12px; border-radius: 5px; background: var(--stitch-raised); font: italic 600 16px/1.65 var(--stitch-serif); white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -204,6 +212,9 @@ nav.work-flow { margin: 0; }
 .stitch-log-entry .stitch-log-time { display: block; margin-top: 3px; text-align: right; }
 .stitch-log-author { display: flex; align-items: center; gap: 8px; padding: 8px; margin: 10px 0 8px; border-radius: 4px; background: var(--stitch-card); font-weight: 600; }
 .stitch-log-author .diary-symbol, .stitch-log-value { color: var(--stitch-accent); }
+.stitch-log-value { display: block; margin: 8px 0; font: 700 23px var(--stitch-serif); }
+.stitch-log-tally { margin: 4px 0 8px; line-height: 1.7; }
+.stitch-log-tally .stitch-kicker { display: block; margin-bottom: 2px; }
 .stitch-log-note { padding: 10px; background: var(--stitch-inset); border-radius: 4px; }
 .stitch-log-note .stitch-kicker { color: var(--stitch-danger); }
 .stitch-log-note p { margin-top: 4px; white-space: pre-wrap; }
@@ -223,7 +234,7 @@ nav.work-flow { margin: 0; }
 .stitch-boq-editor progress::-moz-progress-bar { background: var(--stitch-primary); border-radius: 20px; }
 .stitch-boq-values { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; margin: 8px 0 12px; padding: 8px; border-radius: 4px; background: var(--stitch-card); }
 .stitch-boq-values dt { font: 500 10px/1.5 var(--stitch-mono); text-transform: uppercase; color: var(--stitch-muted); }
-.stitch-boq-values dd { overflow-wrap: anywhere; font-weight: 700; }
+.stitch-boq-values dd { white-space: nowrap; font-weight: 700; }
 .stitch-boq-items { display: grid; gap: 12px; }
 .stitch-boq-items .stitch-card h3 { margin: 3px 0 8px; font: 600 17px/1.35 var(--stitch-serif); }
 .stitch-compact-disclosure { min-width: 0; flex: 1; }
@@ -312,23 +323,23 @@ nav.work-flow { margin: 0; }
 .ada-help .ada-panel { width: min(92vw, 360px); max-height: var(--ada-panel-height); background: var(--stitch-paper); box-shadow: 0 18px 44px rgb(0 0 0 / 34%); }
 .ada-help .ada-panel:not([data-dragging]), .ada-help .ada-launch:not([data-dragging]) { transition: left 220ms ease, top 220ms ease; }
 .ada-help .ada-launch[data-dragging] { cursor: grabbing; transform: scale(1.05); }
-.ada-help .ada-panel header { gap: 9px; padding: 9px 12px; flex: none; touch-action: none; user-select: none; cursor: grab; }
+.ada-help .ada-panel header { gap: 10px; padding: 12px 14px; flex: none; touch-action: none; user-select: none; cursor: grab; }
 .ada-help .ada-panel[data-dragging] header { cursor: grabbing; }
 .ada-help .ada-panel header > div { flex: 1; min-width: 0; }
 .ada-help .ada-panel header strong, .ada-help .ada-panel header small { display: block; line-height: 1.25; }
 .ada-help .ada-panel header small { margin-top: 2px; font-size: 11px; opacity: .88; }
 .ada-help .ada-panel header button { min-width: 44px; min-height: 44px; padding: 0; background: transparent; }
-.ada-help .ada-messages { flex: 1 1 auto; padding: 10px 11px; font-size: 13px; }
-.ada-help .ada-answer { padding: 9px 11px; background: var(--stitch-card); line-height: 1.5; }
-.ada-help .ada-question { margin-left: 28px; line-height: 1.5; }
+.ada-help .ada-messages { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; padding: 16px 14px; font-size: 13px; line-height: 1.6; }
+.ada-help .ada-answer { margin-bottom: 0; padding: 12px 14px; background: var(--stitch-card); line-height: 1.6; }
+.ada-help .ada-question { margin-bottom: 0; margin-left: 28px; padding: 12px 14px; line-height: 1.6; }
 .ada-help .ada-answer .text-link { min-height: 44px; }
-.ada-help .ada-topics { display: flex; flex: none; flex-wrap: nowrap; overflow-x: auto; margin: 0; padding: 5px 11px; gap: 6px; }
+.ada-help .ada-topics { display: flex; flex: none; flex-wrap: wrap; margin: 0; padding: 12px 14px; gap: 8px; }
 .ada-help .ada-topics button { min-height: 44px; flex: none; white-space: nowrap; border-color: var(--stitch-accent); color: var(--stitch-accent); font-size: 12px; font-weight: 600; }
-.ada-help .ada-panel form { display: flex; flex: none; gap: 7px; padding: 7px 11px; border-color: var(--stitch-divider); }
+.ada-help .ada-panel form { display: flex; flex: none; gap: 10px; padding: 12px 14px; border-color: var(--stitch-divider); }
 .ada-help .ada-panel form input { min-height: 44px; padding: 0 10px; background: var(--stitch-raised); color: var(--stitch-ink); border-radius: 9px; }
 .ada-help .ada-panel form button { min-width: 44px; min-height: 44px; border: 0; border-radius: 9px; background: var(--stitch-primary); color: white; }
 .ada-help .ada-panel form button:disabled { opacity: .6; }
-.ada-help .ada-foot { flex: none; padding: 3px 11px 8px; color: var(--stitch-muted); font-size: 11px; text-align: center; }
+.ada-help .ada-foot { flex: none; padding: 8px 14px 12px; color: var(--stitch-muted); font-size: 11px; text-align: center; }
 @media (prefers-reduced-motion: reduce) { .ada-help .ada-panel:not([data-dragging]), .ada-help .ada-launch:not([data-dragging]) { transition: none; } }
 
 @media (max-width: 1023px) {
@@ -351,7 +362,16 @@ nav.work-flow { margin: 0; }
   html body main:has(> .stitch-header) {
     padding-top: 0;
     padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
-    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+    /* Same clearance as the general workspace rule: dock (68px) + Ada's
+       floating button (48px, resting 88px up) + a gap, so the last
+       primary action can scroll fully above Ada. This rule wins over the
+       general one on specificity, so it must carry the same value. */
+    padding-bottom: calc(152px + env(safe-area-inset-bottom));
+  }
+  /* Pages with a pinned log action bar dock Ada 140px up, so their
+     content needs clearance past Ada's top edge (140 + 48) too. */
+  html body main:has(> .stitch-header):has(.stitch-log-actions) {
+    padding-bottom: calc(200px + env(safe-area-inset-bottom));
   }
   .workspace-header.stitch-header {
     display: block;
@@ -395,6 +415,8 @@ nav.work-flow { margin: 0; }
   .stitch-back { display: grid; min-width: 48px; min-height: 48px; place-items: center; flex: none; margin-left: -8px; }
   .stitch-project-switch { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; margin-top: 4px; border-radius: 5px; padding: 0 16px; background: var(--stitch-card); text-align: left; }
   .stitch-project-switch strong { overflow: hidden; flex: 1; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; }
+  .stitch-switch-current { display: flex; flex: none; align-items: center; gap: 6px; }
+  .stitch-switch-current > .diary-symbol { color: var(--stitch-accent); }
   .stitch-project-switch > .diary-symbol:first-child { color: var(--stitch-accent); }
   .stitch-project-switch > .diary-symbol:last-child { color: var(--stitch-muted); }
   .stitch-project-switch .stitch-kicker { max-width: 32%; padding: 2px 5px; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: var(--stitch-inset); }
@@ -404,6 +426,10 @@ nav.work-flow { margin: 0; }
   .workspace-header.stitch-header .workspace-dock a[aria-current="page"] { color: var(--stitch-primary); font-weight: 600; text-decoration: none; }
   body:has(.stitch-header) .ada-help { --ada-reserve: calc(22px + env(safe-area-inset-bottom)); }
   body:has(.stitch-header .workspace-dock) .ada-help { --ada-reserve: calc(88px + env(safe-area-inset-bottom)); }
+  /* The pinned log action bar sits directly above the dock; Ada's default
+     rest position overlaps it and truncates its label, so on pages with a
+     sticky bottom action bar Ada docks above the bar instead. */
+  body:has(.stitch-header .workspace-dock):has(.stitch-log-actions) .ada-help { --ada-reserve: calc(140px + env(safe-area-inset-bottom)); }
   body:has(.stitch-header) .ada-help .ada-launch { min-height: 44px; right: max(14px, env(safe-area-inset-right)); font-size: 13.5px; }
   body:has(.stitch-header) .ada-help .ada-panel { width: min(360px, 92vw); }
   .stitch-header ~ .diary-panel { border-radius: 8px; }

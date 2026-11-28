@@ -7,14 +7,14 @@ import { intakeRpc } from "../telegram/storage";
 import { getReport, readReportInput } from "../reports/data";
 import { reportFromInput, ReportStateError, type ReportView } from "../reports/model";
 
-export type Reviewer = { name: string; role: "foreman" | "pm"; archived?: boolean; canApprove: boolean; canReview: boolean };
+export type Reviewer = { name: string; role: "foreman" | "pm"; archived?: boolean; canApprove: boolean; canReview: boolean; canView: boolean };
 export type LogEntry = { kind: "report" | "amendment"; id: string; report_id: string; submission_id: string;
   date: string; timestamp: string; author: string; total_cost?: string; currency?: string; timezone?: string; note?: string; href?: string };
 export type DisputeLog = { project: { id: string; name: string }; is_demo: boolean; entries: LogEntry[] };
 export const reportVersion = (report: ReportView) => createHash("sha256").update(JSON.stringify(report.document)).digest("hex");
 export async function getReviewer(id: string, hash?: string): Promise<Reviewer | null> {
   const actor=await recordActor(id,hash);
-  return actor?{name:actor.professional_name,role:actor.role,archived:Boolean(actor.archived_at),canApprove:actor.permissions?actor.permissions.approve_lock&&actor.permissions.view_reports:actor.role==="pm",canReview:actor.can_review??true}:null;
+  return actor?{name:actor.professional_name,role:actor.role,archived:Boolean(actor.archived_at),canApprove:actor.permissions?actor.permissions.approve_lock&&actor.permissions.view_reports:actor.role==="pm",canReview:actor.can_review??true,canView:actor.permissions?actor.permissions.view_reports:true}:null;
 }
 const errors: Record<string, [string, number]> = {
   forbidden: ["Only the project manager can approve this report.", 403], unavailable: ["Report unavailable.", 404],

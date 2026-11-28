@@ -7,7 +7,7 @@ import { ReportDocument } from "@/components/report-document";
 import type { ReportDocument as Document } from "@/lib/reports/model";
 import { UUID } from "@/lib/confirm/access";
 import { PublicSite } from "@/components/public-site";
-import { DiaryNotice } from "@/components/diary-notice";
+import { PageLoading } from "@/components/page-loading";
 export const metadata={title:"Original guest trial — SiteLedger AI",robots:{index:false,follow:false},referrer:"no-referrer" as const};
 async function Original({params}:{params:Promise<{id:string}>}) {
   const {id}=await params;if(!UUID.test(id))notFound();
@@ -17,4 +17,4 @@ async function Original({params}:{params:Promise<{id:string}>}) {
     {original.draft ? <ReportDocument guestOriginal report={{id,status:"draft",approved_by:null,locked_at:null,stale:false,document:original.draft}}/> : <p className="whitespace-pre-wrap font-body-md text-body-md leading-relaxed text-on-surface-variant">{original.transcript??"No transcript was generated. Original media is available on the account site note."}</p>}
   </>;
 }
-export default function OriginalPage(props:{params:Promise<{id:string}>}){return <PublicSite current="/trial"><div className="public-column pb-10 pt-4"><Suspense fallback={<DiaryNotice busy title="Opening preserved trial work…">Checking access to the original guest record.</DiaryNotice>}><Original {...props}/></Suspense></div></PublicSite>;}
+export default function OriginalPage(props:{params:Promise<{id:string}>}){return <PublicSite current="/trial"><div className="public-column pb-10 pt-4"><Suspense fallback={<PageLoading title="Opening preserved trial work…" detail="Checking access to the original guest record." variant="report"/>}><Original {...props}/></Suspense></div></PublicSite>;}

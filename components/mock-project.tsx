@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useActionConfirmation } from "./action-confirmation";
 import { DiaryIcon } from "./diary-icon";
 import { ReplayTour } from "./diary-tour";
@@ -9,6 +9,63 @@ import { ReplayTour } from "./diary-tour";
 const key="siteledger-mock-hidden:";
 const event="siteledger-mock-change";
 const listen=(notify:()=>void)=>{window.addEventListener(event,notify);window.addEventListener("storage",notify);return()=>{window.removeEventListener(event,notify);window.removeEventListener("storage",notify);};};
+
+export function MockBoqActions() {
+  // The mock BoQ is demo data and cannot be edited — but its buttons must
+  // still do something. They open a bottom sheet that says so and points
+  // at the user's own projects, instead of a dead disabled button.
+  const [open, setOpen] = useState(false);
+  const sheet = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const dialog = sheet.current;
+    if (dialog && !dialog.open) dialog.showModal();
+  }, [open ]);
+  return <>
+    <div className="stitch-two-actions">
+      <button type="button" className="stitch-button" data-primary onClick={() => setOpen(true)}><DiaryIcon name="upload" size={20}/>+ Upload BoQ File</button>
+      <button type="button" className="stitch-button" data-white onClick={() => setOpen(true)}><DiaryIcon name="plus" size={20}/>+ Add item</button>
+    </div>
+    {open && <dialog ref={sheet} className="action-dialog stitch-sheet" aria-label="Demo BoQ is read-only" onClose={() => setOpen(false)}>
+      <div className="action-dialog__body">
+        <h2>Demo BoQ — read-only</h2>
+        <p>This mock project is demo data. Upload and edit the BoQ in your own project.</p>
+      </div>
+      <div className="action-dialog__actions stitch-sheet-actions">
+        <Link href="/projects" className="stitch-button" data-primary>Open your projects</Link>
+        <button type="button" className="stitch-button" onClick={() => { sheet.current?.close(); setOpen(false); }}>Close</button>
+      </div>
+    </dialog>}
+  </>;
+}
+
+export function MockAddWork() {
+  // The mock is demo data and takes no new recordings — but its
+  // "Add today's work" button must not silently navigate to the real
+  // /today (which snaps back to the real project, because the mock has
+  // no server-side active state). It opens a bottom sheet that says
+  // recording happens in your own project, with an explicit link out.
+  const [open, setOpen] = useState(false);
+  const sheet = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const dialog = sheet.current;
+    if (dialog && !dialog.open) dialog.showModal();
+  }, [open ]);
+  return <>
+    <button type="button" className="diary-primary" data-tour="add-work" onClick={() => setOpen(true)}><DiaryIcon name="plus" size={26} />Add today&apos;s work</button>
+    {open && <dialog ref={sheet} className="action-dialog stitch-sheet" aria-label="Record work in your own project" onClose={() => setOpen(false)}>
+      <div className="action-dialog__body">
+        <h2>Record work in your own project</h2>
+        <p>This mock project is demo data. It takes no new recordings — record your work in your own project instead.</p>
+      </div>
+      <div className="action-dialog__actions stitch-sheet-actions">
+        <Link href="/today" className="stitch-button" data-primary>Open your diary</Link>
+        <button type="button" className="stitch-button" onClick={() => { sheet.current?.close(); setOpen(false); }}>Close</button>
+      </div>
+    </dialog>}
+  </>;
+}
 
 export function MockProjectControl({person,restore=false,explore=false}:{person:string;restore?:boolean;explore?:boolean}) {
   const hidden=useSyncExternalStore(listen,()=>{try{return localStorage.getItem(key+person)==="yes";}catch{return false;}},()=>false);
@@ -23,7 +80,7 @@ export function MockProjectControl({person,restore=false,explore=false}:{person:
     <h2><DiaryIcon name="explore" size={20}/>New here? See a full project first</h2>
     <p>The mock project is filled in with demo reports, a BoQ, site photos, work progress and a team. It is always marked as demo data, and you can delete it whenever you like.</p>
     <Link href="/projects/mock" className="stitch-button" data-primary><DiaryIcon name="flask" size={19}/>Open the mock project <span className="stitch-kicker stitch-chip">Demo</span></Link>
-    <ReplayTour label="Replay the intro tour" inPlace/>
+    <ReplayTour label="Replay the intro tour" inPlace signedIn/>
   </section>;
   return <section className="diary-panel mt-6">{confirmation}<h2>Mock project — demo data</h2><p>Explore the BoQ, locked work and photos in a fictional project.</p><Link href="/projects/mock" className="work-button work-button-primary mt-4">Open mock project</Link><button type="button" className="text-link mt-2 block" onClick={()=>void remove()}>Delete mock project</button></section>;
 }

@@ -7,7 +7,7 @@ import { PublicSite } from "@/components/public-site";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { ThemeSettings } from "@/components/diary-theme";
 import { ReplayTour } from "@/components/diary-tour";
-import { DiaryNotice } from "@/components/diary-notice";
+import { PageLoading } from "@/components/page-loading";
 import { AccountSecurity } from "@/components/account-security";
 import { UUID } from "@/lib/confirm/access";
 import { intakeRpc } from "@/lib/telegram/storage";
@@ -27,7 +27,7 @@ async function AccountContent({ searchParams }: { searchParams: Promise<{ sectio
   const feedbackOwner=Boolean(account.email_verified&&account.email&&account.email.toLowerCase()===process.env.SITELEDGER_FEEDBACK_OWNER_EMAIL?.toLowerCase());
   const role=project?.role_label??(project?.role==="pm"?"PM/QS":project?.role==="foreman"?"Foreman":"No active project role");
   const settings: (readonly [ComponentProps<typeof DiaryIcon>["name"], string, string, string])[] = [
-    ["help","/help","Help & Support","How to use SiteLedger"], ["info","/#about","About","SiteLedger and its builder"],
+    ["help","/help","Help & Support","How to use SiteLedger"], ["info","/about","About","SiteLedger and its builder"],
     ["feedback","/account/feedback","Send feedback","Report a bug or suggest an improvement"], ["receipt","/account/feedback?view=history","My feedback","Read updates and replies"],
     ["email","/account?section=email","Email & password","Manage account access"],
     ["telegram","/account?section=telegram",account.telegram_linked?"Telegram connection":"Link Telegram","Manage your Telegram account"],
@@ -49,7 +49,7 @@ async function AccountContent({ searchParams }: { searchParams: Promise<{ sectio
       </section>
       <section className="stitch-card stitch-profile-settings" data-tour="profile-settings"><h2>Settings</h2><ThemeSettings/>
         <ul className="stitch-menu-list">{settings.map(([icon,href,label,subtitle])=><li key={href}><Link href={href} className="stitch-menu-row"><DiaryIcon name={icon} size={20}/><span><strong>{label}</strong><small>{subtitle}</small></span><DiaryIcon name="chevron" size={18}/></Link></li>)}</ul>
-        <MockProjectControl person={account.profile_id} restore/><ReplayTour/>
+        <MockProjectControl person={account.profile_id} restore/><ReplayTour signedIn/>
       </section>
       <div data-tour="sign-out"><AccountSignOut account={account}/></div>
     </>}
@@ -59,5 +59,5 @@ async function AccountContent({ searchParams }: { searchParams: Promise<{ sectio
   </div></main>;
 }
 export default function AccountPage(props: { searchParams: Promise<{section?:string;project?:string}> }) {
-  return <Suspense fallback={<main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><WorkspaceHeader current="account"/><DiaryNotice busy title="Opening your account…"/></main>}><AccountContent {...props}/></Suspense>;
+  return <Suspense fallback={<main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><PageLoading title="Opening your account…" header={<WorkspaceHeader current="account"/>}/></main>}><AccountContent {...props}/></Suspense>;
 }

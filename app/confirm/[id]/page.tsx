@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { getReview } from "@/lib/confirm/data";
+import { recoverWorkItems } from "@/lib/confirm/recovery";
 import { privateBoqVersions } from "@/lib/projects/boq-data";
 import { ConfirmForm } from "@/components/confirm-form";
 import { after } from "next/server";
@@ -10,7 +11,7 @@ import { processSubmission } from "@/lib/ai/process-submission";
 import Link from "next/link";
 import { TelegramAccountEntry } from "@/components/account-forms";
 import { WorkspaceHeader } from "@/components/workspace-header";
-import { DiaryNotice } from "@/components/diary-notice";
+import { PageLoading } from "@/components/page-loading";
 import { currentSessionHash } from "@/lib/auth/session";
 import { intakeRpc } from "@/lib/telegram/storage";
 import type { ReviewDraft } from "@/lib/confirm/draft";
@@ -40,10 +41,32 @@ async function Review(props: Props) {
   // Rates for the display-only cost preview on the confirm screen, from the
   // project's current BoQ version. The server costing at confirm time is
   // the authority; if this read fails the form simply shows no preview.
+  // Version rows store the raw BoQ row (to_jsonb), so rate arrives as a JSON
+  // number, not a string — coerce before trimming, and never let a bad
+  // version row take the Confirm page down.
   const versions = record.project_id ? await privateBoqVersions(record.project_id).catch(() => null) : null;
-  const rates = versions?.[0]?.rows.filter(row => row.item_code && /^\d+(?:\.\d*)?$/.test(row.rate.trim())).map(row => ({ item_code: row.item_code!, rate: row.rate.trim() }));
-  return <ConfirmForm key={`${record.id}:${record.job_status}`} record={record} draft={draft?.draft} rates={rates?.length ? rates : undefined} />;
+  const rates = (() => {
+    try {
+      const parsed = (versions?.[0]?.rows ?? [])
+        .filter(row => row.item_code && /^\d+(?:\.\d*)?$/.test(String(row.rate ?? "").trim()))
+        .map(row => ({ item_code: row.item_code!, rate: String(row.rate).trim() }));
+      return parsed.length ? parsed : undefined;
+    } catch { return undefined; }
+  })();
+  // Drafts processed before the extraction fallback existed can hold an
+  // empty work list even though the transcript states quantities. Recover
+  // those candidates at read time so the Confirm screen shows the costed
+  // items; the form still governs saved drafts, and confirmed or locked
+  // records are never rewritten here. Recovery is fail-safe: if it throws,
+  // the page still renders the stored data.
+  let extraction = record.extraction;
+  if (!record.confirmed_extraction && !record.trial_values) {
+    try { extraction = recoverWorkItems(record.extraction, record.transcript, record.boq); }
+    catch { extraction = record.extraction; }
+  }
+  const viewRecord = extraction === record.extraction ? record : { ...record, extraction };
+  return <ConfirmForm key={`${record.id}:${record.job_status}`} record={viewRecord} draft={draft?.draft} rates={rates?.length ? rates : undefined} />;
 }
 export default function Page(props: Props) {
-  return <Suspense fallback={<main className="mx-auto max-w-5xl px-5 py-7 sm:px-10"><WorkspaceHeader current="reports"/><DiaryNotice busy title="Opening your site note…">Loading your voice note and photos.</DiaryNotice></main>}><Review {...props} /></Suspense>;
+  return <Suspense fallback={<main className="mx-auto max-w-5xl px-5 py-7 sm:px-10"><PageLoading title="Opening your site note…" detail="Loading your voice note and photos." variant="form" header={<WorkspaceHeader current="reports"/>}/></main>}><Review {...props} /></Suspense>;
 }
