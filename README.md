@@ -10,22 +10,45 @@ On a building site, yesterday's work can become tomorrow's payment argument. Sit
 
 The Nigerian demonstration uses naira, Nigerian English and Pidgin. Private projects select their own currency and timezone. Rates come from the supplied BoQ; the AI never invents a price or converts currencies.
 
+## Contents
+
+- [See the product](#see-the-product)
+- [How it works](#how-it-works)
+- [Try it before creating an account](#try-it-before-creating-an-account)
+- [Accounts, projects and Telegram](#accounts-projects-and-telegram)
+- [Current build status](#current-build-status)
+- [Project ledger and BoQ](#project-ledger-and-boq)
+- [Run locally](#run-locally)
+- [Verify the build](#verify-the-build)
+- [Architecture](#architecture)
+- [Kiro evidence](#kiro-evidence)
+- [Preview deployments](#preview-deployments)
+
 ## See the product
+
+### Desktop
 
 <img src="docs/images/landing-desktop.png" width="760" alt="SiteLedger landing page: headline 'The day's work. With the money attached.', with buttons to try a private site record, sign in or create an account, and view a sample report">
 
-The public landing page explains the workflow and opens the fictional sample or
-private account access. About, Help/FAQ, Contact, Privacy and Terms share its navigation.
-Account, project, team and report screens also adapt to desktop widths.
+The public landing page explains the workflow and opens the fictional sample or private account access. About, Help/FAQ, Contact, Privacy and Terms share its navigation. Account, project, team and report screens also adapt to desktop widths.
 
 <img src="docs/images/site-diary-desktop.png" width="760" alt="Desktop site diary with a large voice-recording button, a visible keyboard focus ring on the voice-file picker and an expandable recent-notes column">
 
-The work diary shares the account/project navigation. Saved notes lead directly
-to review; recent device notes are expandable. Loading,
-unclear extraction, failed requests and offline work have visible guidance.
+The work diary shares the account/project navigation. Saved notes lead directly to review; recent device notes are expandable. Loading, unclear extraction, failed requests and offline work have visible guidance.
 
-<img src="docs/images/costed-report.png" width="360" alt="Locked daily site report for 6 November 2026: seven BoQ items costed against the Bill of Quantities, totalling 1,495,300 naira">
-<img src="docs/images/account-confirmation.png" width="360" alt="Mobile signup confirmation with email-code entry and professional-name confirmation">
+<img src="docs/images/project-ledger-desktop.png" width="760" alt="Desktop project ledger showing a 1,000,000-naira contract, 261,000-naira approved value and a red quantity-overrun flag in a ruled BoQ table">
+
+The project ledger shows the contract sum, value earned from approved reports and variance flags in a ruled BoQ table. This disposable acceptance project deliberately reduces the BoQ target to exercise an overrun. Its approved ₦261,000 stays unchanged after the current rate is edited, demonstrating that earlier reports retain their recorded prices.
+
+<img src="docs/images/costed-report.png" width="760" alt="Locked daily site report for 6 November 2026: seven BoQ items costed against the Bill of Quantities, totalling 1,495,300 naira">
+
+The locked daily site report for 6 November 2026: seven BoQ items costed against the Bill of Quantities, totalling ₦1,495,300, signed by the foreman and the PM.
+
+### Mobile
+
+<img src="docs/images/account-confirmation.png" width="360" alt="Mobile signup confirmation with email-code entry and professional-name confirmation"> <img src="docs/images/private-trial.png" width="360" alt="Mobile private trial showing its 24-hour expiry, unverified guest notice and 261,000-naira draft value using illustrative demo rates">
+
+On the left, mobile signup confirmation with email-code entry and professional-name confirmation. On the right, the private trial showing its 24-hour expiry, unverified guest notice and ₦261,000 draft value using illustrative demo rates. The work screens are mobile-first: the same diary, confirm and report flows fit a 390px phone.
 
 These screenshots use a disposable test project. Construction images are labelled synthetic demonstrations, not genuine site evidence. [Photo provenance](public/demo/photos/PROVENANCE.md).
 
@@ -59,8 +82,6 @@ with zero to three photos, review the extracted quantities and cost a draft
 against the labelled, illustrative NGN demo BoQ. Audio is limited to 3 MiB;
 each compressed JPEG is limited to 1 MiB. Trial starts, storage and processing
 are limited to keep the free services bounded. AI failure allows manual entry.
-
-<img src="docs/images/private-trial.png" width="360" alt="Mobile private trial showing its 24-hour expiry, unverified guest notice and 261,000-naira draft value using illustrative demo rates">
 
 This cropped screenshot comes from the disposable browser test. Guest work is
 private to its original browser session. Approval, locking, client PDF export
@@ -119,9 +140,9 @@ retry guidance without exposing private error details.
 
 ## Current build status
 
-The core voice/photo → confirmation → costing → PDF → locked log flow is implemented, along with private accounts, projects, teams, secure Telegram linking and recovery, six public pages and desktop layouts. Task 10B adds the private 24-hour trial and verified account handover.
+The core voice/photo → confirmation → costing → PDF → locked log flow is implemented and live, along with private accounts, projects, teams, secure Telegram linking and recovery, six public pages, the private 24-hour trial with verified account handover, and desktop layouts on every screen. Production is deployed on Vercel at [siteledger-ai.vercel.app](https://siteledger-ai.vercel.app).
 
-New projects start with an **empty BoQ**; saved trials receive their frozen demo BoQ. The supplied-rate editor, private project ledger and task 12 polish are implemented. Production is deployed on Vercel Hobby and Telegram uses the production URL. Email verification accepts the full Supabase code, including eight digits. GitHub is connected to Vercel: pushes to `main` deploy production, and review branches get previews. Work screens include Back, persistent phone navigation and Telegram's native Back button. Account settings and project overview, records, progress and team administration use focused views; locked-report amendments open separately. Public-page, static-PDF, navigation and unauthenticated access checks pass; task 13 awaits the builder's full phone flow over mobile data. [Deployment and phone-check steps](docs/production-deployment.md). The final README gallery, Telegram conversation/voice captures, Kiro write-up and narrated video targeting **2:50** follow deployment checks in task 14. See [the ordered tasks](.kiro/specs/siteledger/tasks.md) and [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
+New projects start with an **empty BoQ**; saved trials receive their frozen demo BoQ. The supplied-rate editor, private project ledger and task 12 polish are implemented. Email verification accepts the full Supabase code, including eight digits. GitHub is connected to Vercel: pushes to `main` deploy production, and review branches get previews. Work screens include Back, persistent phone navigation and Telegram's native Back button. Account settings and project overview, records, progress and team administration use focused views; locked-report amendments open separately. Public-page, static-PDF, navigation and unauthenticated access checks pass; task 13 awaits the builder's full phone flow over mobile data. [Deployment and phone-check steps](docs/production-deployment.md). The Kiro write-up and narrated demo video targeting **2:50** follow in task 14. See [the ordered tasks](.kiro/specs/siteledger/tasks.md) and [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
 
 The public `/reports/demo`, `/log/demo` and demo summary expose only the original fictional seed, excluding genuine uploads, private amendments and live totals. Rates are **illustrative, not live market prices**; use QS-verified rates for real work.
 
@@ -145,12 +166,6 @@ completion and overrun flags. No dated plan is supplied; flags mark quantities
 exceeding the BoQ. Archived projects are read-only until their owner restores them.
 
 Demo and saved-trial BoQs remain labelled **Demo rates — verify before real use**.
-
-<img src="docs/images/project-ledger-desktop.png" width="760" alt="Desktop project ledger showing a 1,000,000-naira contract, 261,000-naira approved value and a red quantity-overrun flag in a ruled BoQ table">
-
-This disposable acceptance project deliberately reduces the BoQ target to
-exercise an overrun. Its approved ₦261,000 stays unchanged after the current
-rate is edited, demonstrating that earlier reports retain their recorded prices.
 
 ## Run locally
 
