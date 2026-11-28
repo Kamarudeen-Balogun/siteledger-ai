@@ -2,9 +2,36 @@ import Link from "next/link";
 import { PublicSite } from "@/components/public-site";
 import { LandingAccountLink } from "@/components/landing-account-link";
 import { DiaryIcon } from "@/components/diary-icon";
-export const metadata={title:"SiteLedger AI — From site voice note to costed record",description:"Record site work by voice, confirm the quantities, cost them against your BoQ and preserve an approved report with photos and amendments."};
+import { pageMetadata, SITE_DESCRIPTION, SITE_URL } from "@/lib/seo";
+export const metadata = pageMetadata({
+  title: "SiteLedger AI — From site voice note to costed record",
+  description: "Record site work by voice, confirm the quantities, cost them against your BoQ and preserve an approved report with photos and amendments.",
+  path: "/",
+});
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      name: "SiteLedger AI",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      description: SITE_DESCRIPTION,
+      url: SITE_URL,
+      offers: { "@type": "Offer", price: "0", priceCurrency: "NGN" },
+      author: { "@type": "Person", name: "Kamarudeen Balogun", url: "https://codeflowx.dev" },
+      provider: { "@type": "Organization", name: "CodeFlowX", url: "https://codeflowx.dev" },
+    },
+    {
+      "@type": "Organization",
+      name: "CodeFlowX",
+      url: "https://codeflowx.dev",
+      sameAs: ["https://github.com/Kamarudeen-Balogun"],
+    },
+  ],
+};
 export default function Home() {
-  return <PublicSite current="/">
+  return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><PublicSite current="/">
     <div className="public-column flex flex-col pb-12">
       {/* Stitch's landing hero is a 12-column grid: headline + CTAs
           left (6), the sample-record preview card right (6). On
@@ -176,5 +203,5 @@ export default function Home() {
         </div>
       </section>
     </div>
-  </PublicSite>;
+  </PublicSite></>;
 }

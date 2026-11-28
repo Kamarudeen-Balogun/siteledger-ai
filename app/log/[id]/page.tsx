@@ -11,7 +11,22 @@ import { WorkspaceHeader } from "@/components/workspace-header";
 import { PageLoading } from "@/components/page-loading";
 import { DiaryNotice } from "@/components/diary-notice";
 import { AmendmentForm } from "@/components/amendment-form";
-export const metadata: Metadata = { title: "Dispute log — SiteLedger", referrer: "no-referrer", robots: { index: false, follow: false } };
+import { pageMetadata } from "@/lib/seo";
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const fallback: Metadata = { ...pageMetadata({ title: "Dispute log — SiteLedger", description: "The append-only dispute log for a SiteLedger project. Locked records can never be silently edited.", path: `/log/${id}` }), robots: { index: false, follow: false }, referrer: "no-referrer" };
+  try {
+    const log = await getDisputeLog(id);
+    if (!log) return fallback;
+    const reports = log.entries.filter(entry => entry.kind === "report").length;
+    const amendments = log.entries.filter(entry => entry.kind === "amendment").length;
+    const title = `Dispute log — ${log.project.name} — SiteLedger AI`;
+    const description = `The append-only dispute log for ${log.project.name}: ${reports} locked reports and ${amendments} amendments. Locked records can never be silently edited.`;
+    return { ...pageMetadata({ title, description, path: `/log/${id}` }), robots: { index: false, follow: false }, referrer: "no-referrer" };
+  } catch {
+    return fallback;
+  }
+}
 type Props = { params: Promise<{ id: string }> };
 async function Log(props: Props) {
   await connection(); const { id } = await props.params;

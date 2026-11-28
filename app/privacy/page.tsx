@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { InformationPage } from "@/components/public-site";
 import { DiaryIcon } from "@/components/diary-icon";
-export const metadata={title:"Privacy — SiteLedger AI",description:"How SiteLedger handles account information, site records, media, local queues and connected service providers."};
+import { pageMetadata } from "@/lib/seo";
+export const metadata = pageMetadata({ title: "Privacy — SiteLedger AI", description: "How SiteLedger handles account information, site records, media, local queues and connected service providers.", path: "/privacy" });
 const card = "rounded-xl bg-surface-container-lowest p-4 shadow-sm";
 const h2 = "font-headline-md text-headline-md text-on-surface";
 const p = "mt-2 font-body-md text-body-md leading-relaxed text-on-surface-variant";

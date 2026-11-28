@@ -4,10 +4,21 @@ import Image from "next/image";
 import { demoReport } from "@/lib/data/demo-documents";
 import { PublicSite } from "@/components/public-site";
 import { DiaryIcon } from "@/components/diary-icon";
-import { displayUnit, displayWorkTitle, formatQuantity } from "@/lib/reports/model";
-export const metadata: Metadata = { title: "Sample report — SiteLedger AI", robots: { index: false, follow: false } };
+import { displayUnit, displayWorkTitle, formatQuantity, displayDate } from "@/lib/reports/model";
+import { pageMetadata } from "@/lib/seo";
 const naira = new Intl.NumberFormat("en-NG");
 function money(value: string) { return `₦${naira.format(Number(value))}`; }
+const demoProjectName = demoReport.document.source.project.name;
+const demoReportDate = displayDate(demoReport.document.source.date);
+const demoTotal = money(demoReport.document.costing.total_cost);
+const demoItemCount = demoReport.document.costing.items.length;
+export const metadata: Metadata = pageMetadata({
+  title: `Sample report: ${demoProjectName} — ${demoTotal} locked — SiteLedger AI`,
+  description: `A locked daily site report from ${demoReportDate}: ${demoItemCount} BoQ items costed against the Bill of Quantities, totalling ${demoTotal}, signed by Musa Bello (Foreman) and Engr. Tola Adeyemi (PM). See what a costed day looks like.`,
+  path: "/reports/demo",
+  type: "article",
+  publishedTime: "2026-11-06",
+});
 export default function Page() {
   const report = demoReport;
   const document = report.document;

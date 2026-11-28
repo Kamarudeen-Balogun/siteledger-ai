@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { InformationPage } from "@/components/public-site";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "About — SiteLedger AI", description: "What SiteLedger is, how a voice note becomes a costed daily record, and who built it." };
+export const metadata: Metadata = pageMetadata({ title: "About — SiteLedger AI", description: "What SiteLedger is, how a voice note becomes a costed daily record, and who built it.", path: "/about" });
 const card = "rounded-xl bg-surface-container-lowest p-4 shadow-sm";
 const h2 = "font-headline-md text-headline-md text-on-surface";
 const p = "mt-2 font-body-md text-body-md leading-relaxed text-on-surface-variant";

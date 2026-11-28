@@ -3,7 +3,16 @@ import { demoLog } from "@/lib/data/demo-documents";
 import { DisputeLogDocument } from "@/components/dispute-log";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { PublicFooter } from "@/components/public-site";
-export const metadata = { title: "Demo dispute log — SiteLedger", referrer: "no-referrer" as const };
+import { pageMetadata } from "@/lib/seo";
+const naira = new Intl.NumberFormat("en-NG");
+const demoLogReports = demoLog.entries.filter(entry => entry.kind === "report");
+const demoLogAmendments = demoLog.entries.filter(entry => entry.kind === "amendment");
+const demoLogTotal = demoLogReports.reduce((sum, entry) => sum + Number(entry.total_cost ?? 0), 0);
+export const metadata = pageMetadata({
+  title: `Demo dispute log — ${demoLog.project.name} — SiteLedger AI`,
+  description: `The public append-only dispute log for the SiteLedger demo project: ${demoLogReports.length} locked reports and ${demoLogAmendments.length} amendment, ₦${naira.format(demoLogTotal)} of work locked in — records that can never be silently edited.`,
+  path: "/log/demo",
+});
 function Demo() {
   const log = demoLog;
   return log ? <><Link href="/reports/demo" className="mb-4 inline-block min-h-12 py-3 underline">Back to demo report</Link><DisputeLogDocument log={log} /></>

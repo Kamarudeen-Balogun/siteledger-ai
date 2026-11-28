@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { InformationPage } from "@/components/public-site";
 import { DiaryIcon } from "@/components/diary-icon";
-export const metadata={title:"Terms of use — SiteLedger AI",description:"Conditions for using SiteLedger accounts, site records, AI suggestions, supplied prices and immutable reports."};
+import { pageMetadata } from "@/lib/seo";
+export const metadata = pageMetadata({ title: "Terms of use — SiteLedger AI", description: "Conditions for using SiteLedger accounts, site records, AI suggestions, supplied prices and immutable reports.", path: "/terms" });
 const card = "rounded-xl bg-surface-container-lowest p-4 shadow-sm";
 const h2 = "font-headline-md text-headline-md text-on-surface";
 const p = "mt-2 font-body-md text-body-md leading-relaxed text-on-surface-variant";

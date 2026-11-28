@@ -8,7 +8,8 @@ import { DiaryIcon } from "@/components/diary-icon";
 import { MockProjectControl } from "@/components/mock-project";
 import { PageLoading } from "@/components/page-loading";
 import { currentAccount } from "@/lib/auth/session";
-export const metadata={title:"Help & FAQ — SiteLedger AI",description:"Get started with accounts, Telegram commands, site voice notes, human confirmation, reports and offline uploads."};
+import { pageMetadata } from "@/lib/seo";
+export const metadata = pageMetadata({ title: "Help & FAQ — SiteLedger AI", description: "Get started with accounts, Telegram commands, site voice notes, human confirmation, reports and offline uploads.", path: "/help" });
 const questions: HelpQuestion[] = [
   { topic: "Accounts", title: "How do I start?", text: "Create an email/password account, enter the full code sent to your email and confirm your professional name. Create a project or accept an invitation addressed to your verified email. New projects start with an empty BoQ. A PM opens Manage BoQ and rates to enter the supplied quantities and rates in the project's currency." },
   { topic: "Site intake & voice", title: "How do I use Telegram?", text: "Open @SiteLedgerNGbot and send /start, or reveal a one-time code on your project’s Team page and send it with /link. Return to SiteLedger to confirm the connection. Use /projects to pick a project, /project with its code to switch directly, /today for your latest note and /reports for recent records. Enter passwords only on the SiteLedger sign-in form." },

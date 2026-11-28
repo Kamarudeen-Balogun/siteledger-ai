@@ -18,8 +18,27 @@ import { DiaryNotice } from "@/components/diary-notice";
 import { DiaryIcon } from "@/components/diary-icon";
 import { ReportShare } from "@/components/report-share";
 import { privateHistory } from "@/lib/projects/data";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Daily site report — SiteLedger", referrer: "no-referrer", robots: { index: false, follow: false } };
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const fallback: Metadata = { ...pageMetadata({ title: "Daily site report — SiteLedger", description: "A daily site report, costed against the Bill of Quantities and locked into the dispute log.", path: `/reports/${id}` }), robots: { index: false, follow: false }, referrer: "no-referrer" };
+  try {
+    const input = await readReportInput(id);
+    if (!input) return fallback;
+    const report = reportFromInput(input);
+    if (!report) return fallback;
+    const { source } = report.document;
+    const total = formatMoney(report.document.costing.total_cost, report.document.currency);
+    const date = displayDate(source.date);
+    const count = report.document.costing.items.length;
+    const title = `Daily site report — ${source.project.name} — ${date} — ${total} — SiteLedger AI`;
+    const description = `${source.project.name}, ${date}: ${count} items costed against the Bill of Quantities, totalling ${total}. ${report.status === "locked" ? "Locked into the append-only dispute log." : "Draft report — not yet locked."}`;
+    return { ...pageMetadata({ title, description, path: `/reports/${id}`, type: "article", publishedTime: source.date }), robots: { index: false, follow: false }, referrer: "no-referrer" };
+  } catch {
+    return fallback;
+  }
+}
 type Props = { params: Promise<{ id: string }> };
 
 async function Report({ params }: Props) {
