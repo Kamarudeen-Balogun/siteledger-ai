@@ -85,6 +85,12 @@ button[aria-pressed="true"] { background: var(--foreground); color: var(--backgr
 .diary-loading-line::after { content: ""; display: block; width: 40px; height: 3px; background: var(--accent); animation: diary-loading 1.5s ease-in-out infinite alternate; }
 @keyframes diary-loading { from { transform: translateX(0); } to { transform: translateX(80px); } }
 @media (prefers-reduced-motion: reduce) { .diary-loading-line::after { animation: none; } }
+/* Page-change loading: a subtle orange line sweeping the top of the page
+   above the ruled-paper skeleton rows — the diary turning a page, not a
+   notice. The segment is 40% of the width and sweeps fully across. */
+.diary-loading-top { height: 3px; overflow: hidden; background: var(--rule); }
+.diary-loading-top i { display: block; width: 40%; height: 3px; background: var(--accent); animation: diary-loading-wide 1.4s ease-in-out infinite; }
+@keyframes diary-loading-wide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 /* Motion: skeletons, spinners, upload progress, press states, sheets, bot example. */
 .stitch-skeleton-stack { display: grid; gap: 10px; margin-top: 12px; }
 .stitch-skeleton-stack i { display: block; height: 18px; border-radius: 2px; background: linear-gradient(90deg, var(--skeleton) 25%, var(--skeleton-light) 50%, var(--skeleton) 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite; }
@@ -121,7 +127,7 @@ button[aria-pressed="true"] { background: var(--foreground); color: var(--backgr
 .stitch-bot-bubble strong { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); }
 .stitch-bot-card { max-width: 92%; padding: 14px; border: 1px solid var(--accent); background: #fffdf9; }
 .stitch-bot-card p + p { margin-top: 8px; }
-@media (prefers-reduced-motion: reduce) { .stitch-skeleton-stack i, .stitch-spinner, .stitch-upload-progress i, .diary-notice, .diary-skeleton i, .diary-skeleton__nav i { animation: none; } .work-button, .stitch-button { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .stitch-skeleton-stack i, .stitch-spinner, .stitch-upload-progress i, .diary-notice, .diary-skeleton i, .diary-skeleton__nav i, .diary-loading-top i { animation: none; } .work-button, .stitch-button { transition: none; } }
 .record-control { min-height: 88px; font-size: 20px; letter-spacing: -.02em; }
 .diary-capture-layout { display: grid; min-width: 0; }
 .diary-capture-layout > section { min-width: 0; }
