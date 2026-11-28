@@ -77,9 +77,12 @@ export function PublicSite({ children, current }: { children: ReactNode; current
           <span className="font-headline-sm text-headline-sm font-bold tracking-tight text-on-surface">SiteLedger AI</span>
         </Link>
         <div className="flex items-center gap-1">
+          <nav aria-label="Site navigation" className="mr-2 hidden items-center gap-6 lg:flex">
+            {menuLinks.slice(0, 5).map(([href, label]) => <Link key={href} href={href} aria-current={current === href ? "page" : undefined} className="flex min-h-[44px] items-center py-1 font-label-ledger text-label-ledger text-on-surface-variant transition-colors hover:text-on-surface">{label}</Link>)}
+          </nav>
           <LandingAccountLink className="flex h-10 min-h-[44px] items-center justify-center rounded bg-surface-container-high px-4 font-label-ledger text-label-ledger text-on-surface transition-colors hover:bg-surface-container-highest active:scale-95" anonymousLabel="Sign in" activeHref="/today" activeLabel="Open diary" />
           <WorkspaceProfile onlyWhenActive />
-          <PublicMenu />
+          <div className="lg:hidden"><PublicMenu /></div>
         </div>
       </div>
     </header>
