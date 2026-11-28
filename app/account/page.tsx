@@ -59,5 +59,5 @@ async function AccountContent({ searchParams }: { searchParams: Promise<{ sectio
   </div></main>;
 }
 export default function AccountPage(props: { searchParams: Promise<{section?:string;project?:string}> }) {
-  return <Suspense fallback={<main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><PageLoading title="Opening your account…" header={<WorkspaceHeader current="account"/>}/></main>}><AccountContent {...props}/></Suspense>;
+  return <Suspense fallback={<main className="mx-auto min-h-screen max-w-7xl px-5 pb-16 pt-7 sm:px-10"><PageLoading title="Opening your account…" variant="split" split="5-7" header={<WorkspaceHeader current="account"/>}/></main>}><AccountContent {...props}/></Suspense>;
 }

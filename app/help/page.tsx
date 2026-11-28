@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense, type ComponentProps } from "react";
-import { InformationPage } from "@/components/public-site";
+import { InformationPage, PublicFooter } from "@/components/public-site";
 import { HelpSearch, type HelpQuestion } from "@/components/help-search";
 import { ReplayTour } from "@/components/diary-tour";
 import { WorkspaceHeader } from "@/components/workspace-header";
@@ -45,7 +45,11 @@ async function HelpContent({searchParams}:{searchParams:Promise<{topic?:string}>
   const [account,query]=await Promise.all([currentAccount().catch(()=>null),searchParams]);
   if(!account)return <PublicHelp/>;
   const selected=topics.find(topic=>topic.id===query.topic);
-  return <main className="mx-auto min-h-svh max-w-5xl px-5 py-7 stitch-help">
+  /* Signed-in Help is a workspace page (no PublicSite), so it had
+     no footer — Stitch's signed-in Help shows the same footer as
+     the public pages. The `.transplant` wrapper supplies the token
+     classes; the workspace layout has no `.transplant` ancestor. */
+  return <><main className="mx-auto min-h-svh max-w-5xl px-5 py-7 stitch-help">
     <WorkspaceHeader current="account" title={selected?.title??"Help & Support"} hideProfile/>
     {selected?<section className="stitch-card"><h1 className="stitch-section-title">{selected.title}</h1><p className="mt-3">{selected.text}</p><Link href="/help" className="text-link">Back to Help</Link></section>:<>
       <p>Plain answers, one topic per page. For anything about money or a locked report, check the report itself.</p>
@@ -56,8 +60,15 @@ async function HelpContent({searchParams}:{searchParams:Promise<{topic?:string}>
       </div>
       <MockProjectControl person={account.profile_id} restore/>
     </>}
-  </main>;
+  </main><div className="transplant"><PublicFooter current="/help" /></div></>;
 }
 export default function Help(props:{searchParams:Promise<{topic?:string}>}) {
-  return <Suspense fallback={<PageLoading title="Opening help…" />}><HelpContent {...props}/></Suspense>;
+  /* The fallback had no <main> wrapper at all, so the skeleton
+     rendered flush to the top-left edge of the viewport with no
+     container padding or width — a small block at the top-left
+     instead of the full page. It now renders inside the same
+     max-w-5xl main the signed-in Help content uses, with a neutral
+     header-bar skeleton (the fallback cannot know whether the
+     public or the signed-in branch will render). */
+  return <Suspense fallback={<main className="mx-auto min-h-svh max-w-5xl px-5 py-7"><PageLoading title="Opening help…" header={<div className="diary-skeleton__nav" aria-hidden="true"><i style={{ width: 120, height: 18 }} /><i style={{ width: 44, height: 18 }} /></div>} /></main>}><HelpContent {...props}/></Suspense>;
 }

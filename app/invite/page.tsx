@@ -13,5 +13,5 @@ async function Invitation() {
     <InvitationAcceptance verified={account.email_verified} nameConfirmed={Boolean(account.name_confirmed_at)} /></>;
 }
 export default function InvitePage() {
-  return <PublicSite current="/invite"><div className="public-column pb-10 pt-4"><Link href="/account" className="inline-flex min-h-12 items-center font-label-ledger text-label-ledger text-primary underline">Your account</Link><h1 className="mt-2 font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Accept a project invitation</h1><Suspense fallback={<PageLoading title="Opening your account…" detail="Checking the session before invitation acceptance." variant="form"/>}><Invitation /></Suspense></div></PublicSite>;
+  return <PublicSite current="/invite"><div className="public-column pb-10 pt-4"><Link href="/" className="text-link">Back to home</Link><Link href="/account" className="inline-flex min-h-12 items-center font-label-ledger text-label-ledger text-primary underline">Your account</Link><h1 className="mt-2 font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Accept a project invitation</h1><Suspense fallback={<PageLoading title="Opening your account…" detail="Checking the session before invitation acceptance." variant="form"/>}><Invitation /></Suspense></div></PublicSite>;
 }

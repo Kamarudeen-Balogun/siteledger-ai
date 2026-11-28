@@ -151,7 +151,7 @@ export function MockBoqRows({ rows, currency }: { rows: { item_code: string; des
     <section className="stitch-card">
       <div className="stitch-title-row"><h2 className="stitch-section-title">Contract Schedule Items</h2><span className="stitch-kicker">Sorted by trade</span></div>
       <ul className="stitch-boq-items">{rows.map((row, index) => <li key={row.item_code} className="stitch-card scroll-mt-24">
-        <button type="button" className="text-link" onClick={() => setSelected(row)} aria-label={`Open ${row.item_code}`}>
+        <button type="button" className="text-link stitch-boq-item-open" onClick={() => setSelected(row)} aria-label={`Open ${row.item_code}`}>
           <span className="stitch-kicker">Item {String(index + 1).padStart(2, "0")} · {row.section}</span>
           <strong>{row.description}</strong>
         </button>
@@ -160,9 +160,11 @@ export function MockBoqRows({ rows, currency }: { rows: { item_code: string; des
           <div><dt>Unit rate</dt><dd>{formatMoneyPerUnit(row.rate, currency, row.unit)}</dd></div>
           <div><dt>Line total</dt><dd>{formatMoney(String(row.rate * row.boq_quantity), currency)}</dd></div>
         </dl>
-        <div className="stitch-title-row"><small>Measured progress</small><strong>{formatQuantityWithUnit(row.cumulative_quantity, row.unit)} · {displayRatio(String(row.percentage_complete))}%</strong></div>
-        <progress max={100} value={Math.min(100, row.percentage_complete)} aria-label={`Progress for ${row.description}`} />
-        {row.is_overrun && <p className="report-variance">Over BoQ quantity — check this item.</p>}
+        <div className="stitch-boq-progress">
+          <div className="stitch-title-row"><small>Measured progress</small><strong>{formatQuantityWithUnit(row.cumulative_quantity, row.unit)} · {displayRatio(String(row.percentage_complete))}%</strong></div>
+          <progress max={100} value={Math.min(100, row.percentage_complete)} aria-label={`Progress for ${row.description}`} />
+          {row.is_overrun && <p className="report-variance">Over BoQ quantity — check this item.</p>}
+        </div>
       </li>)}</ul>
     </section>
     {selected && <dialog ref={sheet} className="action-dialog stitch-sheet" aria-label={selected.description} onClose={() => setSelected(null)}>
@@ -195,7 +197,7 @@ export function MockTeamMembers({ members }: { members: DemoTeamMember[] }) {
     if (dialog && !dialog.open) dialog.showModal();
   }, [selected]);
   return <>
-    <section className="stitch-card">
+    <section className="stitch-card stitch-team-members">
       <div className="stitch-title-row"><h2 className="stitch-section-title">Site team &amp; access</h2><span className="stitch-kicker">Field diary permissions</span></div>
       <ul>{members.map(member => <li key={member.name}>
         <button type="button" className="stitch-menu-row" onClick={() => { setResent(false); setSelected(member); }}>

@@ -77,16 +77,20 @@ export function BoqEditor({ projectId, currency, rows, editable, overview }: { p
     {overview}
     <div className="stitch-title-row"><h2 className="stitch-section-title">Contract Schedule Items</h2><span className="stitch-kicker">Sorted by trade</span></div>
     {!rows.length ? <p className="stitch-card">No BoQ items yet. Site notes can still be recorded while rates are prepared.</p> : <ul className="stitch-boq-items" aria-label="Supplied BoQ price list" data-tour="boq-progress">{rows.map((row,index) => <li key={row.id} id={`boq-item-${row.item_code}`} className="stitch-card scroll-mt-24">
-      <div className="stitch-title-row"><span className="stitch-kicker">Item {String(index+1).padStart(2,"0")} · {row.section}</span>{row.progress.is_overrun&&<span className="stitch-kicker stitch-chip" data-tone="red">Overrun</span>}</div>
-      <h3>{row.description}</h3>
+      <div className="stitch-boq-item-head">
+        <div className="stitch-title-row"><span className="stitch-kicker">Item {String(index+1).padStart(2,"0")} · {row.section}</span>{row.progress.is_overrun&&<span className="stitch-kicker stitch-chip" data-tone="red">Overrun</span>}</div>
+        <h3>{row.description}</h3>
+      </div>
       <dl className="stitch-boq-values">
         <div><dt>Scope qty</dt><dd>{formatQuantityWithUnit(row.boq_quantity, row.unit)}</dd></div>
         <div><dt>Unit rate</dt><dd>{formatMoneyPerUnit(row.rate, currency, row.unit)}</dd></div>
         <div><dt>Line total</dt><dd>{formatMoney(decimal(row.rate,"rate").times(row.boq_quantity).toFixed(),currency)}</dd></div>
       </dl>
-      <div className="stitch-title-row"><small>Measured progress</small><strong>{formatQuantityWithUnit(row.progress.cumulative_quantity, row.unit)} · {displayRatio(row.progress.percentage_complete)}%</strong></div>
-      <progress max={100} value={Math.min(100, Number(row.progress.percentage_complete))} aria-label={`Progress for ${row.description}`}/>
-      {editable && <button type="button" className="text-link mt-3" disabled={busy||importing} onClick={() => edit(row)} aria-label={`Edit ${row.item_code}`}>Adjust item</button>}
+      <div className="stitch-boq-progress">
+        <div className="stitch-title-row"><small>Measured progress</small><strong>{formatQuantityWithUnit(row.progress.cumulative_quantity, row.unit)} · {displayRatio(row.progress.percentage_complete)}%</strong></div>
+        <progress max={100} value={Math.min(100, Number(row.progress.percentage_complete))} aria-label={`Progress for ${row.description}`}/>
+      </div>
+      {editable && <button type="button" className="text-link stitch-boq-adjust mt-3" disabled={busy||importing} onClick={() => edit(row)} aria-label={`Edit ${row.item_code}`}>Adjust item</button>}
     </li>)}</ul>}
   </section>;
 }

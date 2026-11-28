@@ -40,6 +40,6 @@ async function Reports() {
 
 export default function Page() {
   return <main className="mx-auto min-h-svh max-w-5xl px-5 py-7 sm:px-10">
-    <Suspense fallback={<PageLoading title="Opening reports…" variant="rows" header={<WorkspaceHeader current="reports"/>}/>}> <Reports/></Suspense>
+    <Suspense fallback={<PageLoading title="Opening reports…" variant="report" header={<WorkspaceHeader current="reports"/>}/>}> <Reports/></Suspense>
   </main>;
 }

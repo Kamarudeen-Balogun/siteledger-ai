@@ -46,12 +46,15 @@ async function MockContent({ query }: { query: Promise<{ view?: string; note?: s
   const overall = allocation.gt(0) ? earnedTotal.times(100).div(allocation).toNumber() : 0;
   const dayTotal = demoTodayNotes.reduce((sum, note) => note.total_cost ? sum.plus(decimal(note.total_cost, "demo day total")) : sum, decimal("0", "day total"));
   const awaiting = demoTodayNotes.filter(note => note.state === "draft");
-  const demoDay = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric" }).format(new Date("2026-11-06T00:00:00+01:00"));
+  // The demo day is a Lagos date: pin the formatter to Africa/Lagos so
+  // the heading reads 6 Nov 2026 in every timezone. Without a timeZone
+  // the midnight +01:00 instant formats as 5 Nov in UTC and west of it.
+  const demoDay = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Lagos" }).format(new Date("2026-11-06T00:00:00+01:00"));
   // The bottom navigation switches mock views (Today / Reports & Log /
   // BoQ & Rates / Projects & Team), so there is no tab bar here. The header
   // carries the mock project itself, never the previous real project.
   return <><WorkspaceHeader current={viewArea[view ?? "today"]} title={headerTitle} project={headerTitle} />
-    {view === "today" && <>
+    {view === "today" && <div className="stitch-today">
       <div className="diary-today-actions"><MockAddWork/><a href="https://t.me/SiteLedgerNGbot" className="diary-row-link" target="_blank" rel="noreferrer"><DiaryIcon name="send" size={20} /><strong>Send via Telegram</strong><span className="stitch-chip">@SiteLedgerNGbot</span></a></div>
       <p className="stitch-card">Demo data — this project is a safe copy to explore. Record work in your own project.</p>
       <section className="stitch-card stitch-drafts" aria-labelledby="today-drafts" data-tour="drafts"><div className="stitch-title-row">
@@ -79,7 +82,7 @@ async function MockContent({ query }: { query: Promise<{ view?: string; note?: s
         <progress max={100} value={Math.min(100, overall)} aria-label="Measured project progress" />
         <dl>{sample.document.costing.items.map((item, index) => <div key={index}><dt>{displayWorkTitle(sample.document.source.price_list.find(price => price.id === item.boq_item_id)?.description, sample.document.source.items[index].description)}</dt><dd>{formatQuantityWithUnit(item.cumulative_quantity, item.unit)} · {displayRatio(item.percentage_complete)}%</dd></div>)}</dl>
         <Link className="text-link" href="/projects/mock?view=boq">View all work progress</Link></section>
-    </>}
+    </div>}
     {view === "note" && <MockNoteDetail note={demoTodayNotes[1]} report={note2Report} priceList={sample.document.source.price_list} currency={currency} />}
     {view === "confirm" && <MockConfirmView note={demoTodayNotes[2]} priceList={sample.document.source.price_list} currency={currency} />}
     {view === "report" && <ReportDocument report={sample} demoPhotos actions={<MockReportActions />} />}
@@ -96,7 +99,7 @@ async function MockContent({ query }: { query: Promise<{ view?: string; note?: s
       <BoqReview changes={[]} currency={currency} />
       <MockBoqRows rows={demoBoq} currency={currency} />
     </>}
-    {view === "team" && <>
+    {view === "team" && <div className="team-workspace">
       <section className="stitch-card stitch-team-overview">
         <div className="stitch-title-row"><h2 className="stitch-kicker" data-ink="orange">Perkins Ltd account</h2><span className="stitch-kicker stitch-chip" data-tone="green">Demo data</span></div>
         <p><strong>{title}</strong><br />{sample.document.source.project.location} · Client: {sample.document.source.project.client}</p>
@@ -106,16 +109,16 @@ async function MockContent({ query }: { query: Promise<{ view?: string; note?: s
           <div><dt>Locked reports</dt><dd>{demoLog.entries.filter(entry => entry.kind === "report").length}</dd></div>
         </dl>
       </section>
-      <section className="stitch-card">
+      <section className="stitch-card stitch-team-telegram">
         <div className="stitch-title-row"><h2 className="stitch-section-title">Telegram bot</h2></div>
         <p>Foremen send voice notes and photos to the bot — no new app to learn.</p>
         <a href="https://t.me/SiteLedgerNGbot" className="diary-row-link" target="_blank" rel="noreferrer"><DiaryIcon name="send" size={20} /><strong>Send via Telegram</strong><span className="stitch-chip">@SiteLedgerNGbot</span></a>
       </section>
       <MockTeamMembers members={demoTeam} />
-    </>}
+    </div>}
     <Link className="text-link" href="/projects">Back to your projects</Link>
   </>;
 }
 export default function Page({ searchParams }: { searchParams: Promise<{ view?: string; note?: string }> }) {
-  return <main className="mx-auto max-w-5xl px-5 py-7"><Suspense fallback={<PageLoading title="Opening mock project…" variant="rows" header={<WorkspaceHeader current="today" title={headerTitle} project={headerTitle} />} />}> <MockContent query={searchParams} /></Suspense></main>;
+  return <main className="mx-auto max-w-7xl px-5 py-7 sm:px-10"><Suspense fallback={<PageLoading title="Opening mock project…" variant="split" split="6-6" header={<WorkspaceHeader current="today" title={headerTitle} project={headerTitle} />} />}> <MockContent query={searchParams} /></Suspense></main>;
 }
