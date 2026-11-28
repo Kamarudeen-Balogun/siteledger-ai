@@ -1,6 +1,6 @@
 // Demo assets (synthetic voice notes + test photos) are stored in the repo
-// as base64 text under assets/demo/ and decoded into public/demo/ by this
-// script, because the push route for this repo cannot carry binary files.
+// as base64 text under assets/ and decoded into public/ by this script,
+// because the push route for this repo cannot carry binary files.
 // The decoded files are the assets the app serves; the .b64 sources are
 // the tracked source of truth. Idempotent: re-decodes every run, so a
 // changed source always wins over a stale decoded file. Run automatically

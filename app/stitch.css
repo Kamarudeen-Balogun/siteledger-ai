@@ -132,8 +132,13 @@ nav.work-flow { margin: 0; }
 .stitch-today .diary-capture-option strong { font-size: 14px; }
 .stitch-today .diary-capture-option small, .stitch-today .diary-capture-hint { color: var(--stitch-muted); font-size: 12px; }
 .stitch-review-button { min-height: 52px; }
-.stitch-transition { position: fixed; inset: env(safe-area-inset-top) 0 auto; z-index: 70; height: 2px; pointer-events: none; transform-origin: left; background: var(--stitch-primary); animation: stitch-transition 280ms ease-out both; }
-@keyframes stitch-transition { from { transform: scaleX(.08); opacity: .6; } to { transform: scaleX(1); opacity: 0; } }
+/* Page-change line: a subtle orange segment sweeping the top of the page
+   for as long as the change is in flight — the same diary-loading language
+   as the skeleton top line, no flash-and-vanish, no veil. The element
+   unmounts when the change finishes, so the line never lingers. */
+.stitch-transition { position: fixed; inset: env(safe-area-inset-top) 0 auto; z-index: 70; height: 3px; overflow: hidden; pointer-events: none; background: transparent; }
+.stitch-transition::after { content: ""; display: block; width: 40%; height: 3px; background: var(--stitch-primary); animation: stitch-transition-sweep 1.2s ease-in-out infinite; }
+@keyframes stitch-transition-sweep { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 @media (prefers-reduced-motion: reduce) { .stitch-transition { display: none; } }
 .stitch-confirm .stitch-human-gate { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 16px; background: var(--stitch-warning); }
 .stitch-human-gate > span { flex: none; display: grid; width: 32px; height: 32px; place-items: center; border-radius: 50%; background: var(--stitch-strong); color: #fff; }

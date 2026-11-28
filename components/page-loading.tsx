@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
-import { DiaryNotice } from "./diary-notice";
 
-// The loading state shown while a page change resolves. It is shaped like
-// the destination — ruled diary rows, a report total band, or form fields —
-// on the same paper background, with the orange diary loading line, so a
+// The loading state shown while a page change resolves. It reads as the
+// diary turning a page: a subtle orange line at the top and ruled-paper
+// skeleton rows shaped like the destination, on the same paper background.
+// No big "Opening…" notice — the skeleton itself is the loading state, so a
 // page change never flashes blank and never shifts layout when the real
-// content lands. All motion is the existing shimmer, which the
+// content lands. The title stays only as a small status line (and the
+// accessible status). All motion is the existing shimmer, which the
 // reduced-motion rule already disables.
 export type PageLoadingVariant = "rows" | "report" | "form" | "table";
 
@@ -20,7 +21,8 @@ export function PageLoading({ title, detail, variant = "rows", header }: {
 }) {
   return <>
     {header}
-    <DiaryNotice busy title={title}>{detail}</DiaryNotice>
+    <div className="diary-loading-top" aria-hidden="true"><i /></div>
+    <p className="mt-3 font-body-sm text-body-sm text-on-surface-variant" role="status">{title}{detail ? ` — ${detail}` : ""}</p>
     {/* The tall skeleton bars first: on a tab change the loader must read
       as a skeleton at once, not as a heading over blank paper — the audit
       saw only the heading, and these are the bars a project switch

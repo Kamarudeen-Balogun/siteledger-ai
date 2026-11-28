@@ -27,7 +27,7 @@ async function AccountContent({ searchParams }: { searchParams: Promise<{ sectio
   const feedbackOwner=Boolean(account.email_verified&&account.email&&account.email.toLowerCase()===process.env.SITELEDGER_FEEDBACK_OWNER_EMAIL?.toLowerCase());
   const role=project?.role_label??(project?.role==="pm"?"PM/QS":project?.role==="foreman"?"Foreman":"No active project role");
   const settings: (readonly [ComponentProps<typeof DiaryIcon>["name"], string, string, string])[] = [
-    ["help","/help","Help & Support","How to use SiteLedger"], ["info","/#about","About","SiteLedger and its builder"],
+    ["help","/help","Help & Support","How to use SiteLedger"], ["info","/about","About","SiteLedger and its builder"],
     ["feedback","/account/feedback","Send feedback","Report a bug or suggest an improvement"], ["receipt","/account/feedback?view=history","My feedback","Read updates and replies"],
     ["email","/account?section=email","Email & password","Manage account access"],
     ["telegram","/account?section=telegram",account.telegram_linked?"Telegram connection":"Link Telegram","Manage your Telegram account"],
