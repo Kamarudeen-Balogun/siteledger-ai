@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { PublicSite } from "@/components/public-site";
 import { LandingAccountLink } from "@/components/landing-account-link";
 import { DiaryIcon } from "@/components/diary-icon";
@@ -21,13 +20,40 @@ export default function Home() {
         <div className="relative flex flex-col gap-2 overflow-hidden rounded-xl bg-surface-container-lowest p-4 shadow-md">
           <div className="flex items-center justify-between">
             <span className="font-stamp-label text-stamp-label uppercase text-on-surface-variant">Sample record</span>
-            <span className="rotate-[-4deg] select-none rounded bg-primary-fixed/60 px-2 py-0.5 font-stamp-label text-[10px] font-bold uppercase leading-tight tracking-widest text-primary-container">Locked · 23 Nov 2026</span>
+            <span className="rotate-[-4deg] select-none rounded bg-primary-fixed/60 px-2 py-0.5 font-stamp-label text-[10px] font-bold uppercase leading-tight tracking-widest text-primary-container">Locked · 6 Nov 2026</span>
           </div>
           <h2 id="sample-record-title" className="font-headline-sm text-headline-sm text-on-surface">A real costed day, locked.</h2>
-          <Link href="/reports/demo" aria-label="Open the sample report">
-            <Image src="/sample-record.webp" alt="Sample locked daily site report: 18 square metres of blockwork costed at 261,000 naira, approved and locked on 23 November 2026" width={390} height={810} className="h-auto w-full rounded-lg" />
+          {/* Compact code-built duplicate of the locked sample report at
+              /reports/demo — the figures are the real sample's (seven BoQ
+              items totalling ₦1,495,300, locked 6 Nov 2026). No screenshot:
+              a code card cannot fail to load. Only the first item shows
+              here; the full report is one tap away. */}
+          <Link href="/reports/demo" aria-label="Open the sample report — locked 6 November 2026" className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-headline-sm text-headline-sm font-semibold text-on-surface">Sample Report</span>
+              <span className="inline-flex items-center gap-1 rounded bg-surface-container px-2 py-1"><span className="h-1.5 w-1.5 rounded-full bg-primary" /><span className="font-stamp-label text-stamp-label uppercase text-primary">Sample</span></span>
+              <span className="inline-flex items-center gap-1 rounded bg-secondary-container px-2 py-1 text-on-secondary-container"><DiaryIcon name="lock" size={14} /><span className="font-stamp-label text-stamp-label uppercase">Locked</span></span>
+            </div>
+            <div className="flex flex-col gap-1 rounded-xl bg-surface-container p-4 shadow-sm">
+              <span className="font-stamp-label text-stamp-label uppercase text-on-surface-variant">Daily site report · 6 Nov 2026</span>
+              <span className="mt-0.5 font-headline-md text-headline-md font-semibold text-on-surface">4-Bedroom Duplex, Lekki Phase 1, Lagos</span>
+              <span className="font-body-md text-body-md text-on-surface-variant">Perkins Limited</span>
+            </div>
+            <div className="overflow-hidden rounded-xl bg-surface-container p-0 shadow-sm">
+              <div className="flex justify-between px-4 pb-1 pt-3"><span className="font-stamp-label text-stamp-label uppercase text-on-surface-variant">Item</span><span className="font-stamp-label text-stamp-label uppercase text-on-surface-variant">Qty × Rate · Amount</span></div>
+              <div className="flex flex-col px-2 pb-2">
+                <div className="flex items-center justify-between rounded bg-surface-container-low px-2 py-3">
+                  <div className="min-w-0 pr-2"><span className="block font-label-ledger text-label-ledger text-on-surface">Excavation, foundation trenches</span></div>
+                  <div className="shrink-0 text-right"><span className="block font-code-entry text-code-entry text-on-surface-variant">27 m³ × ₦8,500</span><span className="block font-code-entry text-code-entry font-bold text-on-surface">₦229,500</span></div>
+                </div>
+                <div className="mx-2 mb-2 mt-1 flex items-center justify-between rounded bg-primary-fixed/40 px-2 py-2">
+                  <span className="flex items-center gap-1.5"><DiaryIcon name="seal" size={18} /><span className="font-label-ledger text-label-ledger uppercase text-on-primary-fixed">Value of work today</span></span>
+                  <span className="font-headline-sm text-headline-sm font-bold text-primary">₦1,495,300</span>
+                </div>
+              </div>
+            </div>
           </Link>
-          <p className="font-body-sm text-body-sm text-on-surface-variant">A locked daily record from the public demonstration — quantities checked, costed against the BoQ, and approved. <Link href="/reports/demo" className="text-link">Open the sample report</Link></p>
+          <p className="font-body-sm text-body-sm text-on-surface-variant">A locked daily record from the public demonstration — quantities checked, costed against the BoQ, and approved. <Link href="/reports/demo" className="text-link">See the full sample report</Link></p>
           <div className="flex items-start gap-2 pt-1">
             <DiaryIcon name="history" size={16} />
             <p className="font-body-sm text-body-sm text-on-surface-variant"><strong className="font-medium text-on-surface">Immutable audit trail:</strong> Voice note → human check → BoQ cost. Approval is locked; adjustments post as signed amendments.</p>

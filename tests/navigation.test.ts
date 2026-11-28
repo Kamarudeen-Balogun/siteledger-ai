@@ -300,24 +300,60 @@ test("public Help page has no tour button; the tour routes by sign-in state", ()
 test("landing page shows a real sample record, not the illustrative card, and has no About section", () => {
   // The landing "Illustrative daily record" card (Lekki duplex, LOG
   // #2025-084, Demo Rev C) was hand-built copy, not a real record. It is
-  // replaced by a screenshot of the real locked sample report, and the
-  // About write-up moved off the landing page entirely — it lives on
-  // /about now, which is also where the account settings link points.
+  // replaced by a compact code-built duplicate of the real locked sample
+  // report — no screenshot image, so the card can never fail to load —
+  // and the About write-up moved off the landing page entirely — it lives
+  // on /about now, which is also where the account settings link points.
   const home = read("app", "page.tsx");
   assert.ok(!home.includes("Illustrative daily record"), "no illustrative card copy");
   assert.ok(!home.includes("LOG #2025-084"), "no illustrative log number");
   assert.ok(!home.includes("Demo Rev C"), "no illustrative demo revision");
   assert.ok(!home.includes('id="about"'), "no About section on the landing page");
   assert.ok(!home.includes("About SiteLedger"), "no About write-up on the landing page");
-  assert.match(home, /src="\/sample-record\.webp"/, "landing shows the sample-record screenshot");
-  assert.match(home, /alt="Sample locked daily site report/, "screenshot has real alt text");
-  assert.ok(home.includes('href="/reports/demo"'), "screenshot links to the sample report");
+  // Compact code card: Sample Report heading with SAMPLE + LOCKED badges,
+  // the project/date line, one teaser BoQ item, and the value band — the
+  // full seven-item report lives at /reports/demo.
+  assert.ok(home.includes("Sample Report"), "compact card shows the Sample Report heading");
+  assert.ok(home.includes(">Sample<"), "compact card shows the SAMPLE badge");
+  assert.ok(home.includes(">Locked<"), "compact card shows the LOCKED badge");
+  assert.ok(home.includes("6 November 2026"), "compact card names the lock date");
+  assert.ok(home.includes("4-Bedroom Duplex, Lekki Phase 1, Lagos"), "compact card names the project");
+  assert.ok(home.includes("Perkins Limited"), "compact card names the client");
+  assert.ok(home.includes("Excavation, foundation trenches"), "compact card teases one BoQ item");
+  assert.ok(home.includes("₦1,495,300"), "compact card shows the value of work today");
+  assert.ok(home.includes("Value of work today"), "compact card shows the value band");
+  assert.ok(!home.includes("Sandcrete blocks 150mm hollow"), "compact card shows only one BoQ item, not the full table");
+  assert.ok(home.includes('href="/reports/demo"'), "compact card links to the sample report");
+  assert.ok(home.includes("See the full sample report"), "compact card points at the full report");
+  // No screenshot image anywhere in the landing flow: the base64 asset,
+  // the decode-script entry, the gitignore entry and the generated file
+  // are all gone, and the page imports no image component.
+  assert.ok(!home.includes("sample-record.webp"), "no sample-record image on the landing page");
+  assert.ok(!home.includes("next/image"), "landing page imports no image component");
   const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-  assert.ok(existsSync(join(root, "public", "sample-record.webp")), "sample screenshot exists in public/");
+  assert.ok(!existsSync(join(root, "assets", "sample-record.webp.b64")), "sample-record base64 asset is deleted");
+  assert.ok(!existsSync(join(root, "public", "sample-record.webp")), "generated sample-record image is deleted");
+  assert.ok(!read("scripts", "decode-demo-assets.mjs").includes("sample-record"), "decode script has no sample-record entry");
+  assert.ok(!read(".gitignore").includes("sample-record"), "gitignore has no sample-record entry");
   assert.ok(existsSync(join(root, "app", "about", "page.tsx")), "the About page still exists");
   const account = read("app", "account", "page.tsx");
   assert.ok(account.includes('["info","/about","About"'), "account settings About points at /about");
   assert.ok(!account.includes("/#about"), "no dead #about anchor remains");
+  // The figures must be the NEW design's locked sample (6 Nov 2026,
+  // seven items, ₦1,495,300) — the old-design README screenshot (18 m²
+  // blockwork, ₦261,000, 23 Nov 2026) was false information and is gone.
+  // The quoted figures are cross-checked against the demo data itself.
+  assert.ok(!home.includes("23 Nov 2026"), "no old lock date on the landing page");
+  assert.ok(!home.includes("261,000"), "no old blockwork figure on the landing page");
+  const demo = JSON.parse(read("lib", "data", "demo-documents.json")).report.document;
+  assert.equal(demo.costing.total_cost, "1495300", "demo total is ₦1,495,300");
+  assert.equal(demo.costing.items.length, 7, "demo report has seven items");
+  assert.equal(demo.costing.items[0].cost_today, "229500", "teaser item costs ₦229,500");
+  // The README shows the same new-design images, with captions that match.
+  const readme = read("README.md");
+  assert.ok(!readme.includes("18 square metres of blockwork and a cost of 261,000 naira"), "no old locked-report caption in the README");
+  assert.ok(!readme.includes("551,000-naira cost illustration"), "no old landing caption in the README");
+  assert.match(readme, /costed-report\.png" width="360" alt="Locked daily site report for 6 November 2026/, "README locked-report caption matches the new image");
 });
 
 test("one SL logo throughout; no ledger mark anywhere", () => {
