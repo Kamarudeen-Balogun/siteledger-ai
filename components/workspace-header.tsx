@@ -22,6 +22,6 @@ export function WorkspaceHeader({ current, title, project, projectId, publicView
       <div className="diary-header-actions"><ThemeSwitch/>{!hideProfile && <WorkspaceProfile/>}</div>
     </div>
     {!isDetail && <WorkspaceProjectPicker current={current} project={project} projectId={projectId}/>}
-    {!publicView && <WorkspaceNavigation current={current}/>}
+    {!publicView && <WorkspaceNavigation current={current} onBack={onBack}/>}
   </header>;
 }

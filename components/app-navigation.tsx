@@ -253,7 +253,7 @@ export function WorkspaceProjectPicker({ current, project, projectId }: { curren
   </>;
 }
 
-export function WorkspaceNavigation({ current }: { current: WorkspaceArea }) {
+export function WorkspaceNavigation({ current, onBack }: { current: WorkspaceArea; onBack?: () => void }) {
   const navigation = useContext(Navigation);
   const path = navigation?.pathname ?? "/";
   // On the mock project the dock stays on the mock: its Today, Reports,
@@ -268,6 +268,10 @@ export function WorkspaceNavigation({ current }: { current: WorkspaceArea }) {
     { href: isMock ? "/projects/mock?view=team" : projectHref ? `${projectHref}/team` : "/projects", label: "Projects & Team", area: "projects", icon: "team" },
   ] as const;
   function back() {
+    // A caller-supplied back action wins: during "Add today's work"
+    // the header Back closes the capture sheet instead of leaving
+    // the page (the icon button in the title already does this).
+    if (onBack) { onBack(); return; }
     if (navigation) navigation.back();
     else window.location.assign(navigationFallback(window.location.pathname));
   }

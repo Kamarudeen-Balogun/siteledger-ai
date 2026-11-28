@@ -193,8 +193,14 @@
   }
   .workspace-header .workspace-navigation > .workspace-back:hover { color: var(--accent); }
   /* Detail pages (account, feedback, help) have no project switcher
-     and no tab bar: the header collapses to brand + actions. */
-  .workspace-header[data-detail] .workspace-navigation { display: none; }
+     and no tab bar — but they DO keep the Back link. Hiding the whole
+     navigation row left a detail page with no way back at all on
+     desktop (the icon back button in the title is mobile-only), which
+     is why the Settings page had none. Only the tab bar is hidden;
+     the Back link stays, in its own row under the header rule. The
+     mobile dock is already display:none at this width. */
+  .workspace-header[data-detail] .workspace-desktop-nav { display: none; }
+  .workspace-header[data-detail] .workspace-navigation { border-bottom: 0; }
   .workspace-header[data-detail] { border-bottom: 1px solid var(--rule); padding-bottom: 16px; }
   /* The save indicator lives in Today's content (real state). On
      desktop it reads as a full-width strip above the two columns. */
@@ -390,7 +396,16 @@
     grid-auto-flow: dense;
   }
   .team-workspace > * { grid-column: 1 / -1; }
-  .team-workspace > section.stitch-team-members { grid-column: 1 / span 8; }
+  /* The members section is one tall grid item (the whole members
+     list + role controls). It shares its row with the overview card,
+     so that row grows to the members list's full height and the
+     stamped-report link, Telegram card and menu list all land below
+     it — the large empty gap in the right rail. Spanning the members
+     section across the four right-rail rows lets each right-rail
+     item take its own row beside it, so the rail fills top to
+     bottom. The mock has the same shape (overview + Telegram +
+     members), so the same span fills its rail too. */
+  .team-workspace > section.stitch-team-members { grid-column: 1 / span 8; grid-row: span 4; }
   .team-workspace > section.stitch-team-overview,
   .team-workspace > a.stitch-team-report,
   .team-workspace > section.stitch-team-telegram { grid-column: 9 / span 4; }

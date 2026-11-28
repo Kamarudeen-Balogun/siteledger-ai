@@ -120,5 +120,5 @@ export function PageIntro({ label, title, children }: { label: string; title: st
 }
 
 export function InformationPage({ current, label, title, intro, children }: { current: string; label: string; title: string; intro: ReactNode; children: ReactNode }) {
-  return <PublicSite current={current}><div className="public-column flex flex-col pb-10"><PageIntro label={label} title={title}>{intro}</PageIntro><div className="flex flex-col gap-4">{children}</div></div></PublicSite>;
+  return <PublicSite current={current}><div className="public-column flex flex-col pb-10"><Link href="/" className="text-link">Back to home</Link><PageIntro label={label} title={title}>{intro}</PageIntro><div className="flex flex-col gap-4">{children}</div></div></PublicSite>;
 }

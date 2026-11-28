@@ -193,7 +193,7 @@ test("Team is 8+4, Account is 5+7 and Project detail is 5+7 on Stitch's 12-colum
   // placement would strand it below them; dense backfills it to the
   // top of the left column, beside the overview.
   assert.match(css, /\.team-workspace \{[^}]*grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)[^}]*grid-auto-flow: dense;/);
-  assert.match(css, /\.team-workspace > section\.stitch-team-members \{ grid-column: 1 \/ span 8; \}/);
+  assert.match(css, /\.team-workspace > section\.stitch-team-members \{ grid-column: 1 \/ span 8; grid-row: span 4; \}/);
   assert.match(css, /\.team-workspace > section\.stitch-team-overview,\s*\.team-workspace > a\.stitch-team-report,\s*\.team-workspace > section\.stitch-team-telegram \{ grid-column: 9 \/ span 4; \}/);
   // The overview card sits in the narrow 4-column rail and its
   // metrics `dl` uses the shared auto-fit rule with nowrap `dd`s:
@@ -466,7 +466,7 @@ test("the Team page's right half is filled by the menu list (members view only)"
   assert.match(css, /\.team-workspace:has\(> section\.stitch-team-members\) > \.stitch-menu-list \{ grid-column: 9 \/ span 4; margin-top: 0; \}/);
   assert.match(css, /\.team-workspace:has\(> section\.stitch-team-members\) > details\.work-disclosure \{ grid-column: 1 \/ span 8; \}/);
   // The 8+4 split itself is unchanged.
-  assert.match(css, /\.team-workspace > section\.stitch-team-members \{ grid-column: 1 \/ span 8; \}/);
+  assert.match(css, /\.team-workspace > section\.stitch-team-members \{ grid-column: 1 \/ span 8; grid-row: span 4; \}/);
   assert.match(css, /\.team-workspace > section\.stitch-team-overview,\s*\.team-workspace > a\.stitch-team-report,\s*\.team-workspace > section\.stitch-team-telegram \{ grid-column: 9 \/ span 4; \}/);
   // The menu list and the explainer are still rendered by the
   // team page / TeamManagement (real content, nothing invented).
@@ -474,4 +474,90 @@ test("the Team page's right half is filled by the menu list (members view only)"
   assert.match(team, /className="stitch-menu-list mt-4"/);
   const forms = read("components", "project-forms.tsx");
   assert.match(forms, /What can each role do\?/);
+});
+
+test("the Team members section spans the four right-rail rows so the right half fills", () => {
+  const css = read("components", "transplant-desktop.css");
+  // Root cause of the remaining right-half gap: the members section
+  // is one tall grid item sharing its row with the overview card, so
+  // that row grows to the members list's full height and the
+  // stamped-report link, Telegram card and menu list all land below
+  // it. Spanning the members section across the four right-rail rows
+  // lets each right-rail item take its own row beside it.
+  assert.match(css, /\.team-workspace > section\.stitch-team-members \{ grid-column: 1 \/ span 8; grid-row: span 4; \}/);
+  // The right rail itself is unchanged: overview, stamped-report
+  // link and Telegram card still sit 9 / span 4, and the menu list
+  // still fills the rail below them in the members view.
+  assert.match(css, /\.team-workspace > section\.stitch-team-overview,\s*\.team-workspace > a\.stitch-team-report,\s*\.team-workspace > section\.stitch-team-telegram \{ grid-column: 9 \/ span 4; \}/);
+  assert.match(css, /\.team-workspace:has\(> section\.stitch-team-members\) > \.stitch-menu-list \{ grid-column: 9 \/ span 4; margin-top: 0; \}/);
+  // The mock team view shares the same classes, so the same span
+  // fills its rail too (overview + Telegram + members).
+  const mock = read("app", "projects", "mock", "page.tsx");
+  assert.match(mock, /<div className="team-workspace">/);
+  const demo = read("components", "mock-demo.tsx");
+  assert.match(demo, /className="stitch-card stitch-team-members"/);
+});
+
+test("detail pages keep the header Back link on desktop", () => {
+  const css = read("components", "transplant-desktop.css");
+  // Detail pages (account, feedback, help) had no way back at all on
+  // desktop: the whole navigation row was hidden, and the icon back
+  // button in the title is mobile-only (stitch.css hides .stitch-back
+  // outside max-width 1023px). The fix hides only the tab bar; the
+  // Back link stays in its own row under the header rule.
+  assert.doesNotMatch(css, /\.workspace-header\[data-detail\] \.workspace-navigation \{ display: none; \}/);
+  assert.match(css, /\.workspace-header\[data-detail\] \.workspace-desktop-nav \{ display: none; \}/);
+  assert.match(css, /\.workspace-header\[data-detail\] \.workspace-navigation \{ border-bottom: 0; \}/);
+  // The Back button itself is still the quiet text link at the left
+  // of the tab bar row.
+  assert.match(css, /\.workspace-header \.workspace-navigation > \.workspace-back \{/);
+  // The header still marks detail pages (brand + actions, no
+  // switcher) and the mobile icon back is still mobile-only.
+  const header = read("components", "workspace-header.tsx");
+  assert.match(header, /data-detail=\{isDetail \|\| undefined\}/);
+  const stitch = read("app", "stitch.css");
+  assert.match(stitch, /\.stitch-back \{ display: none; \}/);
+});
+
+test("the header Back button honours a caller-supplied back action", () => {
+  const navigation = read("components", "app-navigation.tsx");
+  // During "Add today's work" the header is in detail mode and the
+  // Back button must close the capture sheet, not leave the page
+  // (the icon button in the title already does this via onBack).
+  // WorkspaceNavigation takes the same onBack and its back() checks
+  // it before falling back to history / navigationFallback.
+  assert.match(navigation, /export function WorkspaceNavigation\(\{ current, onBack \}/);
+  assert.match(navigation, /if \(onBack\) \{ onBack\(\); return; \}/);
+  const header = read("components", "workspace-header.tsx");
+  assert.match(header, /<WorkspaceNavigation current=\{current\} onBack=\{onBack\}\/>/);
+});
+
+test("every public page and the trial/invite/shared flows have a way back", () => {
+  // Information pages (About, Contact, Privacy, Terms) share one
+  // wrapper: a single "Back to home" link there covers all four.
+  const site = read("components", "public-site.tsx");
+  assert.match(site, /<Link href="\/" className="text-link">Back to home<\/Link>/);
+  // Trial entry and capture states link back home; the draft and the
+  // preserved original link back to the trial. The trial confirm
+  // flow already has a workspace header (detail mode) with Back.
+  const trial = read("app", "trial", "page.tsx");
+  assert.match(trial, /<Link href="\/" className="text-link">Back to home<\/Link>/);
+  const report = read("app", "trial", "report", "page.tsx");
+  assert.match(report, /<Link href="\/trial" className="text-link">Back to trial<\/Link>/);
+  const original = read("app", "trial", "original", "[id]", "page.tsx");
+  assert.match(original, /<Link href="\/trial" className="text-link">Back to trial<\/Link>/);
+  // The invite page links back home as well as to the account.
+  const invite = read("app", "invite", "page.tsx");
+  assert.match(invite, /<Link href="\/" className="text-link">Back to home<\/Link>/);
+  assert.match(invite, /<Link href="\/account"[^>]*>Your account<\/Link>/);
+  // A shared report links back home below its toolbar.
+  const shared = read("app", "shared", "[id]", "page.tsx");
+  assert.match(shared, /<Link href="\/" className="text-link">Back to home<\/Link>/);
+  // Pages that already had a way back are untouched: the sample
+  // report, the log pages, the mock, help articles, feedback sent
+  // and deletion requested all keep their existing back links.
+  const demo = read("app", "reports", "demo", "page.tsx");
+  assert.match(demo, /Back to home/);
+  const help = read("app", "help", "page.tsx");
+  assert.match(help, /Back to Help/);
 });
