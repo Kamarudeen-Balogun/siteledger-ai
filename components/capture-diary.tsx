@@ -244,7 +244,6 @@ export function CaptureDiary() {
         </section>:<>
           <div className="stitch-status"><span className="stitch-kicker"><i/>{pending.length?`${pending.length} waiting to send`:online?"All changes saved":"Offline"}</span><DiaryIcon name="saved" size={18}/></div>
           {!readOnly&&<div className="diary-today-actions"><button type="button" className="diary-primary" onClick={()=>{setCapturing(true);setError("");window.scrollTo(0,0);}} data-tour="add-work"><DiaryIcon name="plus" size={26}/>Add today&apos;s work</button><a href="https://t.me/SiteLedgerNGbot" className="diary-row-link" target="_blank" rel="noreferrer"><DiaryIcon name="send" size={20}/><strong>Send via Telegram</strong><span className="stitch-chip">@SiteLedgerNGbot</span></a></div>}
-          {person&&<MockProjectControl person={person} explore/>}
           <section className="stitch-card stitch-drafts" aria-labelledby="today-drafts" data-tour="drafts"><div className="stitch-title-row">
             <h2 id="today-drafts"><DiaryIcon name="pending" size={20}/>Awaiting review <span className="stitch-chip">{!currentSummary&&online?"—":drafts.length+localReviews.length}</span></h2><span className="stitch-kicker">Not costed yet</span></div>
             <p>Open a draft to check the details, edit quantities, or finish costing it later.</p>

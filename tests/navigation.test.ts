@@ -170,19 +170,63 @@ test("BoQ add and adjust open as bottom sheets, not inline forms", () => {
   assert.match(editor, /className="text-link mt-3"[^>]*onClick=\{\(\) => edit\(row\)\}[^>]*>Adjust item<\/button>/);
 });
 
-test("BoQ version history is compact rows with a version sheet", () => {
-  // Regression: the Previous versions card expanded inline into a giant
-  // card that buried the BoQ page. Versions are slim rows now; a version's
-  // rows open in a bottom sheet over the intact page.
+test("BoQ version history is a small button opening a sheet, never an inline expansion", () => {
+  // Regression: the version list was a <details> disclosure whose summary
+  // row filled the BoQ page width and expanded inline, pushing the whole
+  // page down. The trigger is a small button now; the list opens in a
+  // bottom sheet over the intact page (background locked by showModal),
+  // and a version's rows open in the same sheet.
   const versions = read("components", "boq-versions.tsx");
-  assert.match(versions, /<button type="button" className="boq-versions__row"/);
+  assert.ok(!versions.includes("<details"), "The version list must not be a <details> expansion");
+  assert.ok(!versions.includes("<summary"), "The version list must not use a <summary> row");
+  assert.match(versions, /<button type="button" className="boq-versions__trigger" data-tour="boq-history"/);
   assert.match(versions, /<dialog ref=\{sheet\} className="action-dialog stitch-sheet"/);
+  assert.match(versions, /if \(dialog && !dialog\.open\) dialog\.showModal\(\);/);
+  assert.match(versions, /<button type="button" className="boq-versions__row"/);
+  assert.match(versions, /Back to versions/);
+  const css = read("app", "globals.css");
+  assert.match(css, /\.boq-versions__trigger \{[^}]*min-height: 40px;/);
+  assert.ok(!css.includes(".boq-versions > summary"), "No summary-row styles may remain");
   const page = read("app", "projects", "[id]", "boq", "page.tsx");
   assert.match(page, /<BoqVersions versions=\{versions\} currency=\{currency\}\/>/);
   assert.ok(!page.includes("boq-versions__rows"), "Version rows render only inside the sheet, not inline on the BoQ page");
   const mock = read("components", "mock-project.tsx");
   assert.match(mock, /export function MockBoqActions/);
   assert.match(mock, /<dialog ref=\{sheet\} className="action-dialog stitch-sheet" aria-label="Demo BoQ is read-only"/);
+});
+
+test("the mock Add today's work never leaves the mock", () => {
+  // Regression: the mock's "Add today's work" linked to /today, whose
+  // server-side active project is the real one (the mock has no
+  // server-side active state), so tapping it right after switching to
+  // the mock snapped the user back to the real project. The mock button
+  // opens a sheet on the mock instead; leaving for the real diary is an
+  // explicit choice inside that sheet.
+  const mock = read("app", "projects", "mock", "page.tsx");
+  assert.ok(!mock.includes('href="/today"'), "The mock page must not link to /today");
+  assert.match(mock, /<MockAddWork\/>/);
+  const project = read("components", "mock-project.tsx");
+  assert.match(project, /export function MockAddWork/);
+  assert.match(project, /<dialog ref=\{sheet\} className="action-dialog stitch-sheet" aria-label="Record work in your own project"/);
+  assert.match(project, /<Link href="\/today" className="stitch-button" data-primary>Open your diary<\/Link>/);
+});
+
+test("the mock explore card shows only when no project is selected", () => {
+  // Regression: "New here? See a full project first" appeared on real
+  // projects' Today tab too, because the explore card rendered in the
+  // main Today view as well as the no-project gate. It must render only
+  // in the gate view, so only users yet to pick a project see it; old
+  // users reach the mock through the normal switcher.
+  const diary = read("components", "capture-diary.tsx");
+  const renders = diary.match(/<MockProjectControl person=\{person\} explore\/>/g) ?? [];
+  assert.equal(renders.length, 1, "The explore card must render in exactly one place");
+  const gateStart = diary.indexOf("gate&&!context?<section");
+  const mainStart = diary.indexOf("{context&&<>");
+  const renderAt = diary.indexOf("<MockProjectControl person={person} explore/>");
+  assert.ok(gateStart >= 0 && mainStart > gateStart, "The gate and main views must exist");
+  assert.ok(renderAt > gateStart && renderAt < mainStart, "The single explore render must sit inside the no-project gate view, not the main Today view");
+  const project = read("components", "mock-project.tsx");
+  assert.match(project, /if\(explore\)return <section className="stitch-card stitch-explore">/);
 });
 
 test("percentages are formatted at one decimal like the mock", () => {
