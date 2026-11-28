@@ -197,7 +197,7 @@ export function MockTeamMembers({ members }: { members: DemoTeamMember[] }) {
     if (dialog && !dialog.open) dialog.showModal();
   }, [selected]);
   return <>
-    <section className="stitch-card">
+    <section className="stitch-card stitch-team-members">
       <div className="stitch-title-row"><h2 className="stitch-section-title">Site team &amp; access</h2><span className="stitch-kicker">Field diary permissions</span></div>
       <ul>{members.map(member => <li key={member.name}>
         <button type="button" className="stitch-menu-row" onClick={() => { setResent(false); setSelected(member); }}>

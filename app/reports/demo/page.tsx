@@ -19,7 +19,7 @@ export default function Page() {
     return { title: displayWorkTitle(priced?.description, found?.description ?? "Work item"), detail: "", qty: `${formatQuantity(item.quantity_done)} ${displayUnit(item.unit)}`, rate: money(item.rate), amount: money(item.cost_today) };
   });
   return <PublicSite current="/reports/demo">
-    <div className="public-column flex flex-col gap-3 pb-10 pt-4">
+    <div className="sample-report-layout public-column flex flex-col gap-3 pb-10 pt-4">
       <Link href="/" className="flex min-h-[44px] items-center gap-1 self-start font-label-ledger text-label-ledger text-primary"><DiaryIcon name="back" size={18} />Back to home</Link>
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="font-headline-lg-mobile text-headline-lg-mobile font-semibold text-on-surface">Sample Report</h1>

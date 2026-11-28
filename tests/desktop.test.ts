@@ -92,16 +92,28 @@ test("the mock Today is a stitch-today grid and its demo day is pinned to Lagos"
   assert.match(mock, /new Date\("2026-11-06T00:00:00\+01:00"\)/);
 });
 
-test("BoQ rows are a 12-column grid on desktop (item 5, values 4, progress 3)", () => {
+test("BoQ rows are a 12-column grid on desktop (item 4, values 5, progress 3) and the values never overlap", () => {
   const css = read("components", "transplant-desktop.css");
   // Stitch boq_mock_project: each row is a 12-column grid — item 5,
-  // values 4, measured progress 3. The rows stay cards; only the
+  // values 4, measured progress 3. The values column is widened to
+  // 5 here (item 4): at 1024px the three nowrap money figures need
+  // ~120px each and a 4-wide column only gives ~110px, so the Unit
+  // Rate ran over the Line Total. The rows stay cards; only the
   // inside is gridded.
   assert.match(css, /\.stitch-boq-items > li\.stitch-card \{[^}]*display: grid;[^}]*grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)/);
-  assert.match(css, /\.stitch-boq-items > li > \.stitch-boq-item-head,\s*\.stitch-boq-items > li > \.stitch-boq-item-open \{ grid-column: 1 \/ span 5; \}/);
-  assert.match(css, /\.stitch-boq-items > li > dl\.stitch-boq-values \{ grid-column: 6 \/ span 4;/);
+  assert.match(css, /\.stitch-boq-items > li > \.stitch-boq-item-head,\s*\.stitch-boq-items > li > \.stitch-boq-item-open \{ grid-column: 1 \/ span 4; \}/);
+  assert.match(css, /\.stitch-boq-items > li > dl\.stitch-boq-values \{ grid-column: 5 \/ span 5;/);
   assert.match(css, /\.stitch-boq-items > li > \.stitch-boq-progress \{[^}]*grid-column: 10 \/ span 3;[^}]*border-left: 1px solid var\(--rule\);/);
   assert.match(css, /\.stitch-boq-items > li > \.stitch-boq-adjust \{ grid-column: 10 \/ span 3;/);
+  // The row's three values share one `dl` whose shared rule uses
+  // auto-fit minmax(80px, 1fr) with nowrap `dd`s — a long rate
+  // overflowed its track into the Line Total. In a row the three
+  // tracks are equal thirds that cannot shrink below zero, and a
+  // rate may wrap between its number and its unit instead of
+  // running over the next figure. Scoped to the row `dl` only.
+  assert.match(css, /\.stitch-boq-items > li > dl\.stitch-boq-values \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); \}/);
+  assert.match(css, /\.stitch-boq-items > li > dl\.stitch-boq-values > div \{ min-width: 0; \}/);
+  assert.match(css, /\.stitch-boq-items > li > dl\.stitch-boq-values dd \{ white-space: normal; \}/);
   // Both BoQ lists carry the hooks the grid places.
   const editor = read("components", "boq-editor.tsx");
   assert.match(editor, /className="stitch-boq-item-head"/);
@@ -118,15 +130,31 @@ test("the landing sections go multi-column on desktop", () => {
   // The earlier layer only gridded `.workflow-list` (which matched
   // nothing — the landing used no such class) and claimed
   // principles/roles were "already three columns at 1024px". They
-  // were flex-col stacks. The hooks are now on the markup.
-  for (const hook of ["landing-principles", "workflow-list", "landing-legal-items", "landing-roles"]) {
+  // were flex-col stacks. The hooks are now on the markup, and the
+  // selectors are qualified (section./div.) so they beat Tailwind's
+  // layered `.flex` — an unlayered rule wins only when it is at
+  // least as specific.
+  for (const hook of ["landing-principles", "workflow-list", "landing-legal-items", "landing-roles", "landing-hero-grid", "landing-hero-actions", "landing-legal-card"]) {
     assert.match(page, new RegExp(`className="[^"]*${hook}`), `landing must carry ${hook}`);
   }
-  assert.match(css, /\.landing-principles,\s*\.landing-roles \{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
-  assert.match(css, /\.workflow-list \{[^}]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(css, /\.landing-legal-items \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /section\.landing-principles,\s*section\.landing-roles \{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(css, /div\.workflow-list \{[^}]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  // The legal section is Stitch's 5+7 split (heading + intro + log
+  // link left, checklist card right), not a 2-column items grid.
+  assert.match(css, /\.landing-legal-card \{[^}]*grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.landing-legal-card > div:first-child,\s*\.landing-legal-card > p,\s*\.landing-legal-card > div:last-child \{ grid-column: 1 \/ span 5; \}/);
+  assert.match(css, /\.landing-legal-card > \.landing-legal-items \{ grid-column: 6 \/ span 7; grid-row: 1 \/ span 2; \}/);
+  assert.doesNotMatch(css, /\.landing-legal-items \{[^}]*grid-template-columns: repeat\(2,/);
+  // Hero: Stitch's 6+6 — headline + CTAs left, the sample-record
+  // preview card right. The CTAs are an inline row at desktop, not
+  // full-width buttons.
+  assert.match(css, /\.landing-hero-grid \{[^}]*grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.landing-hero-grid > section:first-child \{ grid-column: 1 \/ span 6;/);
+  assert.match(css, /\.landing-hero-grid > section:last-child \{ grid-column: 7 \/ span 6;/);
+  assert.match(css, /\.landing-hero-actions \{ flex-direction: row;/);
+  assert.match(css, /\.landing-hero-actions > a \{ width: auto; \}/);
   // Section headings span the full width above their grids.
-  assert.match(css, /\.landing-principles > div:first-child,\s*\.landing-roles > div:first-child \{ grid-column: 1 \/ -1; \}/);
+  assert.match(css, /section\.landing-principles > div:first-child,\s*section\.landing-roles > div:first-child \{ grid-column: 1 \/ -1; \}/);
   // Copy and figures are untouched: the four routine steps and the
   // four legal items are all still in the page.
   assert.equal((page.match(/"0[1-4]",/g) ?? []).length, 4);
@@ -134,29 +162,167 @@ test("the landing sections go multi-column on desktop", () => {
   assert.match(page, /"Private, Encrypted Site Repositories"/);
 });
 
-test("Team is 8+4, Account is 7+5 and Project detail is 7+5 on Stitch's 12-column grid", () => {
+test("Team is 8+4, Account is 5+7 and Project detail is 5+7 on Stitch's 12-column grid", () => {
   const css = read("components", "transplant-desktop.css");
   // Team (team_ajah): members 8 left, Current Site + Reports & Log
-  // + Connect Telegram 4 right.
-  assert.match(css, /\.team-workspace \{[^}]*grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)/);
+  // + Connect Telegram 4 right. Dense flow: the members section
+  // comes AFTER the overview/report/telegram in the DOM, so sparse
+  // placement would strand it below them; dense backfills it to the
+  // top of the left column, beside the overview.
+  assert.match(css, /\.team-workspace \{[^}]*grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)[^}]*grid-auto-flow: dense;/);
   assert.match(css, /\.team-workspace > section\.stitch-team-members \{ grid-column: 1 \/ span 8; \}/);
   assert.match(css, /\.team-workspace > section\.stitch-team-overview,\s*\.team-workspace > a\.stitch-team-report,\s*\.team-workspace > section\.stitch-team-telegram \{ grid-column: 9 \/ span 4; \}/);
   const team = read("app", "projects", "[id]", "team", "page.tsx");
   assert.match(team, /className="team-workspace /);
-  // Account (account_profile_settings): profile card 5 left,
-  // Settings 7 right, sign-out full-width below. The grid only
+  // The mock team view gets the same 8+4 (it never had the wrapper
+  // or the hooks, so round-2's rule matched nothing there). The
+  // 8+4 also moves the members' "Pending" chip out of the
+  // bottom-right corner, so Ada no longer clips it.
+  const mock = read("app", "projects", "mock", "page.tsx");
+  assert.match(mock, /<div className="team-workspace">/);
+  assert.match(mock, /className="stitch-card stitch-team-telegram"/);
+  const demo = read("components", "mock-demo.tsx");
+  assert.match(demo, /className="stitch-card stitch-team-members"/);
+  // Account (account_profile_settings): the spans in code.html, DOM
+  // order, are profile card 5 and Settings 7 — profile left (5),
+  // Settings right (7), sign-out full-width below. The grid only
   // applies to the overview; edit forms keep their single column.
   assert.match(css, /\.stitch-profile:has\(> section\.stitch-profile-card\) \{[^}]*grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.stitch-profile:has\(> section\.stitch-profile-card\) > section\.stitch-profile-card \{ grid-column: 1 \/ span 5; \}/);
   assert.match(css, /\.stitch-profile:has\(> section\.stitch-profile-card\) > section\.stitch-profile-settings \{ grid-column: 6 \/ span 7;/);
-  // Project detail (project_detail): Next step + links 5 left,
-  // Project summary dashboard 7 right. The grid only applies to
-  // the overview view; records and progress stay single-column.
+  // Project detail (project_detail): the spans in code.html, DOM
+  // order, are Next step 5 and dashboard 7 — Next step + links 5
+  // left, Project summary dashboard 7 right. The dashboard spans
+  // two rows so it fills the right side beside both the step and
+  // the links. The grid only applies to the overview view; records
+  // and progress stay single-column.
   assert.match(css, /\.project-workspace:has\(> section\[data-project-step\]\) \{[^}]*grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.project-workspace:has\(> section\[data-project-step\]\) > section\[data-project-step\],\s*\.project-workspace:has\(> section\[data-project-step\]\) > \.stitch-menu-list \{ grid-column: 1 \/ span 5;/);
-  assert.match(css, /\.project-workspace:has\(> section\[data-project-step\]\) > section\.project-ledger \{ grid-column: 6 \/ span 7;/);
+  assert.match(css, /\.project-workspace:has\(> section\[data-project-step\]\) > section\.project-ledger \{ grid-column: 6 \/ span 7; grid-row: span 2;/);
   const detail = read("app", "projects", "[id]", "page.tsx");
   assert.match(detail, /className="project-workspace /);
+  // The dashboard's lead figures broke mid-number ("₦25,000,000")
+  // because `overflow-wrap: anywhere` lets them split anywhere.
+  // At desktop they stay on one line and shrink to fit the column.
+  assert.match(css, /\.project-ledger \.ledger-totals dd \{ overflow-wrap: normal; white-space: nowrap; font-size: clamp\(20px, 2vw, 30px\); \}/);
+});
+
+test("Today's Work Progress backfills to the top of the right column (dense flow)", () => {
+  const css = read("components", "transplant-desktop.css");
+  // The right-column items (Work Progress, Telegram example) come
+  // AFTER the left-column items in the DOM. Sparse auto-placement
+  // put Work Progress beside the LAST left item (Daily Ledger
+  // Entry), leaving the right half empty beside Awaiting review
+  // and Today's submissions. Dense backfills it to the top-right,
+  // beside Awaiting review — where Stitch puts it.
+  assert.match(css, /\.stitch-today \{[^}]*grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)[^}]*grid-auto-flow: dense;/);
+  // The placement lines are unchanged: left items 1 / span 6,
+  // right items 7 / span 6.
+  assert.match(css, /\.stitch-today > section\.stitch-drafts,\s*\.stitch-today > section\.stitch-ledger \{ grid-column: 1 \/ span 6; \}/);
+  assert.match(css, /\.stitch-today > section\.diary-progress,\s*\.stitch-today > details\.work-disclosure\[data-tour="bot-example"\] \{ grid-column: 7 \/ span 6; \}/);
+});
+
+test("the sample report takes Stitch's 7+5 on desktop; the sealed record stays single-column", () => {
+  const css = read("components", "transplant-desktop.css");
+  const demo = read("app", "reports", "demo", "page.tsx");
+  // sample_locked_report: report document 7 left, photo evidence 5
+  // right. The figure is placed by explicit line beside the items
+  // table, not dense flow, so it cannot backfill beside the back
+  // link. Every other child stays in the left column.
+  assert.match(demo, /className="sample-report-layout /);
+  assert.match(css, /\.sample-report-layout \{[^}]*grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.sample-report-layout > \* \{ grid-column: 1 \/ span 7; \}/);
+  assert.match(css, /\.sample-report-layout > figure \{ grid-column: 8 \/ span 5; \}/);
+  // ReportDocument (the sealed record) is untouched: Stitch's mock
+  // locked report is itself single-column, and the 7+5 is only the
+  // sample page's inspection split.
+  assert.doesNotMatch(css, /\.report-document \{[^}]*display: grid;/);
+  // Content, figures and signatures are unchanged: the page renders
+  // the total from the demo data (total_cost 1495300) and the
+  // signatures are literals in the page.
+  const data = read("lib", "data", "demo-documents.json");
+  assert.match(data, /"total_cost": "1495300"/);
+  assert.match(demo, /Recorded by Musa Bello/);
+  assert.match(demo, /Approved by Engr\. Tola Adeyemi/);
+});
+
+test("Contact takes Stitch's 5+7 on desktop (desk left, form right)", () => {
+  const css = read("components", "transplant-desktop.css");
+  const contact = read("app", "contact", "page.tsx");
+  // contact_desktop: contact desk 5 left, Dispatch Message form 7
+  // right. The "next step" section stays full-width below the grid.
+  assert.match(contact, /<div className="contact-layout">/);
+  assert.match(contact, /<ContactDesk\/>/);
+  assert.match(contact, /<ContactForm siteKey=/);
+  assert.match(css, /\.contact-layout \{[^}]*grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.contact-layout > section:first-child \{ grid-column: 1 \/ span 5; \}/);
+  assert.match(css, /\.contact-layout > section:last-child \{ grid-column: 6 \/ span 7; \}/);
+});
+
+test("Trial takes Stitch's 7+5 on desktop and keeps its signed-in redirect", () => {
+  const css = read("components", "transplant-desktop.css");
+  const forms = read("components", "trial-forms.tsx");
+  const page = read("app", "trial", "page.tsx");
+  // trial_desktop: start form 7 left, "What's included" sidebar 5
+  // right. The sidebar lists only what the trial actually offers,
+  // in the trial's own words.
+  assert.match(forms, /<div className="trial-start-layout">/);
+  assert.match(forms, /aria-label="What's included in the sandbox"/);
+  assert.match(forms, /One voice note/);
+  assert.match(forms, /Up to three photos/);
+  assert.match(forms, /Human review and draft costing/);
+  assert.match(forms, /24-hour session/);
+  assert.match(css, /\.trial-start-layout \{[^}]*grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.trial-start-layout > form \{ grid-column: 1 \/ span 7;/);
+  assert.match(css, /\.trial-start-layout > aside \{ grid-column: 8 \/ span 5;/);
+  // Signed-in users with no trial state are still redirected to
+  // /today by design — /trial opening Today is that redirect, and
+  // the gap it showed is the Today empty-right-column issue, fixed
+  // by the dense flow above.
+  assert.match(page, /if\(!state&&account\)redirect\("\/today"\);/);
+});
+
+test("every public page shows the shared footer", () => {
+  const site = read("components", "public-site.tsx");
+  // The footer is one shared component, not a copy per page.
+  assert.match(site, /export function PublicFooter\(\{ current \}/);
+  assert.match(site, /Built by Balogun Kamarudeen Ayomide/);
+  assert.match(site, /<PublicFooter current=\{current\} \/>/);
+  // PublicSite (landing, sample report, trial, sign-in, invite)
+  // and InformationPage (About, Contact, Privacy, Terms) both
+  // render it, so those pages have it by construction.
+  for (const page of [["app", "about", "page.tsx"], ["app", "contact", "page.tsx"], ["app", "privacy", "page.tsx"], ["app", "terms", "page.tsx"]]) {
+    assert.match(read(...page), /InformationPage/);
+  }
+  for (const page of [["app", "trial", "page.tsx"], ["app", "account", "page.tsx"], ["app", "invite", "page.tsx"], ["app", "reports", "demo", "page.tsx"]]) {
+    assert.match(read(...page), /PublicSite/);
+  }
+  // The two public pages that do NOT go through PublicSite — the
+  // signed-in Help view and the Log demo — render it directly,
+  // wrapped in `.transplant` so the token classes resolve (the
+  // workspace layout has no `.transplant` ancestor).
+  const help = read("app", "help", "page.tsx");
+  assert.match(help, /PublicFooter/);
+  assert.match(help, /<div className="transplant"><PublicFooter current="\/help" \/><\/div>/);
+  const log = read("app", "log", "demo", "page.tsx");
+  assert.match(log, /PublicFooter/);
+  assert.match(log, /<div className="transplant"><PublicFooter current="\/log\/demo" \/><\/div>/);
+});
+
+test("every desktop grid column uses minmax(0, 1fr) so content cannot force overflow", () => {
+  const css = read("components", "transplant-desktop.css");
+  const rules = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  // Any grid-template-columns in the desktop layer must use
+  // minmax(0, 1fr) tracks — a bare `1fr` lets a long ₦ figure or
+  // label force its track wider and overlap its neighbour at
+  // 1024px, 1280px or 1838px.
+  for (const match of rules.matchAll(/grid-template-columns: ([^;]+);/g)) {
+    assert.ok(match[1].includes("minmax(0, 1fr)"), `grid-template-columns must use minmax(0, 1fr): ${match[1]}`);
+  }
+  // No desktop rule lives outside the single @media block (covered
+  // by the first test) and no grid track is a bare `fr` without a
+  // minmax guard.
+  assert.doesNotMatch(rules, /repeat\(\d+, 1fr\)/);
 });
 
 test("the BoQ item label no longer runs into the item name, and the mock project actions are spaced", () => {

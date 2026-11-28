@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense, type ComponentProps } from "react";
-import { InformationPage } from "@/components/public-site";
+import { InformationPage, PublicFooter } from "@/components/public-site";
 import { HelpSearch, type HelpQuestion } from "@/components/help-search";
 import { ReplayTour } from "@/components/diary-tour";
 import { WorkspaceHeader } from "@/components/workspace-header";
@@ -45,7 +45,11 @@ async function HelpContent({searchParams}:{searchParams:Promise<{topic?:string}>
   const [account,query]=await Promise.all([currentAccount().catch(()=>null),searchParams]);
   if(!account)return <PublicHelp/>;
   const selected=topics.find(topic=>topic.id===query.topic);
-  return <main className="mx-auto min-h-svh max-w-5xl px-5 py-7 stitch-help">
+  /* Signed-in Help is a workspace page (no PublicSite), so it had
+     no footer — Stitch's signed-in Help shows the same footer as
+     the public pages. The `.transplant` wrapper supplies the token
+     classes; the workspace layout has no `.transplant` ancestor. */
+  return <><main className="mx-auto min-h-svh max-w-5xl px-5 py-7 stitch-help">
     <WorkspaceHeader current="account" title={selected?.title??"Help & Support"} hideProfile/>
     {selected?<section className="stitch-card"><h1 className="stitch-section-title">{selected.title}</h1><p className="mt-3">{selected.text}</p><Link href="/help" className="text-link">Back to Help</Link></section>:<>
       <p>Plain answers, one topic per page. For anything about money or a locked report, check the report itself.</p>
@@ -56,7 +60,7 @@ async function HelpContent({searchParams}:{searchParams:Promise<{topic?:string}>
       </div>
       <MockProjectControl person={account.profile_id} restore/>
     </>}
-  </main>;
+  </main><div className="transplant"><PublicFooter current="/help" /></div></>;
 }
 export default function Help(props:{searchParams:Promise<{topic?:string}>}) {
   return <Suspense fallback={<PageLoading title="Opening help…" />}><HelpContent {...props}/></Suspense>;

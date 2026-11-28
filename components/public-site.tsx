@@ -87,19 +87,28 @@ export function PublicSite({ children, current }: { children: ReactNode; current
       </div>
     </header>
     <main id="content" tabIndex={-1} className="pt-16">{children}</main>
-    <footer className="public-column mt-10 flex flex-col gap-4 border-t border-surface-container-high pb-safe pt-6">
-      <div className="flex items-center justify-between">
-        <span className="font-stamp-label text-stamp-label uppercase text-primary">Digital Site Diary</span>
-      </div>
-      <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 font-label-ledger text-label-ledger" aria-label="Footer navigation">
-        {menuLinks.map(([href, label]) => <Link key={href} href={href} aria-current={current === href ? "page" : undefined} className="flex min-h-[44px] items-center py-1 text-on-surface-variant transition-colors hover:text-on-surface">{label}</Link>)}
-      </nav>
-      <div className="flex flex-col gap-1 pb-6 pt-2">
-        <p className="font-body-sm text-body-sm text-on-surface-variant">The day’s work, confirmed and costed. A record you can return to.</p>
-        <p className="font-body-sm text-body-sm leading-6 text-on-surface-variant">Built by Balogun Kamarudeen Ayomide — Civil Engineer &amp; AI Automation Specialist · <a className="underline" href="https://codeflowx.dev" target="_blank" rel="noreferrer">codeflowx.dev</a> · <a className="underline" href="mailto:kamarudeen@codeflowx.dev">kamarudeen@codeflowx.dev</a> · <a className="underline" href="https://github.com/Kamarudeen-Balogun/siteledger-ai" target="_blank" rel="noreferrer">GitHub</a> · <a className="underline" href="https://t.me/SiteLedgerNGbot" target="_blank" rel="noreferrer">Telegram @SiteLedgerNGbot</a></p>
-      </div>
-    </footer>
+    <PublicFooter current={current} />
   </div>;
+}
+
+/* The shared public footer ("Built by Balogun Kamarudeen ...").
+   PublicSite renders it inside its `.transplant` root. Workspace
+   pages that are public-facing (signed-in Help, Log demo) render it
+   wrapped in a `<div className="transplant">` so the token classes
+   resolve — the workspace layout has no `.transplant` ancestor. */
+export function PublicFooter({ current }: { current: string }) {
+  return <footer className="public-column mt-10 flex flex-col gap-4 border-t border-surface-container-high pb-safe pt-6">
+    <div className="flex items-center justify-between">
+      <span className="font-stamp-label text-stamp-label uppercase text-primary">Digital Site Diary</span>
+    </div>
+    <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 font-label-ledger text-label-ledger" aria-label="Footer navigation">
+      {menuLinks.map(([href, label]) => <Link key={href} href={href} aria-current={current === href ? "page" : undefined} className="flex min-h-[44px] items-center py-1 text-on-surface-variant transition-colors hover:text-on-surface">{label}</Link>)}
+    </nav>
+    <div className="flex flex-col gap-1 pb-6 pt-2">
+      <p className="font-body-sm text-body-sm text-on-surface-variant">The day’s work, confirmed and costed. A record you can return to.</p>
+      <p className="font-body-sm text-body-sm leading-6 text-on-surface-variant">Built by Balogun Kamarudeen Ayomide — Civil Engineer &amp; AI Automation Specialist · <a className="underline" href="https://codeflowx.dev" target="_blank" rel="noreferrer">codeflowx.dev</a> · <a className="underline" href="mailto:kamarudeen@codeflowx.dev">kamarudeen@codeflowx.dev</a> · <a className="underline" href="https://github.com/Kamarudeen-Balogun/siteledger-ai" target="_blank" rel="noreferrer">GitHub</a> · <a className="underline" href="https://t.me/SiteLedgerNGbot" target="_blank" rel="noreferrer">Telegram @SiteLedgerNGbot</a></p>
+    </div>
+  </footer>;
 }
 
 export function PageIntro({ label, title, children }: { label: string; title: string; children: ReactNode }) {

@@ -99,7 +99,7 @@ async function MockContent({ query }: { query: Promise<{ view?: string; note?: s
       <BoqReview changes={[]} currency={currency} />
       <MockBoqRows rows={demoBoq} currency={currency} />
     </>}
-    {view === "team" && <>
+    {view === "team" && <div className="team-workspace">
       <section className="stitch-card stitch-team-overview">
         <div className="stitch-title-row"><h2 className="stitch-kicker" data-ink="orange">Perkins Ltd account</h2><span className="stitch-kicker stitch-chip" data-tone="green">Demo data</span></div>
         <p><strong>{title}</strong><br />{sample.document.source.project.location} · Client: {sample.document.source.project.client}</p>
@@ -109,13 +109,13 @@ async function MockContent({ query }: { query: Promise<{ view?: string; note?: s
           <div><dt>Locked reports</dt><dd>{demoLog.entries.filter(entry => entry.kind === "report").length}</dd></div>
         </dl>
       </section>
-      <section className="stitch-card">
+      <section className="stitch-card stitch-team-telegram">
         <div className="stitch-title-row"><h2 className="stitch-section-title">Telegram bot</h2></div>
         <p>Foremen send voice notes and photos to the bot — no new app to learn.</p>
         <a href="https://t.me/SiteLedgerNGbot" className="diary-row-link" target="_blank" rel="noreferrer"><DiaryIcon name="send" size={20} /><strong>Send via Telegram</strong><span className="stitch-chip">@SiteLedgerNGbot</span></a>
       </section>
       <MockTeamMembers members={demoTeam} />
-    </>}
+    </div>}
     <Link className="text-link" href="/projects">Back to your projects</Link>
   </>;
 }
