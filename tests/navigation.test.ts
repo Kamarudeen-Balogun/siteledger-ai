@@ -340,3 +340,58 @@ test("public Help page has no tour button; the tour routes by sign-in state", ()
   assert.ok(read("app", "account", "page.tsx").includes("<ReplayTour signedIn/>"), "account page tour declares signedIn");
   assert.ok(read("components", "mock-project.tsx").includes("<ReplayTour label=\"Replay the intro tour\" inPlace signedIn/>"), "mock-project tour declares signedIn");
 });
+
+test("opening screens show a skeleton, never a bare notice", () => {
+  // Regression (live audit 2026-11-28): several navigations showed a
+  // mostly-blank "Opening <thing>…" screen — header + heading only —
+  // because their Suspense fallbacks were a bare DiaryNotice with no
+  // skeleton. Every opening fallback is now the PageLoading skeleton
+  // (same "Opening…" title, shaped like the destination), and no page
+  // may keep a bare DiaryNotice opening fallback.
+  const openingPages: [string[], string][] = [
+    [["app", "account", "page.tsx"], "Opening your account…"],
+    [["app", "account", "feedback", "page.tsx"], "Opening feedback…"],
+    [["app", "projects", "page.tsx"], "Opening your projects…"],
+    [["app", "projects", "[id]", "team", "page.tsx"], "Opening the project team…"],
+    [["app", "account", "deletion", "page.tsx"], "Opening account deletion…"],
+    [["app", "shared", "[id]", "page.tsx"], "Opening shared report…"],
+    [["app", "invite", "page.tsx"], "Opening your account…"],
+    [["app", "trial", "page.tsx"], "Opening your private trial…"],
+    [["app", "trial", "original", "[id]", "page.tsx"], "Opening preserved trial work…"],
+    [["app", "trial", "report", "page.tsx"], "Opening your private draft…"],
+  ];
+  for (const [parts, title] of openingPages) {
+    const source = read(...parts);
+    assert.ok(source.includes(`<PageLoading title="${title}"`), `${parts.join("/")} must load with the PageLoading skeleton titled "${title}"`);
+    assert.ok(!source.includes('DiaryNotice busy title="Opening'), `${parts.join("/")} must not keep a bare DiaryNotice opening fallback`);
+  }
+});
+
+test("Today's connecting state renders the skeleton, not a bare notice", () => {
+  // Regression: while Today connected, the diary showed a bare
+  // "Opening your diary…" notice with no skeleton. The opening state
+  // now renders the PageLoading rows skeleton under the header.
+  const diary = read("components", "capture-diary.tsx");
+  assert.match(diary, /<PageLoading title="Opening your diary…" variant="rows"\/>/);
+  assert.ok(!diary.includes('<DiaryNotice busy title="Opening your diary…"'), "Today must not keep the bare opening notice");
+});
+
+test("Help loads with a skeleton instead of a blank flash", () => {
+  // Regression: Help's Suspense fallback was null, so navigating to Help
+  // flashed blank. It now shows the PageLoading skeleton.
+  const help = read("app", "help", "page.tsx");
+  assert.ok(!help.includes("fallback={null}"), "Help must not have a null loading fallback");
+  assert.ok(help.includes('<PageLoading title="Opening help…"'), "Help must load with the PageLoading skeleton");
+});
+
+test("skeleton bars are a clearly visible warm taupe on paper", () => {
+  // Regression: the skeleton bars were a pale taupe (#d8cbb4 on #faf7f2
+  // paper) that read as nearly blank in the live audit, even on pages
+  // that already used PageLoading. The bars are now a deeper warm taupe
+  // with taller bars, so the screen reads as a skeleton at once.
+  const css = read("app", "globals.css");
+  assert.match(css, /--skeleton: #b9a583;/);
+  assert.match(css, /--skeleton-light: #dccfb4;/);
+  assert.match(css, /\.stitch-skeleton-stack i \{[^}]*height: 20px;/);
+  assert.match(css, /\.diary-skeleton i \{[^}]*height: 16px;/);
+});

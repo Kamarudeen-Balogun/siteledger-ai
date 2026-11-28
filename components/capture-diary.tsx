@@ -8,6 +8,7 @@ import { audioType,describeFiles,photoForUpload } from "@/lib/web/files";
 import { validManifest,type CaptureContext,type QueueEntry } from "@/lib/web/types";
 import { WorkspaceHeader } from "./workspace-header";
 import { DiaryNotice } from "./diary-notice";
+import { PageLoading } from "./page-loading";
 import { WorkFlow, WorkDisclosure } from "./work-flow";
 import { DiaryIcon } from "./diary-icon";
 import { MockProjectControl } from "./mock-project";
@@ -208,7 +209,7 @@ export function CaptureDiary() {
   return <main className="mx-auto min-h-svh max-w-7xl px-5 py-7 sm:px-10 today-workspace stitch-today">
     <WorkspaceHeader current="today" title={capturing?"Add Today's Work":undefined} project={project} projectId={context?.project_id} detail={capturing} hideProfile={capturing} onBack={capturing?()=>void closeCapture():undefined}/>
     {confirmation}
-    {opening?<DiaryNotice busy title="Opening your diary…"/>:gate&&!context?<section className="diary-panel diary-gate">
+    {opening?<PageLoading title="Opening your diary…" variant="rows"/>:gate&&!context?<section className="diary-panel diary-gate">
       <h1>{gate==="sign-in"?"Sign in to open your diary":"Choose a project"}</h1>
       <p>{gate==="sign-in"?"Open your account to record work and review your site notes.":"Open a project to record work or check its reports."}</p>
       <Link href={gate==="sign-in"?"/account":"/projects"} className="work-button work-button-primary">{gate==="sign-in"?"Sign in":"Your projects"}</Link>

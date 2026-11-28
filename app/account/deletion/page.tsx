@@ -5,6 +5,7 @@ import { currentAccount,currentSessionHash } from "@/lib/auth/session";
 import { intakeRpc } from "@/lib/telegram/storage";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { DiaryNotice } from "@/components/diary-notice";
+import { PageLoading } from "@/components/page-loading";
 import { RequestDeletion, ReviewDeletions, type DeletionItem } from "@/components/account-deletion";
 
 export const metadata={title:"Account deletion — SiteLedger",robots:{index:false,follow:false}};
@@ -23,5 +24,5 @@ async function Content({searchParams}:{searchParams:Promise<{view?:string}>}) {
   return <RequestDeletion email={account.email} pending={Boolean(state?.requested)}/>;
 }
 export default function Page(props:{searchParams:Promise<{view?:string}>}) {
-  return <main className="mx-auto max-w-5xl px-5 py-7"><WorkspaceHeader current="account" title="Account deletion" hideProfile/><Suspense fallback={<DiaryNotice busy title="Opening account deletion…"/>}><Content {...props}/></Suspense></main>;
+  return <main className="mx-auto max-w-5xl px-5 py-7"><WorkspaceHeader current="account" title="Account deletion" hideProfile/><Suspense fallback={<PageLoading title="Opening account deletion…" variant="form"/>}><Content {...props}/></Suspense></main>;
 }

@@ -5,7 +5,7 @@ import { UUID } from "@/lib/confirm/access";
 import { privateProjects, privateTeam } from "@/lib/projects/data";
 import { TeamManagement } from "@/components/project-forms";
 import { WorkspaceHeader } from "@/components/workspace-header";
-import { DiaryNotice } from "@/components/diary-notice";
+import { PageLoading } from "@/components/page-loading";
 import { DiaryIcon } from "@/components/diary-icon";
 import { privateDashboard } from "@/lib/projects/boq-data";
 import { formatMoney } from "@/lib/costing/format-money";
@@ -39,4 +39,4 @@ async function TeamContent({params,searchParams}:{params:Promise<{id:string}>;se
     <div className="stitch-menu-list mt-4"><Link href={`/projects/${id}`} className="stitch-menu-row"><DiaryIcon name="building"/><span>Project overview</span><DiaryIcon name="chevron"/></Link>{section!=="members"&&<Link href={`/projects/${id}/team`} className="stitch-menu-row"><DiaryIcon name="team"/><span>Site team</span><DiaryIcon name="chevron"/></Link>}{sections.some(([key])=>key==="invitations")&&section!=="invitations"&&<Link href={`/projects/${id}/team?section=invitations`} className="stitch-menu-row"><DiaryIcon name="invite"/><span>Manage pending invitations</span><DiaryIcon name="chevron"/></Link>}{project.owner&&section!=="settings"&&<Link href={`/projects/${id}/team?section=settings`} className="stitch-menu-row"><DiaryIcon name="settings"/><span>Project settings</span><DiaryIcon name="chevron"/></Link>}</div>
   </>;
 }
-export default function TeamPage(props:{params:Promise<{id:string}>;searchParams:Promise<{section?:string}>}){return <main className="mx-auto min-h-screen max-w-6xl px-5 pb-16 pt-7 sm:px-10"><Suspense fallback={<><WorkspaceHeader current="projects"/><DiaryNotice busy title="Opening the project team…"/></>}><TeamContent {...props}/></Suspense></main>;}
+export default function TeamPage(props:{params:Promise<{id:string}>;searchParams:Promise<{section?:string}>}){return <main className="mx-auto min-h-screen max-w-6xl px-5 pb-16 pt-7 sm:px-10"><Suspense fallback={<PageLoading title="Opening the project team…" header={<WorkspaceHeader current="projects"/>}/>}><TeamContent {...props}/></Suspense></main>;}
