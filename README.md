@@ -28,21 +28,21 @@ The Nigerian demonstration uses naira, Nigerian English and Pidgin. Private proj
 
 ### Desktop
 
-<img src="docs/images/landing-desktop.png" width="760" alt="SiteLedger landing page: headline 'The day's work. With the money attached.', with buttons to try a private site record, sign in or create an account, and view a sample report">
+<img src="docs/images/landing-desktop.png" width="760" alt="SiteLedger landing page: headline 'The day's work. With the money attached.', with buttons to try a private site record, sign in or create an account, and a sample locked report card for the 4-Bedroom Duplex, Lekki Phase 1, totalling 1,495,300 naira">
 
 The public landing page explains the workflow and opens the fictional sample or private account access. About, Help/FAQ, Contact, Privacy and Terms share its navigation. Account, project, team and report screens also adapt to desktop widths.
 
-<img src="docs/images/site-diary-desktop.png" width="760" alt="Desktop site diary with a large voice-recording button, a visible keyboard focus ring on the voice-file picker and an expandable recent-notes column">
+<img src="docs/images/today-desktop.png" width="760" alt="Desktop Today diary for Test Duplex — Ajah: Add today's work, Send via Telegram, Awaiting review, and Work Progress measured at 2.3% complete with 551,000 naira earned">
 
-The work diary shares the account/project navigation. Saved notes lead directly to review; recent device notes are expandable. Loading, unclear extraction, failed requests and offline work have visible guidance.
+The work diary for a project shows today's notes, what is awaiting review, and measured work progress from locked reports. Saved notes lead directly to review; un-costed recordings stay as drafts until they are costed.
 
-<img src="docs/images/project-ledger-desktop.png" width="760" alt="Desktop project ledger showing a 1,000,000-naira contract, 261,000-naira approved value and a red quantity-overrun flag in a ruled BoQ table">
+<img src="docs/images/ledger-desktop.png" width="760" alt="Desktop BoQ and rates for Test Duplex — Ajah: contract ledger allocation 23,905,000 naira against a 25,000,000-naira contract sum, 2.3% earned, 551,000 naira to date">
 
-The project ledger shows the contract sum, value earned from approved reports and variance flags in a ruled BoQ table. This disposable acceptance project deliberately reduces the BoQ target to exercise an overrun. Its approved ₦261,000 stays unchanged after the current rate is edited, demonstrating that earlier reports retain their recorded prices.
+The project ledger shows the contract sum, value earned from approved reports and the unallocated contingency in a ruled BoQ table. Rates that move by five times or more from their previous version are flagged for review.
 
-<img src="docs/images/costed-report.png" width="760" alt="Locked daily site report for 6 November 2026: seven BoQ items costed against the Bill of Quantities, totalling 1,495,300 naira">
+<img src="docs/images/report-desktop.png" width="760" alt="Locked daily site report for 26 November 2026, Ajah, Lagos: permanently sealed into the dispute log, approved, costed from the contract BoQ">
 
-The locked daily site report for 6 November 2026: seven BoQ items costed against the Bill of Quantities, totalling ₦1,495,300, signed by the foreman and the PM.
+The locked daily site report for 26 November 2026, Ajah, Lagos: permanently sealed into the dispute log, approved and costed from the contract BoQ.
 
 ### Mobile
 
