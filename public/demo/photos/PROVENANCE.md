@@ -47,6 +47,16 @@ responses, preserved failure evidence and the disposable report/PDF checks.
 Synthetic scenes can demonstrate the workflow; they do not establish detector
 accuracy on real sites. Keep them separate from genuine submissions and records.
 
+## Storage — base64 sources, decoded at build time
+
+The four WebP photos and three MP3 voice notes above are stored in the repo
+as base64 text under `assets/demo/` (`.b64` files), because the push route
+for this repo cannot carry binary files. `scripts/decode-demo-assets.mjs`
+decodes them into `public/demo/` before every build and dev start
+(`package.json` `prebuild` / `predev`); the decoded bytes are git-ignored
+and are never committed. The SHA-256 values in the tables above are of the
+decoded files — the decode was verified to reproduce them byte-for-byte.
+
 ## Added 27 November 2026 — demo Today photos and voice notes
 
 Four further synthetic test photos from the builder's test-photo set

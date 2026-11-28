@@ -48,7 +48,9 @@
     "test:account-browser": "node scripts/verify-account-browser.mjs",
     "test:dashboard": "node --conditions=react-server --import tsx --test tests/dashboard.test.ts",
     "db:check-dashboard": "node scripts/check-database.mjs tests/dashboard.sql",
-    "db:check-fresh": "node scripts/check-fresh-database.mjs && node scripts/check-fresh-database.mjs --legacy"
+    "db:check-fresh": "node scripts/check-fresh-database.mjs && node scripts/check-fresh-database.mjs --legacy",
+    "prebuild": "node scripts/decode-demo-assets.mjs",
+    "predev": "node scripts/decode-demo-assets.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",
