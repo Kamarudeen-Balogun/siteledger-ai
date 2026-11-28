@@ -90,5 +90,7 @@ stamp = stamp.rotate(-7, expand=True, resample=Image.BICUBIC)
 img.paste(stamp, (cx1 - 235, 500), stamp)
 
 out = "/home/hatch/workspace/siteledger-seo-work/public/og-image.png"
-img.save(out, "PNG")
+# Flat design with a small palette: save as an indexed PNG so the file
+# stays small (34KB) — it must fit a single base64 tool argument for upload.
+img.convert("P", palette=Image.ADAPTIVE, colors=128).save(out, "PNG", optimize=True)
 print("saved", out, img.size)
