@@ -28,7 +28,6 @@ const questions: HelpQuestion[] = [
 function PublicHelp(){return <InformationPage current="/help" label="A practical field guide" title="From your first note to an approved record." intro={<p>Choose the right project, record the work, check the quantities and approve only when the daily record is ready.</p>}>
   <section><h2>Start in the channel that suits you</h2><div className="flex flex-wrap gap-3"><Link href="/account" className="flex min-h-12 items-center justify-center rounded-lg bg-primary-container px-5 font-label-ledger text-label-ledger text-on-primary shadow hover:bg-primary">Open your account</Link><a href="https://t.me/SiteLedgerNGbot" className="flex min-h-12 items-center justify-center rounded-lg bg-surface-container-low px-5 font-label-ledger text-label-ledger text-on-surface hover:bg-surface-container" target="_blank" rel="noreferrer">Open the Telegram bot</a><Link className="text-link" href="/reports/demo">View the sample report</Link></div></section>
   <section aria-labelledby="faq-title"><h2 id="faq-title">Common questions</h2><HelpSearch questions={[...questions]}/></section>
-  <section><h2>SiteLedger walkthrough</h2><ReplayTour/></section>
   <section><h2>Need another hand?</h2><p className="mt-3 leading-7">Foremen and project engineers can reach the builder through the Telegram bot for urgent voice-note recovery or BoQ help, or use the contact desk.</p><p className="mt-3"><Link href="/contact" className="text-link">Contact the builder</Link></p></section>
   </InformationPage>;}
 
@@ -50,7 +49,7 @@ async function HelpContent({searchParams}:{searchParams:Promise<{topic?:string}>
     {selected?<section className="stitch-card"><h1 className="stitch-section-title">{selected.title}</h1><p className="mt-3">{selected.text}</p><Link href="/help" className="text-link">Back to Help</Link></section>:<>
       <p>Plain answers, one topic per page. For anything about money or a locked report, check the report itself.</p>
       <p className="stitch-help-device"><DiaryIcon name="phone" size={18}/>Works on iPhone and Android.</p>
-      <div className="stitch-menu-list"><ReplayTour help/><Link href="/projects/mock" className="stitch-menu-row"><DiaryIcon name="flask"/><span><strong>The mock project — demo data</strong><small>Open the fictional project, or restore it from settings.</small></span><DiaryIcon name="chevron"/></Link>
+      <div className="stitch-menu-list"><ReplayTour help signedIn/><Link href="/projects/mock" className="stitch-menu-row"><DiaryIcon name="flask"/><span><strong>The mock project — demo data</strong><small>Open the fictional project, or restore it from settings.</small></span><DiaryIcon name="chevron"/></Link>
         {topics.map(topic=><Link href={`/help?topic=${topic.id}`} key={topic.id} className="stitch-menu-row"><DiaryIcon name={topic.icon}/><span><strong>{topic.title}</strong><small>{topic.subtitle}</small></span><DiaryIcon name="chevron" size={18}/></Link>)}
         <Link href="/contact" className="stitch-menu-row"><DiaryIcon name="email"/><span><strong>Contact</strong><small>Telegram, email and GitHub</small></span><DiaryIcon name="chevron" size={18}/></Link>
       </div>

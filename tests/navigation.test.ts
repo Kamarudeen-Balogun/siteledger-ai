@@ -272,3 +272,27 @@ test("BoQ money never breaks mid-number and version sheets fit", () => {
   // not just the effective date.
   assert.match(versions, /selected\.created_at \? <>Saved \{displayTimestamp\(selected\.created_at\)\}/);
 });
+
+test("public Help page has no tour button; the tour routes by sign-in state", () => {
+  // Regression: the public Help & FAQ page (signed-out visitors) showed
+  // "Take the tour again". Tapping it pushed /today, which renders the
+  // sign-in gate for a signed-out user — and the tour never plays there,
+  // because DiaryTour only mounts when a person exists. The button is a
+  // signed-in feature, so it must not appear on the public page at all,
+  // and ReplayTour must send signed-out users to the sign-in page
+  // (/account) instead of /today.
+  const help = read("app", "help", "page.tsx");
+  const publicStart = help.indexOf("function PublicHelp");
+  const publicEnd = help.indexOf("const topics", publicStart);
+  assert.ok(publicStart >= 0 && publicEnd > publicStart, "PublicHelp must exist");
+  assert.ok(!help.slice(publicStart, publicEnd).includes("ReplayTour"), "PublicHelp must not render the tour button");
+  assert.ok(help.slice(publicEnd).includes("ReplayTour"), "the signed-in Help branch still offers the tour");
+  const tour = read("components", "diary-tour.tsx");
+  assert.match(tour, /signedIn: boolean/, "ReplayTour must take a required signedIn prop");
+  assert.ok(!tour.includes("signedIn?:"), "signedIn must be required, not optional");
+  assert.match(tour, /router\.push\(signedIn \? "\/today" : "\/account"\)/, "signed-out users go to the sign-in page, signed-in users to Today");
+  // Every call site declares its sign-in state; the account page and the
+  // mock-project explore card only render for signed-in users.
+  assert.ok(read("app", "account", "page.tsx").includes("<ReplayTour signedIn/>"), "account page tour declares signedIn");
+  assert.ok(read("components", "mock-project.tsx").includes("<ReplayTour label=\"Replay the intro tour\" inPlace signedIn/>"), "mock-project tour declares signedIn");
+});
