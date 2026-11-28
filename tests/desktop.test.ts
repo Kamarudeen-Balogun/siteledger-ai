@@ -52,6 +52,27 @@ test("the desktop top nav carries the Stitch workspace items", () => {
   assert.match(navigation, /href: isMock \? "\/projects\/mock\?view=team" : projectHref/);
 });
 
+test("the project switcher keeps the name and org badge on one clean row on desktop", () => {
+  const css = read("components", "transplant-desktop.css");
+  // The switcher's row rules (button align-items/gap/padding, name
+  // flex:1 + nowrap + ellipsis, badge max-width + nowrap + ellipsis
+  // + pill) live in stitch.css inside @media (max-width: 1023px),
+  // so at desktop the button was a bare flex row (align-items:
+  // stretch, gap: 0, padding: 0) and the name and badge were plain
+  // wrapping text crowding each other at the top edge ("Test Duplex
+  // — Ajah" / "PERKINS LIMITED", "Mock project" / "DEMO DATA").
+  // The desktop layer re-asserts the row here; mobile is untouched.
+  assert.match(css, /\.workspace-header \.stitch-project-switch \{[^}]*align-items: center;[^}]*gap: 8px;[^}]*padding: 0 16px;/);
+  assert.match(css, /\.workspace-header \.stitch-project-switch strong \{[^}]*flex: 1;[^}]*white-space: nowrap;[^}]*\}/);
+  assert.match(css, /\.workspace-header \.stitch-project-switch \.stitch-kicker \{[^}]*flex: none;[^}]*max-width: 32%;[^}]*white-space: nowrap;[^}]*background: var\(--stitch-inset\);[^}]*\}/);
+  // The markup still renders the name and the org badge in the
+  // switcher (real client, or "Demo data" on the mock).
+  const navigation = read("components", "app-navigation.tsx");
+  assert.match(navigation, /<strong>\{project \?\? selected\?\.name/);
+  assert.match(navigation, /<span className="stitch-kicker">Demo data<\/span>/);
+  assert.match(navigation, /selected\?\.client && <span className="stitch-kicker">/);
+});
+
 test("the desktop layer is imported after the transplant styles", () => {
   const layout = read("app", "layout.tsx");
   assert.match(layout, /import "@\/components\/transplant-desktop\.css";/);
@@ -107,13 +128,15 @@ test("BoQ rows are a 12-column grid on desktop (item 4, values 5, progress 3) an
   assert.match(css, /\.stitch-boq-items > li > \.stitch-boq-adjust \{ grid-column: 10 \/ span 3;/);
   // The row's three values share one `dl` whose shared rule uses
   // auto-fit minmax(80px, 1fr) with nowrap `dd`s — a long rate
-  // overflowed its track into the Line Total. In a row the three
-  // tracks are equal thirds that cannot shrink below zero, and a
-  // rate may wrap between its number and its unit instead of
-  // running over the next figure. Scoped to the row `dl` only.
-  assert.match(css, /\.stitch-boq-items > li > dl\.stitch-boq-values \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); \}/);
+  // overflowed its track into the Line Total. In a row the Unit
+  // rate's track sizes to its content (`auto`) and its `dd` never
+  // wraps, so "₦145,000 per m³" stays on one line instead of
+  // breaking between "per" and "m³"; the Scope qty and Line total
+  // keep flexible tracks. Scoped to the row `dl` only.
+  assert.match(css, /\.stitch-boq-items > li > dl\.stitch-boq-values \{ grid-template-columns: minmax\(0, 1fr\) auto minmax\(0, 1fr\); \}/);
   assert.match(css, /\.stitch-boq-items > li > dl\.stitch-boq-values > div \{ min-width: 0; \}/);
   assert.match(css, /\.stitch-boq-items > li > dl\.stitch-boq-values dd \{ white-space: normal; \}/);
+  assert.match(css, /\.stitch-boq-items > li > dl\.stitch-boq-values > div:nth-child\(2\) dd \{ white-space: nowrap; \}/);
   // Both BoQ lists carry the hooks the grid places.
   const editor = read("components", "boq-editor.tsx");
   assert.match(editor, /className="stitch-boq-item-head"/);
@@ -172,6 +195,16 @@ test("Team is 8+4, Account is 5+7 and Project detail is 5+7 on Stitch's 12-colum
   assert.match(css, /\.team-workspace \{[^}]*grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)[^}]*grid-auto-flow: dense;/);
   assert.match(css, /\.team-workspace > section\.stitch-team-members \{ grid-column: 1 \/ span 8; \}/);
   assert.match(css, /\.team-workspace > section\.stitch-team-overview,\s*\.team-workspace > a\.stitch-team-report,\s*\.team-workspace > section\.stitch-team-telegram \{ grid-column: 9 \/ span 4; \}/);
+  // The overview card sits in the narrow 4-column rail and its
+  // metrics `dl` uses the shared auto-fit rule with nowrap `dd`s:
+  // three figures in ~380px overflowed their 80px-min tracks
+  // into each other ("₦52,328,000₦14,360,80012"). Stitch's card
+  // shows its two metrics in a 2-column grid, so this `dl` is
+  // 2 columns too — each figure gets half the card and stays on
+  // one line, and a third figure (Locked reports, mock only)
+  // wraps to a second row instead of colliding.
+  assert.match(css, /\.stitch-team-overview \.stitch-boq-values \{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+  assert.match(css, /\.stitch-team-overview \.stitch-boq-values > div \{ min-width: 0; \}/);
   const team = read("app", "projects", "[id]", "team", "page.tsx");
   assert.match(team, /className="team-workspace /);
   // The mock team view gets the same 8+4 (it never had the wrapper

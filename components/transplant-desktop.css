@@ -118,6 +118,38 @@
     max-width: 460px;
     min-height: 48px;
     margin-top: 0;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+  }
+  /* The switcher's row rules (button align-items/gap/padding,
+     name flex:1 + nowrap + ellipsis, badge max-width + nowrap +
+     ellipsis + pill) live in stitch.css inside
+     @media (max-width: 1023px), so at desktop the button is a
+     bare flex row (align-items: stretch, gap: 0, padding: 0) and
+     the name and badge are plain wrapping text that crowd each
+     other at the top edge ("Test Duplex — Ajah" / "PERKINS
+     LIMITED", "Mock project" / "DEMO DATA"). Re-assert the row
+     here so the name and badge sit cleanly side by side, the
+     name ellipsizes instead of wrapping, and the badge keeps
+     its own space. Mobile is untouched (its rules still apply
+     below 1024px). */
+  .workspace-header .stitch-project-switch strong {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .workspace-header .stitch-project-switch .stitch-kicker {
+    flex: none;
+    max-width: 32%;
+    padding: 2px 5px;
+    border-radius: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: var(--stitch-inset);
   }
   .workspace-header .workspace-navigation {
     grid-column: 1 / -1;
@@ -264,15 +296,16 @@
      Unit rate, Line total). The shared `.stitch-boq-values` rule
      (stitch.css) uses `repeat(auto-fit, minmax(80px, 1fr))` with
      nowrap `dd`s, which lets a long rate overflow its track into
-     the next figure. In a row the three tracks are equal thirds
-     that cannot shrink below zero, and a rate may wrap between
-     its number and its unit ("₦14,500" / "per m²") instead of
-     running over the Line Total. Scoped to the row `dl` only, so
-     the allocation summary, detail sheet and team-overview `dl`s
-     keep their own layout. */
-  .stitch-boq-items > li > dl.stitch-boq-values { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+     the next figure. In a row the Unit rate's track sizes to its
+     content (`auto`) and its `dd` never wraps, so "₦145,000 per
+     m³" stays on one line instead of breaking between "per" and
+     "m³"; the Scope qty and Line total keep flexible tracks.
+     Scoped to the row `dl` only, so the allocation summary,
+     detail sheet and team-overview `dl`s keep their own layout. */
+  .stitch-boq-items > li > dl.stitch-boq-values { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
   .stitch-boq-items > li > dl.stitch-boq-values > div { min-width: 0; }
   .stitch-boq-items > li > dl.stitch-boq-values dd { white-space: normal; }
+  .stitch-boq-items > li > dl.stitch-boq-values > div:nth-child(2) dd { white-space: nowrap; }
 
   /* ---- 4. Reports & Log -------------------------------------------- */
   /* Single-column sealed record log (Stitch: max-w-5xl). The summary
@@ -347,6 +380,21 @@
   .team-workspace > section.stitch-team-overview,
   .team-workspace > a.stitch-team-report,
   .team-workspace > section.stitch-team-telegram { grid-column: 9 / span 4; }
+  /* The overview card (Current Site / Perkins Ltd account) sits
+     in the narrow 4-column right rail, and its metrics `dl` uses
+     the shared auto-fit rule (stitch.css) with nowrap `dd`s:
+     three figures in ~380px overflow their 80px-min tracks into
+     each other ("₦52,328,000₦14,360,80012"). Stitch's card shows
+     its two metrics in a 2-column grid, so this `dl` becomes
+     2 columns too — each figure gets half the card and stays on
+     one line, and a third figure (Locked reports, mock only)
+     wraps to a second row instead of colliding. The real Team
+     card has two figures, so it renders exactly like Stitch. */
+  .stitch-team-overview .stitch-boq-values {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 24px;
+  }
+  .stitch-team-overview .stitch-boq-values > div { min-width: 0; }
 
   /* ---- 8. Account, settings & feedback ----------------------------- */
   /* Stitch Account is 5+7 (the spans in code.html, DOM order:
